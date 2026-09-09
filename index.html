@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#121212" />
+  <meta name="description" content="Kişisel fitness takip uygulaması" />
+
+  <!-- PWA / iOS -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="FitTakip" />
+  <meta name="mobile-web-app-capable" content="yes" />
+
+  <!-- Apple Touch Icons -->
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png" />
+
+  <!-- Manifest -->
+  <link rel="manifest" href="manifest.json" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+
+  <title>FitTakip</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── HEADER ── -->
+  <header class="app-header">
+    <div class="header-brand">
+      <span class="brand-icon">⚡</span>
+      <span class="brand-name">FitTakip</span>
+    </div>
+    <div class="menu-wrapper">
+      <button class="menu-toggle" id="menuToggle" aria-label="Menüyü aç" aria-expanded="false">
+        <span class="toggle-bar"></span>
+        <span class="toggle-bar"></span>
+        <span class="toggle-bar"></span>
+      </button>
+      <nav class="dropdown-menu" id="dropdownMenu" role="navigation" aria-hidden="true">
+        <button class="nav-item" data-page="home">
+          <span class="nav-icon">📊</span> Ana Sayfa
+        </button>
+        <button class="nav-item" data-page="profile">
+          <span class="nav-icon">👤</span> Kişisel Bilgiler
+        </button>
+        <button class="nav-item" data-page="workout">
+          <span class="nav-icon">🏋️</span> Antrenman Planı
+        </button>
+        <button class="nav-item" data-page="nutrition">
+          <span class="nav-icon">🥗</span> Beslenme Planı
+        </button>
+        <button class="nav-item" data-page="supplement">
+          <span class="nav-icon">💊</span> Supplement Planı
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ── OVERLAY ── -->
+  <div class="overlay" id="overlay"></div>
+
+  <!-- ── MAIN ── -->
+  <main class="app-main">
+
+    <!-- PAGE: HOME -->
+    <section class="page" id="page-home">
+      <div class="page-header">
+        <h1 class="page-title">Analiz Raporu</h1>
+        <p class="page-subtitle">Güncel sağlık verilerin</p>
+      </div>
+
+      <div class="cards-grid">
+        <div class="stat-card accent-card">
+          <p class="card-label">Güncel Kilo</p>
+          <p class="card-value" id="dash-weight">–</p>
+          <p class="card-unit">kg</p>
+        </div>
+        <div class="stat-card">
+          <p class="card-label">Boy</p>
+          <p class="card-value" id="dash-height">–</p>
+          <p class="card-unit">cm</p>
+        </div>
+        <div class="stat-card bmi-card">
+          <p class="card-label">Vücut Kitle İndeksi</p>
+          <p class="card-value bmi-value" id="dash-bmi">–</p>
+          <p class="card-unit bmi-status" id="dash-bmi-status">Veri yok</p>
+        </div>
+      </div>
+
+      <div class="info-box" id="bmi-info-box">
+        <p class="info-title">BMI Skalası</p>
+        <div class="bmi-scale">
+          <div class="scale-item">
+            <span class="scale-dot underweight"></span>
+            <span>&lt; 18.5 — Zayıf</span>
+          </div>
+          <div class="scale-item">
+            <span class="scale-dot normal"></span>
+            <span>18.5 – 24.9 — Normal</span>
+          </div>
+          <div class="scale-item">
+            <span class="scale-dot overweight"></span>
+            <span>25 – 29.9 — Fazla Kilolu</span>
+          </div>
+          <div class="scale-item">
+            <span class="scale-dot obese"></span>
+            <span>≥ 30 — Obez</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-state" id="home-empty">
+        <p class="empty-icon">📋</p>
+        <p class="empty-text">Analiz için önce <strong>Kişisel Bilgiler</strong> sayfasından boy ve kilonu gir.</p>
+      </div>
+    </section>
+
+    <!-- PAGE: PROFILE -->
+    <section class="page hidden" id="page-profile">
+      <div class="page-header">
+        <h1 class="page-title">Kişisel Bilgiler</h1>
+        <p class="page-subtitle">Bilgilerini güncel tut</p>
+      </div>
+
+      <div class="form-card">
+        <div class="form-group">
+          <label class="form-label" for="input-height">Boy (cm)</label>
+          <input class="form-input" type="number" id="input-height" placeholder="örn. 178" min="100" max="250" inputmode="decimal" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="input-weight">Kilo (kg)</label>
+          <input class="form-input" type="number" id="input-weight" placeholder="örn. 75" min="30" max="300" inputmode="decimal" step="0.1" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="input-age">Yaş</label>
+          <input class="form-input" type="number" id="input-age" placeholder="örn. 28" min="10" max="120" inputmode="numeric" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="input-goal">Hedef</label>
+          <input class="form-input" type="text" id="input-goal" placeholder="örn. 6 ayda 10 kg vermek" />
+        </div>
+        <button class="btn-save" id="save-profile">Kaydet</button>
+        <p class="save-feedback hidden" id="profile-feedback">✅ Kaydedildi!</p>
+      </div>
+    </section>
+
+    <!-- PAGE: WORKOUT -->
+    <section class="page hidden" id="page-workout">
+      <div class="page-header">
+        <h1 class="page-title">Antrenman Planı</h1>
+        <p class="page-subtitle">Haftalık program</p>
+      </div>
+
+      <div class="form-card">
+        <div class="form-group">
+          <label class="form-label" for="input-workout">Antrenman programını buraya yaz</label>
+          <textarea class="form-textarea" id="input-workout" placeholder="Pazartesi: Göğüs + Triceps&#10;Salı: Sırt + Biceps&#10;Çarşamba: Dinlenme&#10;..."></textarea>
+        </div>
+        <button class="btn-save" id="save-workout">Kaydet</button>
+        <p class="save-feedback hidden" id="workout-feedback">✅ Kaydedildi!</p>
+      </div>
+    </section>
+
+    <!-- PAGE: NUTRITION -->
+    <section class="page hidden" id="page-nutrition">
+      <div class="page-header">
+        <h1 class="page-title">Beslenme Planı</h1>
+        <p class="page-subtitle">Günlük makro hedefleri</p>
+      </div>
+
+      <div class="form-card">
+        <div class="form-group">
+          <label class="form-label" for="input-nutrition">Beslenme planını buraya yaz</label>
+          <textarea class="form-textarea" id="input-nutrition" placeholder="Sabah: Yulaf ezmesi, 3 yumurta&#10;Öğle: Tavuk göğsü, pirinç, salata&#10;Ara: Protein bar&#10;Akşam: Balık, sebze..."></textarea>
+        </div>
+        <button class="btn-save" id="save-nutrition">Kaydet</button>
+        <p class="save-feedback hidden" id="nutrition-feedback">✅ Kaydedildi!</p>
+      </div>
+    </section>
+
+    <!-- PAGE: SUPPLEMENT -->
+    <section class="page hidden" id="page-supplement">
+      <div class="page-header">
+        <h1 class="page-title">Supplement Planı</h1>
+        <p class="page-subtitle">Günlük takviyeler</p>
+      </div>
+
+      <div class="form-card">
+        <div class="form-group">
+          <label class="form-label" for="input-supplement">Supplement planını buraya yaz</label>
+          <textarea class="form-textarea" id="input-supplement" placeholder="Sabah (aç karnına):&#10;- Kreatin 5g&#10;- D3 Vitamini 2000 IU&#10;&#10;Antrenman öncesi:&#10;- Pre-workout&#10;&#10;Antrenman sonrası:&#10;- Whey Protein 30g&#10;- BCAA 5g"></textarea>
+        </div>
+        <button class="btn-save" id="save-supplement">Kaydet</button>
+        <p class="save-feedback hidden" id="supplement-feedback">✅ Kaydedildi!</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ── BOTTOM NAV ── -->
+  <nav class="bottom-nav">
+    <button class="bottom-nav-item active" data-page="home">
+      <span class="bnav-icon">📊</span>
+      <span class="bnav-label">Analiz</span>
+    </button>
+    <button class="bottom-nav-item" data-page="profile">
+      <span class="bnav-icon">👤</span>
+      <span class="bnav-label">Profil</span>
+    </button>
+    <button class="bottom-nav-item" data-page="workout">
+      <span class="bnav-icon">🏋️</span>
+      <span class="bnav-label">Antrenman</span>
+    </button>
+    <button class="bottom-nav-item" data-page="nutrition">
+      <span class="bnav-icon">🥗</span>
+      <span class="bnav-label">Beslenme</span>
+    </button>
+    <button class="bottom-nav-item" data-page="supplement">
+      <span class="bnav-icon">💊</span>
+      <span class="bnav-label">Suplement</span>
+    </button>
+  </nav>
+
+  <script src="app.js"></script>
+</body>
+</html>
