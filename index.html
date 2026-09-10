@@ -60,13 +60,13 @@
     </div>
   </header>
 
-  <!-- ── OVERLAY ── -->
+  <!-- ── OVERLAY (dropdown dışına tıklama) ── -->
   <div class="overlay" id="overlay"></div>
 
   <!-- ── MAIN ── -->
   <main class="app-main">
 
-    <!-- PAGE: HOME -->
+    <!-- PAGE: HOME (DASHBOARD) -->
     <section class="page" id="page-home">
       <div class="page-header">
         <h1 class="page-title">Analiz Raporu</h1>
@@ -117,6 +117,20 @@
         <p class="empty-icon">📋</p>
         <p class="empty-text">Analiz için önce <strong>Kişisel Bilgiler</strong> sayfasından boy ve kilonu gir.</p>
       </div>
+
+      <!-- ── MODÜL 1: HEDEF & GRAFİK KARTI ── -->
+      <div class="chart-card">
+        <p class="info-title">📈 Kilo Takip Grafiği</p>
+        <div class="chart-container">
+          <canvas id="weightChart"></canvas>
+        </div>
+        <p class="chart-empty hidden" id="chart-empty">
+          Henüz tartım verisi yok. <strong>Kişisel Bilgiler</strong> sayfasından haftalık tartım ekleyerek grafiği görüntüleyebilirsin.
+        </p>
+        <div class="status-message status-neutral" id="goal-status-message">
+          Hedef ve tartım verisi ekleyerek analizi başlat.
+        </div>
+      </div>
     </section>
 
     <!-- PAGE: PROFILE -->
@@ -126,7 +140,9 @@
         <p class="page-subtitle">Bilgilerini güncel tut</p>
       </div>
 
+      <!-- TEMEL BİLGİLER -->
       <div class="form-card">
+        <h2 class="card-heading">👤 Temel Bilgiler</h2>
         <div class="form-group">
           <label class="form-label" for="input-height">Boy (cm)</label>
           <input class="form-input" type="number" id="input-height" placeholder="örn. 178" min="100" max="250" inputmode="decimal" />
@@ -140,11 +156,53 @@
           <input class="form-input" type="number" id="input-age" placeholder="örn. 28" min="10" max="120" inputmode="numeric" />
         </div>
         <div class="form-group">
-          <label class="form-label" for="input-goal">Hedef</label>
+          <label class="form-label" for="input-goal">Genel Hedef Notu (opsiyonel)</label>
           <input class="form-input" type="text" id="input-goal" placeholder="örn. 6 ayda 10 kg vermek" />
         </div>
         <button class="btn-save" id="save-profile">Kaydet</button>
         <p class="save-feedback hidden" id="profile-feedback">✅ Kaydedildi!</p>
+      </div>
+
+      <!-- ── MODÜL 1: HEDEF BELİRLEME ── -->
+      <div class="form-card">
+        <h2 class="card-heading">🎯 Hedef Belirleme</h2>
+        <div class="form-group">
+          <label class="form-label" for="goal-type">Hedef Tipi</label>
+          <select class="form-input" id="goal-type">
+            <option value="Kilo Almak">Kilo Almak</option>
+            <option value="Sabit Kalmak">Sabit Kalmak</option>
+            <option value="Kilo Vermek">Kilo Vermek</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="goal-date">Hedef Tarihi</label>
+          <input class="form-input" type="date" id="goal-date" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="goal-weight">Hedef Kilo (kg)</label>
+          <input class="form-input" type="number" id="goal-weight" min="1" max="99" step="0.1" placeholder="örn. 70" />
+        </div>
+        <button class="btn-save" id="save-goal">Hedefi Kaydet</button>
+        <p class="save-feedback hidden" id="goal-feedback">✅ Hedef kaydedildi!</p>
+      </div>
+
+      <!-- ── MODÜL 1: HAFTALIK TARTIM ── -->
+      <div class="form-card">
+        <h2 class="card-heading">⚖️ Haftalık Tartım Ekle</h2>
+        <div class="form-group">
+          <label class="form-label" for="weighin-date">Tarih</label>
+          <input class="form-input" type="date" id="weighin-date" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="weighin-weight">Kilo (kg)</label>
+          <input class="form-input" type="number" id="weighin-weight" min="30" max="300" step="0.1" placeholder="örn. 74.5" />
+        </div>
+        <button class="btn-save" id="add-weighin">Tartım Ekle</button>
+        <p class="save-feedback hidden" id="weighin-feedback">✅ Tartım eklendi!</p>
+
+        <div class="weighin-list" id="weighinList">
+          <p class="empty-hint">Henüz tartım eklenmedi.</p>
+        </div>
       </div>
     </section>
 
@@ -155,10 +213,21 @@
         <p class="page-subtitle">Haftalık program</p>
       </div>
 
-      <div class="form-card">
+      <!-- ── MODÜL 2: İNTERAKTİF ANTRENMAN OLUŞTURUCU ── -->
+      <button class="btn-add-workout" id="openWorkoutModal">
+        <span>+</span> Antrenman Planı Ekle
+      </button>
+
+      <div class="workout-accordion" id="workoutAccordion">
+        <!-- JS ile doldurulur -->
+      </div>
+
+      <!-- SERBEST NOTLAR (opsiyonel, eski özellik korunuyor) -->
+      <div class="form-card notes-card">
+        <h2 class="card-heading">📝 Genel Notlar (Opsiyonel)</h2>
         <div class="form-group">
-          <label class="form-label" for="input-workout">Antrenman programını buraya yaz</label>
-          <textarea class="form-textarea" id="input-workout" placeholder="Pazartesi: Göğüs + Triceps&#10;Salı: Sırt + Biceps&#10;Çarşamba: Dinlenme&#10;..."></textarea>
+          <label class="form-label" for="input-workout">Ek notlarını buraya yazabilirsin</label>
+          <textarea class="form-textarea" id="input-workout" placeholder="örn. Diz sakatlığı nedeniyle squat yerine leg press yapıyorum..."></textarea>
         </div>
         <button class="btn-save" id="save-workout">Kaydet</button>
         <p class="save-feedback hidden" id="workout-feedback">✅ Kaydedildi!</p>
@@ -225,6 +294,63 @@
     </button>
   </nav>
 
+  <!-- ── MODÜL 2: ANTRENMAN EKLEME MODALI ── -->
+  <div class="modal-overlay hidden" id="workoutModalOverlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 class="modal-title">Antrenman Ekle</h2>
+        <button class="modal-close" id="closeWorkoutModal" aria-label="Kapat">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="modal-day">Gün</label>
+          <select class="form-input" id="modal-day">
+            <option value="Pazartesi">Pazartesi</option>
+            <option value="Salı">Salı</option>
+            <option value="Çarşamba">Çarşamba</option>
+            <option value="Perşembe">Perşembe</option>
+            <option value="Cuma">Cuma</option>
+            <option value="Cumartesi">Cumartesi</option>
+            <option value="Pazar">Pazar</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="modal-location">Mekan</label>
+          <select class="form-input" id="modal-location">
+            <option value="Evde">Evde</option>
+            <option value="Spor Salonunda">Spor Salonunda</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="modal-exercise">Hareket</label>
+          <select class="form-input" id="modal-exercise"></select>
+        </div>
+
+        <div class="half-group">
+          <div class="form-group">
+            <label class="form-label" for="modal-sets">Set Sayısı</label>
+            <select class="form-input" id="modal-sets"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="modal-reps">Tekrar Sayısı</label>
+            <select class="form-input" id="modal-reps"></select>
+          </div>
+        </div>
+
+        <div class="modal-preview" id="modal-preview">
+          <!-- JS ile doldurulur -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-save" id="completeWorkoutBtn">Antrenman Programını Tamamla</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Chart.js CDN (Modül 1 için) ── -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@
    fit-takip-v1  →  fit-takip-v2  →  ...
    ══════════════════════════════════════════ */
 
-var CACHE_NAME = 'fit-takip-v1';
+var CACHE_NAME = 'fit-takip-v2';
 
 var STATIC_ASSETS = [
   './',
@@ -13,7 +13,8 @@ var STATIC_ASSETS = [
   './app.js',
   './manifest.json',
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'
 ];
 
 // ── INSTALL ──────────────────────────────────
@@ -21,7 +22,14 @@ self.addEventListener('install', function(event) {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(function(cache) {
-        return cache.addAll(STATIC_ASSETS);
+        // CDN dosyası engellenirse bile kurulumun tamamı çökmesin
+        return Promise.all(
+          STATIC_ASSETS.map(function(url) {
+            return cache.add(url).catch(function(err) {
+              console.warn('[SW] Cache eklenemedi:', url, err);
+            });
+          })
+        );
       })
       .then(function() {
         return self.skipWaiting();
@@ -30,7 +38,7 @@ self.addEventListener('install', function(event) {
 });
 
 // ── ACTIVATE ─────────────────────────────────
-// Eski cache'leri sil — localStorage'a DOKUNMAZ
+// Eski cache'leri sil — localStorage'a KESİNLİKLE DOKUNMAZ
 self.addEventListener('activate', function(event) {
   event.waitUntil(
     caches.keys()
@@ -38,7 +46,10 @@ self.addEventListener('activate', function(event) {
         return Promise.all(
           keys
             .filter(function(key) { return key !== CACHE_NAME; })
-            .map(function(key) { return caches.delete(key); })
+            .map(function(key) {
+              console.log('[SW] Eski cache siliniyor:', key);
+              return caches.delete(key);
+            })
         );
       })
       .then(function() {
