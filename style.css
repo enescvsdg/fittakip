@@ -67,8 +67,11 @@ body {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
-.brand-icon {
-  font-size: 20px;
+.header-logo {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: block;
 }
 
 .brand-name {
@@ -84,7 +87,7 @@ body {
 .header-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
 }
 
 /* ── MENU TOGGLE ── */
@@ -228,19 +231,49 @@ body {
 }
 
 @keyframes fadeSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── APP BANNER ── */
+.app-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, #2a1510 0%, #1e1e1e 65%);
+  border: 1px solid var(--accent-glow);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  margin-bottom: 18px;
+}
+
+.app-banner-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  box-shadow: 0 4px 14px rgba(255, 92, 43, 0.35);
+  flex-shrink: 0;
+}
+
+.app-banner-title {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.app-banner-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 3px;
 }
 
 /* ── PAGE HEADER ── */
 .page-header {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .page-title {
@@ -365,7 +398,7 @@ body {
 .scale-dot.overweight  { background: #ffc107; }
 .scale-dot.obese       { background: #f44336; }
 
-/* ── EMPTY STATE (dashboard) ── */
+/* ── EMPTY STATE ── */
 .empty-state {
   text-align: center;
   padding: 32px 20px;
@@ -388,7 +421,7 @@ body {
 }
 
 /* ══════════════════════════════════════════
-   MODÜL 1: HEDEF & GRAFİK
+   HEDEF & GRAFİK
    ══════════════════════════════════════════ */
 
 .chart-card {
@@ -598,10 +631,9 @@ select.form-input {
 }
 
 /* ══════════════════════════════════════════
-   MODÜL 2: İNTERAKTİF ANTRENMAN OLUŞTURUCU
+   ANTRENMAN PLANIM (Modül 2 — yeniden tasarım)
    ══════════════════════════════════════════ */
 
-/* ── ADD BUTTON ── */
 .btn-add-workout {
   width: 100%;
   background: var(--surface);
@@ -631,173 +663,294 @@ select.form-input {
   transform: scale(0.98);
 }
 
-/* ── ACCORDION ── */
-.workout-accordion {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.accordion-day {
+/* ── OVERALL PROGRESS ── */
+.overall-progress-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+
+.progress-row {
+  margin-bottom: 10px;
+}
+
+.progress-label {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.progress-label.small {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.progress-bar-track {
+  width: 100%;
+  height: 8px;
+  background: var(--surface-3);
+  border-radius: 20px;
   overflow: hidden;
 }
 
-.day-header {
-  width: 100%;
+.progress-bar-track.small {
+  height: 6px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-radius: 20px;
+  transition: width 0.4s ease;
+}
+
+/* ── DAY TABS ── */
+.day-tabs-scroll {
   display: flex;
-  align-items: center;
   gap: 10px;
-  background: none;
-  border: none;
-  color: var(--text);
-  font-family: var(--font);
-  padding: 16px 18px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 14px;
+  scrollbar-width: none;
+}
+
+.day-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.day-tab {
+  flex: 0 0 auto;
+  min-width: 128px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
   cursor: pointer;
   text-align: left;
+  transition: border-color 0.2s, background 0.2s;
 }
 
-.day-name {
-  font-size: 15px;
+.day-tab.active {
+  border-color: var(--accent);
+  background: linear-gradient(135deg, #2a1510 0%, #1e1e1e 80%);
+}
+
+.day-tab-number {
+  font-size: 12px;
   font-weight: 700;
-  flex: 1;
-}
-
-.day-badge {
-  background: var(--accent-glow);
-  color: var(--accent-2);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 9px;
-  border-radius: 20px;
-}
-
-.chevron {
-  font-size: 16px;
   color: var(--text-muted);
-  transition: transform 0.25s ease;
-  line-height: 1;
 }
 
-.day-header.open .chevron {
-  transform: rotate(180deg);
+.day-tab.active .day-tab-number {
   color: var(--accent);
 }
 
-.day-content {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.35s ease;
+.day-tab-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.25;
 }
 
-.day-content.open {
-  max-height: 3000px;
-}
-
-.day-empty {
-  padding: 4px 18px 18px;
-  font-size: 13px;
-  color: var(--text-dim);
-}
-
-/* ── EXERCISE ROW ── */
-.exercise-row {
-  padding: 12px 18px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.exercise-row-main {
+/* ── DAY PROGRESS ── */
+.day-progress-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  margin-bottom: 8px;
 }
 
-.play-btn {
-  background: var(--surface-2);
-  border: none;
-  border-radius: 50%;
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
+.day-progress-row .progress-bar-track {
+  flex: 1;
 }
 
-.play-btn:active {
-  background: var(--surface-3);
-  transform: scale(0.92);
-}
-
-.exercise-name-btn {
+.delete-day-btn {
   background: none;
   border: none;
-  color: var(--text);
+  color: var(--text-dim);
   font-family: var(--font);
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 12px;
+  padding: 6px 0 16px;
   cursor: pointer;
-  padding: 0;
   text-align: left;
-  text-decoration: underline;
-  text-decoration-color: transparent;
-  transition: text-decoration-color 0.15s, color 0.15s;
+  width: 100%;
 }
 
-.exercise-name-btn:active {
-  color: var(--accent-2);
-  text-decoration-color: var(--accent-2);
+.delete-day-btn:active {
+  color: var(--warning);
 }
 
-.exercise-reps {
+/* ── SECTION DIVIDER ── */
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 12px;
+}
+
+.section-divider span:first-child {
   font-size: 13px;
+  font-weight: 700;
   color: var(--text-muted);
   white-space: nowrap;
 }
 
-.sets-checkboxes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  padding-left: 44px;
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
 }
 
-.set-check-label {
+.day-empty {
+  padding: 20px 4px;
+  font-size: 13px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* ── EXERCISE CARDS ── */
+.exercise-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.exercise-card {
+  position: relative;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.25s;
+}
+
+.exercise-card.completed {
+  border-color: var(--success);
+  background: linear-gradient(135deg, #12241a 0%, #1e1e1e 70%);
+}
+
+.exercise-card-remove {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.exercise-card-remove:active {
+  color: var(--warning);
+}
+
+.exercise-card-title-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
+  padding-right: 22px;
+}
+
+.exercise-card-name {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  line-height: 1.3;
+}
+
+.exercise-card-play {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-dim);
+  background: none;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.exercise-card-play span {
+  margin-left: 1px;
+}
+
+.exercise-card-play:active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.exercise-card-sets-reps {
   font-size: 13px;
   color: var(--text-muted);
-  cursor: pointer;
-  user-select: none;
-}
-
-.set-check-label input[type="checkbox"] {
-  width: 19px;
-  height: 19px;
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
-.set-check-label span {
   font-weight: 600;
 }
 
-.anatomy-preview {
-  padding-left: 44px;
+.exercise-card-circles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.set-circle-label {
+  cursor: pointer;
+}
+
+.set-checkbox-input {
+  display: none;
+}
+
+.set-circle-visual {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--border);
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 14px;
+  background: var(--surface-2);
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+}
+
+.set-circle-label:active .set-circle-visual {
+  transform: scale(0.9);
+}
+
+.set-checkbox-input:checked + .set-circle-visual {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.exercise-anatomy {
   animation: fadeSlideIn 0.25s ease both;
 }
 
-.anatomy-preview img {
+.exercise-anatomy img {
   width: 100%;
   max-width: 320px;
   border-radius: var(--radius-sm);
@@ -853,14 +1006,8 @@ select.form-input {
 }
 
 @keyframes modalSlideUp {
-  from {
-    opacity: 0;
-    transform: translateY(40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .modal-header {

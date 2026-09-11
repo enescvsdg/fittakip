@@ -31,7 +31,7 @@
   <!-- ── HEADER ── -->
   <header class="app-header">
     <div class="header-brand">
-      <span class="brand-icon">⚡</span>
+      <img src="icons/icon-192.png" alt="FitTakip" class="header-logo" />
       <span class="brand-name">FitTakip</span>
     </div>
     <div class="menu-wrapper">
@@ -68,6 +68,16 @@
 
     <!-- PAGE: HOME (DASHBOARD) -->
     <section class="page" id="page-home">
+
+      <!-- ── BANNER ── -->
+      <div class="app-banner">
+        <img src="icons/icon-512.png" alt="FitTakip logosu" class="app-banner-logo" />
+        <div class="app-banner-text">
+          <p class="app-banner-title">FitTakip</p>
+          <p class="app-banner-subtitle">Hedeflerine giden yolda yanındayız 💪</p>
+        </div>
+      </div>
+
       <div class="page-header">
         <h1 class="page-title">Analiz Raporu</h1>
         <p class="page-subtitle">Güncel sağlık verilerin</p>
@@ -118,7 +128,7 @@
         <p class="empty-text">Analiz için önce <strong>Kişisel Bilgiler</strong> sayfasından boy ve kilonu gir.</p>
       </div>
 
-      <!-- ── MODÜL 1: HEDEF & GRAFİK KARTI ── -->
+      <!-- ── HEDEF & GRAFİK ── -->
       <div class="chart-card">
         <p class="info-title">📈 Kilo Takip Grafiği</p>
         <div class="chart-container">
@@ -163,7 +173,7 @@
         <p class="save-feedback hidden" id="profile-feedback">✅ Kaydedildi!</p>
       </div>
 
-      <!-- ── MODÜL 1: HEDEF BELİRLEME ── -->
+      <!-- HEDEF BELİRLEME -->
       <div class="form-card">
         <h2 class="card-heading">🎯 Hedef Belirleme</h2>
         <div class="form-group">
@@ -186,7 +196,7 @@
         <p class="save-feedback hidden" id="goal-feedback">✅ Hedef kaydedildi!</p>
       </div>
 
-      <!-- ── MODÜL 1: HAFTALIK TARTIM ── -->
+      <!-- HAFTALIK TARTIM -->
       <div class="form-card">
         <h2 class="card-heading">⚖️ Haftalık Tartım Ekle</h2>
         <div class="form-group">
@@ -209,20 +219,53 @@
     <!-- PAGE: WORKOUT -->
     <section class="page hidden" id="page-workout">
       <div class="page-header">
-        <h1 class="page-title">Antrenman Planı</h1>
-        <p class="page-subtitle">Haftalık program</p>
+        <h1 class="page-title">Antrenman Planım</h1>
+        <p class="page-subtitle">Her seti tamamladıkça işaretle — ilerlemen kaydedilir.</p>
       </div>
 
-      <!-- ── MODÜL 2: İNTERAKTİF ANTRENMAN OLUŞTURUCU ── -->
       <button class="btn-add-workout" id="openWorkoutModal">
         <span>+</span> Antrenman Planı Ekle
       </button>
 
-      <div class="workout-accordion" id="workoutAccordion">
-        <!-- JS ile doldurulur -->
+      <!-- TOPLAM PROGRAM İLERLEMESİ -->
+      <div class="overall-progress-card hidden" id="overallProgressCard">
+        <div class="progress-row">
+          <span class="progress-label" id="overallProgressLabel">0 / 0 set — toplam program</span>
+        </div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="overallProgressFill" style="width:0%"></div>
+        </div>
       </div>
 
-      <!-- SERBEST NOTLAR (opsiyonel, eski özellik korunuyor) -->
+      <!-- GÜN SEKMELERİ -->
+      <div class="day-tabs-scroll hidden" id="dayTabsContainer"></div>
+
+      <!-- GÜN İLERLEMESİ -->
+      <div class="day-progress-row hidden" id="dayProgressRow">
+        <div class="progress-bar-track small">
+          <div class="progress-bar-fill" id="dayProgressFill" style="width:0%"></div>
+        </div>
+        <span class="progress-label small" id="dayProgressLabel">0 / 0 set</span>
+      </div>
+
+      <button class="delete-day-btn hidden" id="deleteDayBtn">🗑️ Bu Günü Sil</button>
+
+      <!-- BÖLÜM AYIRICI -->
+      <div class="section-divider hidden" id="exerciseSectionDivider">
+        <span>Antrenman Başlangıç</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <!-- EGZERSİZ KARTLARI -->
+      <div class="exercise-cards-list hidden" id="exerciseCardsList"></div>
+
+      <!-- BOŞ DURUM -->
+      <div class="empty-state" id="workout-empty">
+        <p class="empty-icon">🏋️</p>
+        <p class="empty-text">Henüz antrenman planın yok. Yukarıdaki butonla ilk gününü oluştur.</p>
+      </div>
+
+      <!-- SERBEST NOTLAR (opsiyonel) -->
       <div class="form-card notes-card">
         <h2 class="card-heading">📝 Genel Notlar (Opsiyonel)</h2>
         <div class="form-group">
@@ -294,7 +337,7 @@
     </button>
   </nav>
 
-  <!-- ── MODÜL 2: ANTRENMAN EKLEME MODALI ── -->
+  <!-- ── ANTRENMAN EKLEME MODALI ── -->
   <div class="modal-overlay hidden" id="workoutModalOverlay">
     <div class="modal-box">
       <div class="modal-header">
@@ -304,15 +347,12 @@
       <div class="modal-body">
         <div class="form-group">
           <label class="form-label" for="modal-day">Gün</label>
-          <select class="form-input" id="modal-day">
-            <option value="Pazartesi">Pazartesi</option>
-            <option value="Salı">Salı</option>
-            <option value="Çarşamba">Çarşamba</option>
-            <option value="Perşembe">Perşembe</option>
-            <option value="Cuma">Cuma</option>
-            <option value="Cumartesi">Cumartesi</option>
-            <option value="Pazar">Pazar</option>
-          </select>
+          <select class="form-input" id="modal-day"></select>
+        </div>
+
+        <div class="form-group hidden" id="modal-newday-group">
+          <label class="form-label" for="modal-newday-title">Yeni Gün Başlığı</label>
+          <input class="form-input" type="text" id="modal-newday-title" placeholder="örn. Upper Day, Push Günü..." />
         </div>
 
         <div class="form-group">
@@ -339,9 +379,7 @@
           </div>
         </div>
 
-        <div class="modal-preview" id="modal-preview">
-          <!-- JS ile doldurulur -->
-        </div>
+        <div class="modal-preview" id="modal-preview"></div>
       </div>
       <div class="modal-footer">
         <button class="btn-save" id="completeWorkoutBtn">Antrenman Programını Tamamla</button>
@@ -349,7 +387,7 @@
     </div>
   </div>
 
-  <!-- ── Chart.js CDN (Modül 1 için) ── -->
+  <!-- ── Chart.js CDN ── -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="app.js"></script>
 </body>

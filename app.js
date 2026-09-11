@@ -92,7 +92,7 @@ var KEYS = {
   goalDate:    'ft_goal_date',
   goalWeight:  'ft_goal_weight',
   weighins:    'ft_weighins',
-  workoutPlans:'ft_workout_plans'
+  workoutDays: 'ft_workout_days'
 };
 
 // ── JSON STORAGE HELPERS (veri kaybını önlemek için) ──
@@ -123,11 +123,11 @@ function saveWeighIns(list) {
   setJSON(KEYS.weighins, list);
 }
 
-function getWorkoutPlans() {
-  return getJSON(KEYS.workoutPlans, {});
+function getWorkoutDays() {
+  return getJSON(KEYS.workoutDays, []);
 }
-function saveWorkoutPlans(obj) {
-  setJSON(KEYS.workoutPlans, obj);
+function saveWorkoutDays(days) {
+  setJSON(KEYS.workoutDays, days);
 }
 
 // ── TARİH FORMATLAMA ─────────────────────────
@@ -147,7 +147,6 @@ function loadFormData() {
   document.getElementById('input-nutrition').value  = localStorage.getItem(KEYS.nutrition)  || '';
   document.getElementById('input-supplement').value = localStorage.getItem(KEYS.supplement) || '';
 
-  // Modül 1: Hedef bilgileri
   var savedGoalType = localStorage.getItem(KEYS.goalType);
   if (savedGoalType) document.getElementById('goal-type').value = savedGoalType;
   document.getElementById('goal-date').value   = localStorage.getItem(KEYS.goalDate)   || '';
@@ -197,10 +196,9 @@ document.getElementById('save-supplement').addEventListener('click', function() 
 });
 
 /* ══════════════════════════════════════════
-   MODÜL 1: HEDEF & GRAFİK SİSTEMİ
+   HEDEF & GRAFİK SİSTEMİ
    ══════════════════════════════════════════ */
 
-// ── HEDEF KAYDET ──────────────────────────────
 document.getElementById('save-goal').addEventListener('click', function() {
   var type   = document.getElementById('goal-type').value;
   var date   = document.getElementById('goal-date').value;
@@ -214,16 +212,16 @@ document.getElementById('save-goal').addEventListener('click', function() {
   updateDashboard();
 });
 
-// ── HAFTALIK TARTIM EKLE ──────────────────────
 document.getElementById('add-weighin').addEventListener('click', function() {
   var dateInput   = document.getElementById('weighin-date');
   var weightInput = document.getElementById('weighin-weight');
   var date   = dateInput.value;
   var weight = parseFloat(weightInput.value);
+  var feedbackEl = document.getElementById('weighin-feedback');
 
   if (!date || !weight || isNaN(weight)) {
+    feedbackEl.textContent = '⚠️ Lütfen tarih ve kilo gir.';
     showFeedback('weighin-feedback');
-    document.getElementById('weighin-feedback').textContent = '⚠️ Lütfen tarih ve kilo gir.';
     return;
   }
 
@@ -231,7 +229,7 @@ document.getElementById('add-weighin').addEventListener('click', function() {
   list.push({ date: date, weight: weight });
   saveWeighIns(list);
 
-  document.getElementById('weighin-feedback').textContent = '✅ Tartım eklendi!';
+  feedbackEl.textContent = '✅ Tartım eklendi!';
   dateInput.value = '';
   weightInput.value = '';
 
@@ -240,7 +238,6 @@ document.getElementById('add-weighin').addEventListener('click', function() {
   updateDashboard();
 });
 
-// ── TARTIM LİSTESİNİ GÖSTER ────────────────────
 function renderWeighinList() {
   var container = document.getElementById('weighinList');
   if (!container) return;
@@ -264,7 +261,6 @@ function renderWeighinList() {
   container.innerHTML = html;
 }
 
-// ── GRAFİK (Chart.js) ──────────────────────────
 var weightChartInstance = null;
 
 function updateChart() {
@@ -339,25 +335,16 @@ function updateChart() {
       maintainAspectRatio: false,
       interaction: { intersect: false, mode: 'index' },
       plugins: {
-        legend: {
-          labels: { color: '#f0f0f0', font: { size: 11 }, boxWidth: 12 }
-        }
+        legend: { labels: { color: '#f0f0f0', font: { size: 11 }, boxWidth: 12 } }
       },
       scales: {
-        x: {
-          ticks: { color: '#888', font: { size: 10 } },
-          grid: { color: 'rgba(255,255,255,0.05)' }
-        },
-        y: {
-          ticks: { color: '#888', font: { size: 10 } },
-          grid: { color: 'rgba(255,255,255,0.05)' }
-        }
+        x: { ticks: { color: '#888', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { ticks: { color: '#888', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
       }
     }
   });
 }
 
-// ── HEDEF DURUM MESAJI ─────────────────────────
 function updateGoalStatus() {
   var statusEl = document.getElementById('goal-status-message');
   if (!statusEl) return;
@@ -382,7 +369,6 @@ function updateGoalStatus() {
   } else if (goalType === 'Kilo Almak') {
     reached = latestWeight >= goalWeight;
   } else {
-    // Sabit Kalmak
     reached = Math.abs(latestWeight - goalWeight) <= 0.5;
   }
 
@@ -395,7 +381,6 @@ function updateGoalStatus() {
   }
 }
 
-// ── BMI ──────────────────────────────────────
 function calcBMI(heightCm, weightKg) {
   var hM = heightCm / 100;
   return weightKg / (hM * hM);
@@ -408,7 +393,6 @@ function bmiCategory(bmi) {
   return             { label: 'Obez',             color: '#f44336' };
 }
 
-// ── UPDATE DASHBOARD (BMI + Grafik + Hedef) ───
 function updateDashboard() {
   var h = parseFloat(localStorage.getItem(KEYS.height));
   var w = parseFloat(localStorage.getItem(KEYS.weight));
@@ -440,7 +424,6 @@ function updateDashboard() {
     dashStatus.style.color = cat.color;
   }
 
-  // Grafik ve hedef durumu sadece Ana Sayfa görünürken güvenli şekilde çizilir
   var homePage = document.getElementById('page-home');
   if (homePage && !homePage.classList.contains('hidden')) {
     updateChart();
@@ -449,46 +432,110 @@ function updateDashboard() {
 }
 
 /* ══════════════════════════════════════════
-   MODÜL 2: İNTERAKTİF ANTRENMAN OLUŞTURUCU
+   ANTRENMAN PLANIM
+   free-exercise-db (yuhonas/free-exercise-db, Unlicense)
+   veri setinden derlenmiş gerçek hareketler
    ══════════════════════════════════════════ */
 
-var DAYS_ORDER = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+// Kas grubu İngilizce → Türkçe çeviri tablosu
+var MUSCLE_TR = {
+  'abdominals': 'Karın',
+  'biceps':     'Biceps',
+  'calves':     'Baldır',
+  'chest':      'Göğüs',
+  'forearms':   'Ön Kol',
+  'glutes':     'Kalça',
+  'hamstrings': 'Arka Bacak',
+  'lats':       'Sırt (Lat)',
+  'lower back': 'Bel',
+  'middle back':'Sırt (Orta)',
+  'neck':       'Boyun',
+  'quadriceps': 'Bacak (Ön)',
+  'shoulders':  'Omuz',
+  'traps':      'Trapez',
+  'triceps':    'Triceps',
+  'adductors':  'Bacak İç',
+  'abductors':  'Bacak Dış'
+};
 
-// Sahte egzersiz verileri — mekana göre gruplanmış
+// free-exercise-db'den (isim / ekipman / birincil kas) derlenen gerçek hareketler
 var EXERCISES = {
   'Evde': [
-    { name: 'Şınav',                 muscle: 'Göğüs' },
-    { name: 'Barfiks',               muscle: 'Sırt' },
-    { name: 'Vücut Ağırlığı Squat',  muscle: 'Bacak' },
-    { name: 'Plank',                 muscle: 'Karın' },
-    { name: 'Mekik',                 muscle: 'Karın' },
-    { name: 'Sandalye Dips',         muscle: 'Triceps' },
-    { name: 'Lunge',                 muscle: 'Bacak' },
-    { name: 'Pike Push-up',          muscle: 'Omuz' }
+    { name: '3/4 Sit-Up',                    muscle: 'abdominals' },
+    { name: 'Air Bike',                      muscle: 'abdominals' },
+    { name: 'Alternate Heel Touchers',       muscle: 'abdominals' },
+    { name: 'Bent-Knee Hip Raise',           muscle: 'abdominals' },
+    { name: 'Bottoms Up',                    muscle: 'abdominals' },
+    { name: 'Bench Dips',                    muscle: 'triceps' },
+    { name: 'Body-Up',                       muscle: 'triceps' },
+    { name: 'Body Tricep Press',             muscle: 'triceps' },
+    { name: 'Band Skull Crusher',            muscle: 'triceps' },
+    { name: 'Bodyweight Squat',              muscle: 'quadriceps' },
+    { name: 'Bodyweight Walking Lunge',      muscle: 'quadriceps' },
+    { name: 'Bench Jump',                    muscle: 'quadriceps' },
+    { name: 'Band Assisted Pull-Up',         muscle: 'lats' },
+    { name: 'Back Flyes - With Bands',       muscle: 'shoulders' },
+    { name: 'Band Pull Apart',               muscle: 'shoulders' },
+    { name: 'Backward Medicine Ball Throw',  muscle: 'shoulders' },
+    { name: 'Bench Press - With Bands',      muscle: 'chest' },
+    { name: 'Band Good Morning',             muscle: 'hamstrings' },
+    { name: 'Ball Leg Curl',                 muscle: 'hamstrings' },
+    { name: 'Band Hip Adductions',           muscle: 'adductors' }
   ],
   'Spor Salonunda': [
-    { name: 'Bench Press',       muscle: 'Göğüs' },
-    { name: 'Barbell Squat',     muscle: 'Bacak' },
-    { name: 'Deadlift',          muscle: 'Sırt' },
-    { name: 'Lat Pulldown',      muscle: 'Sırt' },
-    { name: 'Shoulder Press',    muscle: 'Omuz' },
-    { name: 'Bicep Curl',        muscle: 'Biceps' },
-    { name: 'Triceps Pushdown',  muscle: 'Triceps' },
-    { name: 'Leg Press',         muscle: 'Bacak' },
-    { name: 'Cable Fly',         muscle: 'Göğüs' }
+    { name: 'Barbell Bench Press - Medium Grip',                muscle: 'chest' },
+    { name: 'Barbell Incline Bench Press - Medium Grip',        muscle: 'chest' },
+    { name: 'Around The Worlds',                                muscle: 'chest' },
+    { name: 'Bent-Arm Dumbbell Pullover',                       muscle: 'chest' },
+    { name: 'Barbell Curl',                                     muscle: 'biceps' },
+    { name: 'Alternate Hammer Curl',                            muscle: 'biceps' },
+    { name: 'Alternate Incline Dumbbell Curl',                  muscle: 'biceps' },
+    { name: 'Barbell Deadlift',                                 muscle: 'lower back' },
+    { name: 'Barbell Full Squat',                                muscle: 'quadriceps' },
+    { name: 'Barbell Squat',                                    muscle: 'quadriceps' },
+    { name: 'Barbell Lunge',                                    muscle: 'quadriceps' },
+    { name: 'Barbell Step Ups',                                 muscle: 'quadriceps' },
+    { name: 'Barbell Walking Lunge',                            muscle: 'quadriceps' },
+    { name: 'Barbell Glute Bridge',                             muscle: 'glutes' },
+    { name: 'Barbell Hip Thrust',                                muscle: 'glutes' },
+    { name: 'Barbell Rear Delt Row',                            muscle: 'shoulders' },
+    { name: 'Barbell Shoulder Press',                           muscle: 'shoulders' },
+    { name: 'Alternating Deltoid Raise',                        muscle: 'shoulders' },
+    { name: 'Arnold Dumbbell Press',                            muscle: 'shoulders' },
+    { name: 'Bent Over Dumbbell Rear Delt Raise With Head On Bench', muscle: 'shoulders' },
+    { name: 'Alternating Cable Shoulder Press',                 muscle: 'shoulders' },
+    { name: 'Bent Over Low-Pulley Side Lateral',                muscle: 'shoulders' },
+    { name: 'Alternating Kettlebell Press',                     muscle: 'shoulders' },
+    { name: 'Barbell Shrug',                                    muscle: 'traps' },
+    { name: 'Bent Over Barbell Row',                            muscle: 'middle back' },
+    { name: 'Bent Over Two-Dumbbell Row',                       muscle: 'middle back' },
+    { name: 'Alternating Kettlebell Row',                       muscle: 'middle back' },
+    { name: 'Bent-Arm Barbell Pullover',                        muscle: 'lats' },
+    { name: 'Barbell Seated Calf Raise',                        muscle: 'calves' },
+    { name: 'Ab Crunch Machine',                                muscle: 'abdominals' },
+    { name: 'Bosu Ball Cable Crunch With Side Bends',           muscle: 'abdominals' },
+    { name: 'Advanced Kettlebell Windmill',                     muscle: 'abdominals' },
+    { name: 'Bottoms-Up Clean From The Hang Position',          muscle: 'forearms' }
   ]
 };
 
-// ── MODAL DOM REFERANSLARI ────────────────────
-var workoutModalOverlay = document.getElementById('workoutModalOverlay');
-var openWorkoutModalBtn = document.getElementById('openWorkoutModal');
+// ── DOM REFERANSLARI ──────────────────────────
+var workoutModalOverlay  = document.getElementById('workoutModalOverlay');
+var openWorkoutModalBtn  = document.getElementById('openWorkoutModal');
 var closeWorkoutModalBtn = document.getElementById('closeWorkoutModal');
-var modalDaySelect      = document.getElementById('modal-day');
-var modalLocationSelect = document.getElementById('modal-location');
-var modalExerciseSelect = document.getElementById('modal-exercise');
-var modalSetsSelect     = document.getElementById('modal-sets');
-var modalRepsSelect     = document.getElementById('modal-reps');
-var completeWorkoutBtn  = document.getElementById('completeWorkoutBtn');
+var modalDaySelect       = document.getElementById('modal-day');
+var modalNewDayGroup     = document.getElementById('modal-newday-group');
+var modalNewDayTitle     = document.getElementById('modal-newday-title');
+var modalLocationSelect  = document.getElementById('modal-location');
+var modalExerciseSelect  = document.getElementById('modal-exercise');
+var modalSetsSelect      = document.getElementById('modal-sets');
+var modalRepsSelect      = document.getElementById('modal-reps');
+var completeWorkoutBtn   = document.getElementById('completeWorkoutBtn');
+var deleteDayBtn         = document.getElementById('deleteDayBtn');
+var dayTabsContainer     = document.getElementById('dayTabsContainer');
+var exerciseCardsListEl  = document.getElementById('exerciseCardsList');
+
+var activeDayIndex = 0;
 
 // ── SELECT DOLDURMA YARDIMCILARI ──────────────
 function fillNumberRange(selectEl, min, max) {
@@ -506,205 +553,336 @@ function fillExerciseSelect(location) {
   }).join('');
 }
 
+function populateModalDaySelect() {
+  var days = getWorkoutDays();
+  var html = '';
+  days.forEach(function(day, idx) {
+    html += '<option value="' + day.id + '">Gün ' + (idx + 1) + ' - ' + day.title + '</option>';
+  });
+  html += '<option value="__new__">+ Yeni Gün Oluştur</option>';
+  modalDaySelect.innerHTML = html;
+
+  if (days.length === 0) {
+    modalDaySelect.value = '__new__';
+  }
+  toggleNewDayInput();
+}
+
+function toggleNewDayInput() {
+  var isNew = modalDaySelect.value === '__new__';
+  modalNewDayGroup.classList.toggle('hidden', !isNew);
+}
+
 // ── MODAL ÖNİZLEME ─────────────────────────────
 function updateModalPreview() {
-  var day      = modalDaySelect.value;
+  var dayLabel;
+  if (modalDaySelect.value === '__new__') {
+    dayLabel = modalNewDayTitle.value.trim() || 'Yeni Gün';
+  } else {
+    var selectedOption = modalDaySelect.options[modalDaySelect.selectedIndex];
+    dayLabel = selectedOption ? selectedOption.textContent : '';
+  }
+
   var location = modalLocationSelect.value;
   var exercise = modalExerciseSelect.value;
   var sets     = modalSetsSelect.value;
   var reps     = modalRepsSelect.value;
 
   document.getElementById('modal-preview').innerHTML =
-    '<p class="preview-day">' + day + ' · ' + location + '</p>' +
+    '<p class="preview-day">' + dayLabel + ' · ' + location + '</p>' +
     '<p class="preview-exercise">' + exercise + '</p>' +
     '<p class="preview-sets">' + sets + ' Set × ' + reps + ' Tekrar</p>';
 }
 
 // ── MODAL AÇ / KAPAT ───────────────────────────
 function openWorkoutModal() {
+  populateModalDaySelect();
   workoutModalOverlay.classList.remove('hidden');
   updateModalPreview();
 }
 
 function closeWorkoutModal() {
   workoutModalOverlay.classList.add('hidden');
+  modalNewDayTitle.value = '';
 }
 
 openWorkoutModalBtn.addEventListener('click', openWorkoutModal);
 closeWorkoutModalBtn.addEventListener('click', closeWorkoutModal);
 
-// overlay'in kendisine (dışına) tıklanınca kapansın
 workoutModalOverlay.addEventListener('click', function(e) {
   if (e.target === workoutModalOverlay) {
     closeWorkoutModal();
   }
 });
 
+modalDaySelect.addEventListener('change', function() {
+  toggleNewDayInput();
+  updateModalPreview();
+});
+
+modalNewDayTitle.addEventListener('input', updateModalPreview);
+
 modalLocationSelect.addEventListener('change', function() {
   fillExerciseSelect(modalLocationSelect.value);
   updateModalPreview();
 });
 
-modalDaySelect.addEventListener('change', updateModalPreview);
 modalExerciseSelect.addEventListener('change', updateModalPreview);
 modalSetsSelect.addEventListener('change', updateModalPreview);
 modalRepsSelect.addEventListener('change', updateModalPreview);
 
 // ── ANTRENMANI TAMAMLA (Kaydet) ────────────────
 completeWorkoutBtn.addEventListener('click', function() {
-  var day      = modalDaySelect.value;
-  var location = modalLocationSelect.value;
-  var exerciseName = modalExerciseSelect.value;
-  var sets     = parseInt(modalSetsSelect.value, 10);
-  var reps     = parseInt(modalRepsSelect.value, 10);
+  var location      = modalLocationSelect.value;
+  var exerciseName  = modalExerciseSelect.value;
+  var sets          = parseInt(modalSetsSelect.value, 10);
+  var reps          = parseInt(modalRepsSelect.value, 10);
 
-  var muscleGroup = 'Genel';
+  var muscle = 'abdominals';
   var list = EXERCISES[location] || [];
   var found = list.find(function(ex) { return ex.name === exerciseName; });
-  if (found) muscleGroup = found.muscle;
+  if (found) muscle = found.muscle;
 
-  var data = getWorkoutPlans();
-  if (!data[day]) data[day] = [];
+  var days = getWorkoutDays();
+  var targetIndex;
 
-  data[day].push({
+  if (modalDaySelect.value === '__new__') {
+    var newTitle = modalNewDayTitle.value.trim() || ('Antrenman Günü ' + (days.length + 1));
+    days.push({ id: 'day_' + Date.now(), title: newTitle, exercises: [] });
+    targetIndex = days.length - 1;
+  } else {
+    targetIndex = days.findIndex(function(d) { return d.id === modalDaySelect.value; });
+    if (targetIndex === -1) targetIndex = 0;
+  }
+
+  days[targetIndex].exercises.push({
     id: 'ex_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-    exercise: exerciseName,
-    location: location,
-    muscleGroup: muscleGroup,
+    name: exerciseName,
+    muscle: muscle,
     sets: sets,
     reps: reps,
     checked: new Array(sets).fill(false)
   });
 
-  saveWorkoutPlans(data);
+  saveWorkoutDays(days);
+  activeDayIndex = targetIndex;
   closeWorkoutModal();
-  renderWorkoutAccordion();
+  renderWorkoutPage();
 });
 
-// ── EGZERSİZ SATIRI HTML OLUŞTUR ───────────────
-function buildExerciseRowHTML(day, ex) {
-  var checkboxesHTML = '';
+// ── GÜN SİLME ──────────────────────────────────
+deleteDayBtn.addEventListener('click', function() {
+  var days = getWorkoutDays();
+  var day = days[activeDayIndex];
+  if (!day) return;
+
+  var confirmed = window.confirm('"' + day.title + '" gününü ve içindeki tüm egzersizleri silmek istediğine emin misin?');
+  if (!confirmed) return;
+
+  days.splice(activeDayIndex, 1);
+  saveWorkoutDays(days);
+  activeDayIndex = 0;
+  renderWorkoutPage();
+});
+
+// ── EGZERSİZ KARTI HTML OLUŞTUR ────────────────
+function buildExerciseCardHTML(dayId, ex) {
+  var muscleTR = MUSCLE_TR[ex.muscle] || ex.muscle;
+  var allChecked = ex.checked.length > 0 && ex.checked.every(Boolean);
+
+  var circlesHTML = '';
   for (var i = 0; i < ex.sets; i++) {
-    var isChecked = ex.checked && ex.checked[i] ? 'checked' : '';
-    checkboxesHTML +=
-      '<label class="set-check-label">' +
-        '<input type="checkbox" class="set-checkbox" data-day="' + day + '" data-id="' + ex.id + '" data-set-index="' + i + '" ' + isChecked + '>' +
-        '<span>' + (i + 1) + '</span>' +
+    var isChecked = !!ex.checked[i];
+    var content = isChecked ? '✓' : (i + 1);
+    circlesHTML +=
+      '<label class="set-circle-label">' +
+        '<input type="checkbox" class="set-checkbox-input" data-day="' + dayId + '" data-id="' + ex.id + '" data-index="' + i + '" ' + (isChecked ? 'checked' : '') + '>' +
+        '<span class="set-circle-visual">' + content + '</span>' +
       '</label>';
   }
 
-  var youtubeQuery = encodeURIComponent(ex.exercise + ' nasıl yapılır');
-  var youtubeUrl = 'https://www.youtube.com/results?search_query=' + youtubeQuery;
-  var anatomyText = encodeURIComponent('Anatomi: ' + ex.muscleGroup);
-  var anatomyImg = 'https://placehold.co/400x200/2c2c2c/ff3b30?text=' + anatomyText;
+  var youtubeUrl = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(ex.name + ' nasıl yapılır');
+  var anatomyImg = 'https://placehold.co/400x200/2c2c2c/ff3b30?text=' + encodeURIComponent('Anatomi: ' + muscleTR);
 
   return (
-    '<div class="exercise-row">' +
-      '<div class="exercise-row-main">' +
-        '<button class="play-btn" data-youtube="' + youtubeUrl + '" title="Video izle">▶️</button>' +
-        '<button class="exercise-name-btn">' + ex.exercise + '</button>' +
-        '<span class="exercise-reps">(' + ex.reps + ' Tekrar)</span>' +
+    '<div class="exercise-card' + (allChecked ? ' completed' : '') + '" data-day="' + dayId + '" data-id="' + ex.id + '">' +
+      '<button class="exercise-card-remove" data-day="' + dayId + '" data-id="' + ex.id + '" title="Kaldır">✕</button>' +
+      '<div class="exercise-card-title-row">' +
+        '<button class="exercise-card-name">' + ex.name + '</button>' +
+        '<button class="exercise-card-play" data-youtube="' + youtubeUrl + '" title="Video izle"><span>▶</span></button>' +
       '</div>' +
-      '<div class="sets-checkboxes">' + checkboxesHTML + '</div>' +
-      '<div class="anatomy-preview hidden">' +
-        '<img src="' + anatomyImg + '" alt="' + ex.muscleGroup + ' kas grubu" loading="lazy" />' +
+      '<p class="exercise-card-sets-reps">' + ex.sets + '×' + ex.reps + '</p>' +
+      '<div class="exercise-card-circles">' + circlesHTML + '</div>' +
+      '<div class="exercise-anatomy hidden">' +
+        '<img src="' + anatomyImg + '" alt="' + muscleTR + ' kas grubu" loading="lazy" />' +
       '</div>' +
     '</div>'
   );
 }
 
-// ── ACCORDION RENDER ───────────────────────────
-function renderWorkoutAccordion() {
-  var container = document.getElementById('workoutAccordion');
-  if (!container) return;
+// ── RENDER: GÜN SEKMELERİ ──────────────────────
+function renderDayTabs() {
+  var days = getWorkoutDays();
+  if (days.length === 0) {
+    dayTabsContainer.innerHTML = '';
+    return;
+  }
+  if (activeDayIndex >= days.length) activeDayIndex = days.length - 1;
+  if (activeDayIndex < 0) activeDayIndex = 0;
 
-  var data = getWorkoutPlans();
   var html = '';
-
-  DAYS_ORDER.forEach(function(day) {
-    var exercises = data[day] || [];
-    var badge = exercises.length ? '<span class="day-badge">' + exercises.length + '</span>' : '';
-
-    var content = '';
-    if (exercises.length === 0) {
-      content = '<p class="day-empty">Bu güne henüz antrenman eklenmedi.</p>';
-    } else {
-      exercises.forEach(function(ex) {
-        content += buildExerciseRowHTML(day, ex);
-      });
-    }
-
+  days.forEach(function(day, idx) {
+    var activeClass = idx === activeDayIndex ? ' active' : '';
     html +=
-      '<div class="accordion-day">' +
-        '<button class="day-header" data-day="' + day + '">' +
-          '<span class="day-name">' + day + '</span>' +
-          badge +
-          '<span class="chevron">⌄</span>' +
-        '</button>' +
-        '<div class="day-content">' + content + '</div>' +
-      '</div>';
+      '<button class="day-tab' + activeClass + '" data-index="' + idx + '">' +
+        '<span class="day-tab-number">Gün ' + (idx + 1) + '</span>' +
+        '<span class="day-tab-title">' + day.title + '</span>' +
+      '</button>';
   });
-
-  container.innerHTML = html;
+  dayTabsContainer.innerHTML = html;
 }
 
-// ── ACCORDION ETKİLEŞİMLERİ (event delegation) ─
-var workoutAccordionEl = document.getElementById('workoutAccordion');
+dayTabsContainer.addEventListener('click', function(e) {
+  var tab = e.target.closest('.day-tab');
+  if (!tab) return;
+  activeDayIndex = parseInt(tab.dataset.index, 10);
+  renderDayTabs();
+  renderDayProgress();
+  renderExerciseCards();
+});
 
-workoutAccordionEl.addEventListener('click', function(e) {
-  // Gün başlığına tıklama → aç/kapat
-  var dayHeader = e.target.closest('.day-header');
-  if (dayHeader) {
-    var content = dayHeader.nextElementSibling;
-    var isOpen = dayHeader.classList.contains('open');
+// ── RENDER: İLERLEME ÇUBUKLARI ─────────────────
+function renderOverallProgress() {
+  var days = getWorkoutDays();
+  var totalSets = 0, doneSets = 0;
 
-    // diğer günleri kapat (tek seferde bir gün açık)
-    workoutAccordionEl.querySelectorAll('.day-header').forEach(function(h) {
-      h.classList.remove('open');
-      h.nextElementSibling.classList.remove('open');
+  days.forEach(function(day) {
+    day.exercises.forEach(function(ex) {
+      totalSets += ex.sets;
+      doneSets += ex.checked.filter(Boolean).length;
     });
+  });
 
-    if (!isOpen) {
-      dayHeader.classList.add('open');
-      content.classList.add('open');
-    }
+  document.getElementById('overallProgressLabel').textContent =
+    doneSets + ' / ' + totalSets + ' set — toplam program';
+
+  var pct = totalSets > 0 ? Math.round((doneSets / totalSets) * 100) : 0;
+  document.getElementById('overallProgressFill').style.width = pct + '%';
+}
+
+function renderDayProgress() {
+  var days = getWorkoutDays();
+  var day = days[activeDayIndex];
+  var totalSets = 0, doneSets = 0;
+
+  if (day) {
+    day.exercises.forEach(function(ex) {
+      totalSets += ex.sets;
+      doneSets += ex.checked.filter(Boolean).length;
+    });
+  }
+
+  document.getElementById('dayProgressLabel').textContent = doneSets + ' / ' + totalSets + ' set';
+  var pct = totalSets > 0 ? Math.round((doneSets / totalSets) * 100) : 0;
+  document.getElementById('dayProgressFill').style.width = pct + '%';
+}
+
+// ── RENDER: EGZERSİZ KARTLARI ──────────────────
+function renderExerciseCards() {
+  var days = getWorkoutDays();
+  var day = days[activeDayIndex];
+
+  if (!day || day.exercises.length === 0) {
+    exerciseCardsListEl.innerHTML = '<p class="day-empty">Bu güne henüz egzersiz eklenmedi.</p>';
     return;
   }
 
-  // Play ikonuna tıklama → YouTube'da yeni sekmede aç
-  var playBtn = e.target.closest('.play-btn');
+  var html = '';
+  day.exercises.forEach(function(ex) {
+    html += buildExerciseCardHTML(day.id, ex);
+  });
+  exerciseCardsListEl.innerHTML = html;
+}
+
+// ── EGZERSİZ KARTI ETKİLEŞİMLERİ ───────────────
+exerciseCardsListEl.addEventListener('click', function(e) {
+  var playBtn = e.target.closest('.exercise-card-play');
   if (playBtn) {
     window.open(playBtn.dataset.youtube, '_blank', 'noopener');
     return;
   }
 
-  // Hareket adına tıklama → anatomi görselini aç/kapat
-  var nameBtn = e.target.closest('.exercise-name-btn');
+  var removeBtn = e.target.closest('.exercise-card-remove');
+  if (removeBtn) {
+    var dayId = removeBtn.dataset.day;
+    var exId  = removeBtn.dataset.id;
+    var days  = getWorkoutDays();
+    var day   = days.find(function(d) { return d.id === dayId; });
+    if (day) {
+      day.exercises = day.exercises.filter(function(x) { return x.id !== exId; });
+      saveWorkoutDays(days);
+      renderWorkoutPage();
+    }
+    return;
+  }
+
+  var nameBtn = e.target.closest('.exercise-card-name');
   if (nameBtn) {
-    var row = nameBtn.closest('.exercise-row');
-    var anatomy = row.querySelector('.anatomy-preview');
+    var card = nameBtn.closest('.exercise-card');
+    var anatomy = card.querySelector('.exercise-anatomy');
     anatomy.classList.toggle('hidden');
     return;
   }
 });
 
-workoutAccordionEl.addEventListener('change', function(e) {
-  if (e.target.classList.contains('set-checkbox')) {
-    var day = e.target.dataset.day;
-    var id  = e.target.dataset.id;
-    var idx = parseInt(e.target.dataset.setIndex, 10);
+exerciseCardsListEl.addEventListener('change', function(e) {
+  if (!e.target.classList.contains('set-checkbox-input')) return;
 
-    var data = getWorkoutPlans();
-    var list = data[day] || [];
-    var ex = list.find(function(item) { return item.id === id; });
+  var dayId = e.target.dataset.day;
+  var exId  = e.target.dataset.id;
+  var idx   = parseInt(e.target.dataset.index, 10);
 
-    if (ex) {
-      if (!ex.checked) ex.checked = [];
-      ex.checked[idx] = e.target.checked;
-      saveWorkoutPlans(data);
-    }
-  }
+  var days = getWorkoutDays();
+  var day = days.find(function(d) { return d.id === dayId; });
+  if (!day) return;
+  var ex = day.exercises.find(function(x) { return x.id === exId; });
+  if (!ex) return;
+
+  ex.checked[idx] = e.target.checked;
+  saveWorkoutDays(days);
+
+  // görseli anlık güncelle
+  var visual = e.target.nextElementSibling;
+  visual.textContent = e.target.checked ? '✓' : (idx + 1);
+
+  var card = e.target.closest('.exercise-card');
+  var allChecked = ex.checked.every(Boolean);
+  card.classList.toggle('completed', allChecked);
+
+  renderDayProgress();
+  renderOverallProgress();
 });
+
+// ── ANA RENDER FONKSİYONU ──────────────────────
+function renderWorkoutPage() {
+  var days = getWorkoutDays();
+  var hasData = days.length > 0;
+
+  document.getElementById('overallProgressCard').classList.toggle('hidden', !hasData);
+  dayTabsContainer.classList.toggle('hidden', !hasData);
+  document.getElementById('dayProgressRow').classList.toggle('hidden', !hasData);
+  deleteDayBtn.classList.toggle('hidden', !hasData);
+  document.getElementById('exerciseSectionDivider').classList.toggle('hidden', !hasData);
+  exerciseCardsListEl.classList.toggle('hidden', !hasData);
+  document.getElementById('workout-empty').classList.toggle('visible', !hasData);
+
+  if (!hasData) return;
+
+  renderDayTabs();
+  renderDayProgress();
+  renderOverallProgress();
+  renderExerciseCards();
+}
 
 // ── SERVICE WORKER ────────────────────────────
 if ('serviceWorker' in navigator) {
@@ -728,8 +906,7 @@ loadFormData();
 renderWeighinList();
 updateDashboard();
 
-// Modül 2: sabit select'leri bir kez doldur, accordion'u çiz
 fillNumberRange(modalSetsSelect, 1, 10);
 fillNumberRange(modalRepsSelect, 1, 20);
 fillExerciseSelect(modalLocationSelect.value);
-renderWorkoutAccordion();
+renderWorkoutPage();

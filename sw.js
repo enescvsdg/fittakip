@@ -1,10 +1,10 @@
 /* ══════════════════════════════════════════
    FitTakip — sw.js  (Service Worker)
    Güncelleme yaparken CACHE_NAME'i artır:
-   fit-takip-v1  →  fit-takip-v2  →  ...
+   fit-takip-v1 → v2 → v3 → ...
    ══════════════════════════════════════════ */
 
-var CACHE_NAME = 'fit-takip-v2';
+var CACHE_NAME = 'fit-takip-v3';
 
 var STATIC_ASSETS = [
   './',
@@ -22,7 +22,6 @@ self.addEventListener('install', function(event) {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(function(cache) {
-        // CDN dosyası engellenirse bile kurulumun tamamı çökmesin
         return Promise.all(
           STATIC_ASSETS.map(function(url) {
             return cache.add(url).catch(function(err) {
