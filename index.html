@@ -60,7 +60,7 @@
     </div>
   </header>
 
-  <!-- ── OVERLAY (dropdown dışına tıklama) ── -->
+  <!-- ── OVERLAY ── -->
   <div class="overlay" id="overlay"></div>
 
   <!-- ── MAIN ── -->
@@ -69,7 +69,6 @@
     <!-- PAGE: HOME (DASHBOARD) -->
     <section class="page" id="page-home">
 
-      <!-- ── BANNER ── -->
       <div class="app-banner">
         <img src="icons/icon-512.png" alt="FitTakip logosu" class="app-banner-logo" />
         <div class="app-banner-text">
@@ -104,22 +103,10 @@
       <div class="info-box" id="bmi-info-box">
         <p class="info-title">BMI Skalası</p>
         <div class="bmi-scale">
-          <div class="scale-item">
-            <span class="scale-dot underweight"></span>
-            <span>&lt; 18.5 — Zayıf</span>
-          </div>
-          <div class="scale-item">
-            <span class="scale-dot normal"></span>
-            <span>18.5 – 24.9 — Normal</span>
-          </div>
-          <div class="scale-item">
-            <span class="scale-dot overweight"></span>
-            <span>25 – 29.9 — Fazla Kilolu</span>
-          </div>
-          <div class="scale-item">
-            <span class="scale-dot obese"></span>
-            <span>≥ 30 — Obez</span>
-          </div>
+          <div class="scale-item"><span class="scale-dot underweight"></span><span>&lt; 18.5 — Zayıf</span></div>
+          <div class="scale-item"><span class="scale-dot normal"></span><span>18.5 – 24.9 — Normal</span></div>
+          <div class="scale-item"><span class="scale-dot overweight"></span><span>25 – 29.9 — Fazla Kilolu</span></div>
+          <div class="scale-item"><span class="scale-dot obese"></span><span>≥ 30 — Obez</span></div>
         </div>
       </div>
 
@@ -128,7 +115,6 @@
         <p class="empty-text">Analiz için önce <strong>Kişisel Bilgiler</strong> sayfasından boy ve kilonu gir.</p>
       </div>
 
-      <!-- ── HEDEF & GRAFİK ── -->
       <div class="chart-card">
         <p class="info-title">📈 Kilo Takip Grafiği</p>
         <div class="chart-container">
@@ -150,7 +136,6 @@
         <p class="page-subtitle">Bilgilerini güncel tut</p>
       </div>
 
-      <!-- TEMEL BİLGİLER -->
       <div class="form-card">
         <h2 class="card-heading">👤 Temel Bilgiler</h2>
         <div class="form-group">
@@ -173,7 +158,6 @@
         <p class="save-feedback hidden" id="profile-feedback">✅ Kaydedildi!</p>
       </div>
 
-      <!-- HEDEF BELİRLEME -->
       <div class="form-card">
         <h2 class="card-heading">🎯 Hedef Belirleme</h2>
         <div class="form-group">
@@ -196,7 +180,6 @@
         <p class="save-feedback hidden" id="goal-feedback">✅ Hedef kaydedildi!</p>
       </div>
 
-      <!-- HAFTALIK TARTIM -->
       <div class="form-card">
         <h2 class="card-heading">⚖️ Haftalık Tartım Ekle</h2>
         <div class="form-group">
@@ -209,7 +192,6 @@
         </div>
         <button class="btn-save" id="add-weighin">Tartım Ekle</button>
         <p class="save-feedback hidden" id="weighin-feedback">✅ Tartım eklendi!</p>
-
         <div class="weighin-list" id="weighinList">
           <p class="empty-hint">Henüz tartım eklenmedi.</p>
         </div>
@@ -223,11 +205,72 @@
         <p class="page-subtitle">Her seti tamamladıkça işaretle — ilerlemen kaydedilir.</p>
       </div>
 
-      <button class="btn-add-workout" id="openWorkoutModal">
-        <span>+</span> Antrenman Planı Ekle
-      </button>
+      <!-- ── FORM + SEPET (Builder) ── -->
+      <div class="workout-builder">
 
-      <!-- TOPLAM PROGRAM İLERLEMESİ -->
+        <!-- SOL: FORM -->
+        <div class="builder-form form-card">
+          <h2 class="card-heading">➕ Antrenman Ekle</h2>
+
+          <div class="form-group">
+            <label class="form-label" for="builder-day">Gün</label>
+            <select class="form-input" id="builder-day">
+              <option value="Pazartesi">Pazartesi</option>
+              <option value="Salı">Salı</option>
+              <option value="Çarşamba">Çarşamba</option>
+              <option value="Perşembe">Perşembe</option>
+              <option value="Cuma">Cuma</option>
+              <option value="Cumartesi">Cumartesi</option>
+              <option value="Pazar">Pazar</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="builder-day-title">Gün Başlığı (Opsiyonel)</label>
+            <input class="form-input" type="text" id="builder-day-title" placeholder="örn. Upper Day, Push Günü..." />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="builder-location">Mekan</label>
+            <select class="form-input" id="builder-location">
+              <option value="Evde">Evde</option>
+              <option value="Spor Salonunda">Spor Salonunda</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="builder-exercise">Hareket</label>
+            <select class="form-input" id="builder-exercise"></select>
+          </div>
+
+          <div class="half-group">
+            <div class="form-group">
+              <label class="form-label" for="builder-sets">Set Sayısı</label>
+              <select class="form-input" id="builder-sets"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="builder-reps">Tekrar Sayısı</label>
+              <select class="form-input" id="builder-reps"></select>
+            </div>
+          </div>
+
+          <button class="btn-save" id="addToCartBtn" type="button">Ekle</button>
+        </div>
+
+        <!-- SAĞ: SEPET -->
+        <div class="builder-cart form-card">
+          <h2 class="card-heading">🛒 Eklenecek Hareketler</h2>
+
+          <div class="cart-list" id="cartList">
+            <p class="empty-hint">Henüz hareket eklenmedi.</p>
+          </div>
+
+          <button class="btn-save" id="completeProgramBtn" type="button">Programı Tamamla</button>
+          <p class="save-feedback hidden" id="program-feedback">✅ Program kaydedildi!</p>
+        </div>
+      </div>
+
+      <!-- ── TOPLAM PROGRAM İLERLEMESİ ── -->
       <div class="overall-progress-card hidden" id="overallProgressCard">
         <div class="progress-row">
           <span class="progress-label" id="overallProgressLabel">0 / 0 set — toplam program</span>
@@ -237,10 +280,10 @@
         </div>
       </div>
 
-      <!-- GÜN SEKMELERİ -->
+      <!-- ── GÜN SEKMELERİ ── -->
       <div class="day-tabs-scroll hidden" id="dayTabsContainer"></div>
 
-      <!-- GÜN İLERLEMESİ -->
+      <!-- ── GÜN İLERLEMESİ ── -->
       <div class="day-progress-row hidden" id="dayProgressRow">
         <div class="progress-bar-track small">
           <div class="progress-bar-fill" id="dayProgressFill" style="width:0%"></div>
@@ -248,24 +291,21 @@
         <span class="progress-label small" id="dayProgressLabel">0 / 0 set</span>
       </div>
 
-      <button class="delete-day-btn hidden" id="deleteDayBtn">🗑️ Bu Günü Sil</button>
+      <button class="delete-day-btn hidden" id="clearDayBtn">🗑️ Bu Günün Programını Temizle</button>
 
-      <!-- BÖLÜM AYIRICI -->
       <div class="section-divider hidden" id="exerciseSectionDivider">
         <span>Antrenman Başlangıç</span>
         <span class="divider-line"></span>
       </div>
 
-      <!-- EGZERSİZ KARTLARI -->
       <div class="exercise-cards-list hidden" id="exerciseCardsList"></div>
 
-      <!-- BOŞ DURUM -->
       <div class="empty-state" id="workout-empty">
         <p class="empty-icon">🏋️</p>
-        <p class="empty-text">Henüz antrenman planın yok. Yukarıdaki butonla ilk gününü oluştur.</p>
+        <p class="empty-text">Bu güne henüz antrenman eklenmedi. Yukarıdaki formla ekleyip "Programı Tamamla" ile kaydet.</p>
       </div>
 
-      <!-- SERBEST NOTLAR (opsiyonel) -->
+      <!-- SERBEST NOTLAR -->
       <div class="form-card notes-card">
         <h2 class="card-heading">📝 Genel Notlar (Opsiyonel)</h2>
         <div class="form-group">
@@ -283,7 +323,6 @@
         <h1 class="page-title">Beslenme Planı</h1>
         <p class="page-subtitle">Günlük makro hedefleri</p>
       </div>
-
       <div class="form-card">
         <div class="form-group">
           <label class="form-label" for="input-nutrition">Beslenme planını buraya yaz</label>
@@ -300,7 +339,6 @@
         <h1 class="page-title">Supplement Planı</h1>
         <p class="page-subtitle">Günlük takviyeler</p>
       </div>
-
       <div class="form-card">
         <div class="form-group">
           <label class="form-label" for="input-supplement">Supplement planını buraya yaz</label>
@@ -316,78 +354,27 @@
   <!-- ── BOTTOM NAV ── -->
   <nav class="bottom-nav">
     <button class="bottom-nav-item active" data-page="home">
-      <span class="bnav-icon">📊</span>
+      <img src="icons/nav/nav-analiz.png" alt="Analiz" class="bnav-icon-img" />
       <span class="bnav-label">Analiz</span>
     </button>
     <button class="bottom-nav-item" data-page="profile">
-      <span class="bnav-icon">👤</span>
+      <img src="icons/nav/nav-profil.png" alt="Profil" class="bnav-icon-img" />
       <span class="bnav-label">Profil</span>
     </button>
     <button class="bottom-nav-item" data-page="workout">
-      <span class="bnav-icon">🏋️</span>
+      <img src="icons/nav/nav-antrenman.png" alt="Antrenman" class="bnav-icon-img" />
       <span class="bnav-label">Antrenman</span>
     </button>
     <button class="bottom-nav-item" data-page="nutrition">
-      <span class="bnav-icon">🥗</span>
+      <img src="icons/nav/nav-beslenme.png" alt="Beslenme" class="bnav-icon-img" />
       <span class="bnav-label">Beslenme</span>
     </button>
     <button class="bottom-nav-item" data-page="supplement">
-      <span class="bnav-icon">💊</span>
-      <span class="bnav-label">Suplement</span>
+      <img src="icons/nav/nav-supplement.png" alt="Supplement" class="bnav-icon-img" />
+      <span class="bnav-label">Supplement</span>
     </button>
   </nav>
 
-  <!-- ── ANTRENMAN EKLEME MODALI ── -->
-  <div class="modal-overlay hidden" id="workoutModalOverlay">
-    <div class="modal-box">
-      <div class="modal-header">
-        <h2 class="modal-title">Antrenman Ekle</h2>
-        <button class="modal-close" id="closeWorkoutModal" aria-label="Kapat">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label" for="modal-day">Gün</label>
-          <select class="form-input" id="modal-day"></select>
-        </div>
-
-        <div class="form-group hidden" id="modal-newday-group">
-          <label class="form-label" for="modal-newday-title">Yeni Gün Başlığı</label>
-          <input class="form-input" type="text" id="modal-newday-title" placeholder="örn. Upper Day, Push Günü..." />
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="modal-location">Mekan</label>
-          <select class="form-input" id="modal-location">
-            <option value="Evde">Evde</option>
-            <option value="Spor Salonunda">Spor Salonunda</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="modal-exercise">Hareket</label>
-          <select class="form-input" id="modal-exercise"></select>
-        </div>
-
-        <div class="half-group">
-          <div class="form-group">
-            <label class="form-label" for="modal-sets">Set Sayısı</label>
-            <select class="form-input" id="modal-sets"></select>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="modal-reps">Tekrar Sayısı</label>
-            <select class="form-input" id="modal-reps"></select>
-          </div>
-        </div>
-
-        <div class="modal-preview" id="modal-preview"></div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-save" id="completeWorkoutBtn">Antrenman Programını Tamamla</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Chart.js CDN ── -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="app.js"></script>
 </body>

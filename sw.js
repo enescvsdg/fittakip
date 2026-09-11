@@ -1,10 +1,10 @@
 /* ══════════════════════════════════════════
    FitTakip — sw.js  (Service Worker)
    Güncelleme yaparken CACHE_NAME'i artır:
-   fit-takip-v1 → v2 → v3 → ...
+   fit-takip-v1 → v2 → v3 → v4 → ...
    ══════════════════════════════════════════ */
 
-var CACHE_NAME = 'fit-takip-v3';
+var CACHE_NAME = 'fit-takip-v5';
 
 var STATIC_ASSETS = [
   './',
@@ -14,6 +14,11 @@ var STATIC_ASSETS = [
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './icons/nav/nav-analiz.png',
+  './icons/nav/nav-profil.png',
+  './icons/nav/nav-antrenman.png',
+  './icons/nav/nav-beslenme.png',
+  './icons/nav/nav-supplement.png',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'
 ];
 
@@ -30,9 +35,7 @@ self.addEventListener('install', function(event) {
           })
         );
       })
-      .then(function() {
-        return self.skipWaiting();
-      })
+      .then(function() { return self.skipWaiting(); })
   );
 });
 
@@ -51,9 +54,7 @@ self.addEventListener('activate', function(event) {
             })
         );
       })
-      .then(function() {
-        return self.clients.claim();
-      })
+      .then(function() { return self.clients.claim(); })
   );
 });
 
@@ -65,27 +66,17 @@ self.addEventListener('fetch', function(event) {
   event.respondWith(
     caches.match(event.request)
       .then(function(cachedResponse) {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
+        if (cachedResponse) return cachedResponse;
 
         return fetch(event.request)
           .then(function(networkResponse) {
-            if (
-              networkResponse &&
-              networkResponse.status === 200 &&
-              networkResponse.type !== 'opaque'
-            ) {
+            if (networkResponse && networkResponse.status === 200 && networkResponse.type !== 'opaque') {
               var clone = networkResponse.clone();
-              caches.open(CACHE_NAME).then(function(cache) {
-                cache.put(event.request, clone);
-              });
+              caches.open(CACHE_NAME).then(function(cache) { cache.put(event.request, clone); });
             }
             return networkResponse;
           })
-          .catch(function() {
-            return caches.match('./index.html');
-          });
+          .catch(function() { return caches.match('./index.html'); });
       })
   );
 });
