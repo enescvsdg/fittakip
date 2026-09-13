@@ -321,17 +321,82 @@
     <section class="page hidden" id="page-nutrition">
       <div class="page-header">
         <h1 class="page-title">Beslenme Planı</h1>
-        <p class="page-subtitle">Günlük makro hedefleri</p>
+        <p class="page-subtitle">Gerçek gıda veritabanıyla günlük takip</p>
       </div>
+
+      <!-- BUGÜNÜN ÖZETİ -->
+      <div class="nutrition-summary-card">
+        <p class="info-title">📊 Bugünkü Toplam</p>
+        <div class="macro-grid">
+          <div class="macro-item">
+            <p class="macro-value" id="macro-kcal">0</p>
+            <p class="macro-label">kcal</p>
+          </div>
+          <div class="macro-item">
+            <p class="macro-value" id="macro-protein">0</p>
+            <p class="macro-label">Protein (g)</p>
+          </div>
+          <div class="macro-item">
+            <p class="macro-value" id="macro-carbs">0</p>
+            <p class="macro-label">Karbonhidrat (g)</p>
+          </div>
+          <div class="macro-item">
+            <p class="macro-value" id="macro-fat">0</p>
+            <p class="macro-label">Yağ (g)</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- GIDA ARAMA -->
       <div class="form-card">
+        <h2 class="card-heading">🔍 Gıda Ara ve Ekle</h2>
+        <p class="food-source-note">Open Food Facts veritabanı — dünyanın en büyük açık gıda veritabanı</p>
+        <div class="food-search-row">
+          <input class="form-input" type="text" id="food-search-input" placeholder="örn. yulaf ezmesi, tavuk göğsü, muz..." />
+          <button class="btn-search" id="food-search-btn" type="button">Ara</button>
+        </div>
+        <div class="food-search-results" id="foodSearchResults"></div>
+      </div>
+
+      <!-- BUGÜNÜN GÜNLÜĞÜ -->
+      <div class="form-card">
+        <h2 class="card-heading">📋 Bugünün Günlüğü</h2>
+        <div class="food-log-list" id="foodLogList">
+          <p class="empty-hint">Bugün henüz bir şey eklemedin.</p>
+        </div>
+      </div>
+
+      <!-- SERBEST NOTLAR -->
+      <div class="form-card notes-card">
+        <h2 class="card-heading">📝 Genel Notlar (Opsiyonel)</h2>
         <div class="form-group">
-          <label class="form-label" for="input-nutrition">Beslenme planını buraya yaz</label>
+          <label class="form-label" for="input-nutrition">Ek notlarını buraya yazabilirsin</label>
           <textarea class="form-textarea" id="input-nutrition" placeholder="Sabah: Yulaf ezmesi, 3 yumurta&#10;Öğle: Tavuk göğsü, pirinç, salata&#10;Ara: Protein bar&#10;Akşam: Balık, sebze..."></textarea>
         </div>
         <button class="btn-save" id="save-nutrition">Kaydet</button>
         <p class="save-feedback hidden" id="nutrition-feedback">✅ Kaydedildi!</p>
       </div>
     </section>
+
+    <!-- GIDA MİKTAR MODALI -->
+    <div class="modal-overlay-2 hidden" id="foodAmountModal">
+      <div class="modal-box-2">
+        <div class="modal-header">
+          <h2 class="modal-title" id="foodAmountTitle">Miktar Gir</h2>
+          <button class="modal-close" id="closeFoodAmountModal" aria-label="Kapat">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="food-amount-input">Miktar (gram)</label>
+            <input class="form-input" type="number" id="food-amount-input" value="100" min="1" max="5000" />
+          </div>
+          <div class="food-amount-preview" id="foodAmountPreview"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" id="confirmAddFoodBtn" type="button">Günlüğe Ekle</button>
+        </div>
+      </div>
+    </div>
 
     <!-- PAGE: SUPPLEMENT -->
     <section class="page hidden" id="page-supplement">

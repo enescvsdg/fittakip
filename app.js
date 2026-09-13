@@ -392,156 +392,262 @@ var MUSCLE_VIEW = {
 
 var LEVEL_TR = { 'beginner': 'Başlangıç', 'intermediate': 'Orta', 'expert': 'İleri' };
 
-// free-exercise-db'den derlenen gerçek hareketler (isim / ekipman / seviye / birincil kas)
+var EQUIPMENT_TR = {
+  'none': '', 'other': '', 'body only': '',
+  'barbell': 'Barbell', 'ez curl bar': 'EZ Bar', 'dumbbell': 'Dumbbell',
+  'gym mat': 'Mat', 'exercise ball': 'Denge Topu', 'medicine ball': 'Sağlık Topu',
+  'pull-up bar': 'Barfiks Barı', 'bench': 'Bench', 'incline bench': 'Eğimli Bench',
+  'kettlebell': 'Kettlebell', 'kettlebells': 'Kettlebell', 'machine': 'Makine',
+  'cable': 'Kablo', 'bands': 'Direnç Bandı', 'foam roll': 'Foam Roller'
+};
+
+// exercemus/exercises (wger.de + exercises.json, CC-BY-SA) + yaygın bilinen hareketler
 var EXERCISES = {
   'Evde': [
-    { name: '3/4 Sit-Up',                   equipment: 'body only', level: 'beginner',     muscle: 'abdominals' },
-    { name: 'Air Bike',                     equipment: 'body only', level: 'beginner',     muscle: 'abdominals' },
-    { name: 'Alternate Heel Touchers',      equipment: 'body only', level: 'beginner',     muscle: 'abdominals' },
-    { name: 'Bent-Knee Hip Raise',          equipment: 'body only', level: 'intermediate', muscle: 'abdominals' },
-    { name: 'Bottoms Up',                   equipment: 'body only', level: 'intermediate', muscle: 'abdominals' },
-    { name: 'Bench Dips',                   equipment: 'body only', level: 'intermediate', muscle: 'triceps' },
-    { name: 'Body-Up',                      equipment: 'body only', level: 'intermediate', muscle: 'triceps' },
-    { name: 'Body Tricep Press',            equipment: 'body only', level: 'intermediate', muscle: 'triceps' },
-    { name: 'Band Skull Crusher',           equipment: 'bands',     level: 'beginner',     muscle: 'triceps' },
-    { name: 'Bodyweight Squat',             equipment: 'body only', level: 'beginner',     muscle: 'quadriceps' },
-    { name: 'Bodyweight Walking Lunge',     equipment: 'body only', level: 'beginner',     muscle: 'quadriceps' },
-    { name: 'Bench Jump',                   equipment: 'body only', level: 'intermediate', muscle: 'quadriceps' },
-    { name: 'Band Assisted Pull-Up',        equipment: 'bands',     level: 'intermediate', muscle: 'lats' },
-    { name: 'Back Flyes - With Bands',      equipment: 'bands',     level: 'beginner',     muscle: 'shoulders' },
-    { name: 'Band Pull Apart',              equipment: 'bands',     level: 'beginner',     muscle: 'shoulders' },
-    { name: 'Backward Medicine Ball Throw', equipment: 'medicine ball', level: 'intermediate', muscle: 'shoulders' },
-    { name: 'Bench Press - With Bands',     equipment: 'bands',     level: 'intermediate', muscle: 'chest' },
-    { name: 'Band Good Morning',            equipment: 'bands',     level: 'beginner',     muscle: 'hamstrings' },
-    { name: 'Ball Leg Curl',                equipment: 'exercise ball', level: 'intermediate', muscle: 'hamstrings' },
-    { name: 'Band Hip Adductions',          equipment: 'bands',     level: 'beginner',     muscle: 'adductors' }
+    { name: "3/4 Sit-Up", equipment: "none", level: "beginner", muscle: "abdominals" },
+    { name: "Air Bike", equipment: "none", level: "beginner", muscle: "abdominals" },
+    { name: "Alternate Heel Touchers", equipment: "none", level: "beginner", muscle: "abdominals" },
+    { name: "Advanced Kettlebell Windmill", equipment: "kettlebell", level: "expert", muscle: "abdominals" },
+    { name: "Bent-Knee Hip Raise", equipment: "none", level: "intermediate", muscle: "abdominals" },
+    { name: "Bottoms Up", equipment: "none", level: "intermediate", muscle: "abdominals" },
+    { name: "Butt-Ups", equipment: "none", level: "beginner", muscle: "abdominals" },
+    { name: "Bent Press", equipment: "kettlebell", level: "expert", muscle: "abdominals" },
+    { name: "Brachialis-SMR", equipment: "foam roll", level: "beginner", muscle: "biceps" },
+    { name: "Bench Dips", equipment: "none", level: "intermediate", muscle: "triceps" },
+    { name: "Body-Up", equipment: "none", level: "intermediate", muscle: "triceps" },
+    { name: "Body Tricep Press", equipment: "none", level: "intermediate", muscle: "triceps" },
+    { name: "Band Skullcrusher", equipment: "bands", level: "beginner", muscle: "triceps" },
+    { name: "Alternating Kettlebell Press", equipment: "kettlebell", level: "intermediate", muscle: "shoulders" },
+    { name: "Arm Circles", equipment: "none", level: "beginner", muscle: "shoulders" },
+    { name: "Back Flyes - With Bands", equipment: "bands", level: "beginner", muscle: "shoulders" },
+    { name: "Backward Medicine Ball Throw", equipment: "medicine ball", level: "intermediate", muscle: "shoulders" },
+    { name: "Band Pull Apart", equipment: "bands", level: "beginner", muscle: "shoulders" },
+    { name: "Bottoms-Up Clean From The Hang Position", equipment: "kettlebell", level: "expert", muscle: "forearms" },
+    { name: "Bodyweight Squat", equipment: "none", level: "beginner", muscle: "quadriceps" },
+    { name: "Bodyweight Walking Lunge", equipment: "none", level: "beginner", muscle: "quadriceps" },
+    { name: "Bench Jump", equipment: "none", level: "intermediate", muscle: "quadriceps" },
+    { name: "Ball Leg Curl", equipment: "exercise ball", level: "intermediate", muscle: "hamstrings" },
+    { name: "Band Good Morning", equipment: "bands", level: "beginner", muscle: "hamstrings" },
+    { name: "Alternating Hang Clean", equipment: "kettlebell", level: "expert", muscle: "hamstrings" },
+    { name: "Calf Raises - With Bands", equipment: "bands", level: "beginner", muscle: "calves" },
+    { name: "Butt Lift (Bridge)", equipment: "none", level: "beginner", muscle: "glutes" },
+    { name: "Band Assisted Pull-Up", equipment: "bands", level: "intermediate", muscle: "lats" },
+    { name: "Alternating Kettlebell Row", equipment: "kettlebell", level: "intermediate", muscle: "middle back" },
+    { name: "Alternating Renegade Row", equipment: "kettlebell", level: "expert", muscle: "middle back" },
+    { name: "Band Hip Adductions", equipment: "bands", level: "beginner", muscle: "adductors" },
+    { name: "Push-Up", equipment: "none", level: "beginner", muscle: "chest" },
+    { name: "Diamond Push-Up", equipment: "none", level: "intermediate", muscle: "triceps" },
+    { name: "Incline Push-Up", equipment: "none", level: "beginner", muscle: "chest" },
+    { name: "Pull-Up", equipment: "pull-up bar", level: "intermediate", muscle: "lats" },
+    { name: "Chin-Up", equipment: "pull-up bar", level: "intermediate", muscle: "lats" },
+    { name: "Farmer's Walk", equipment: "kettlebell", level: "beginner", muscle: "forearms" },
+    { name: "Plank", equipment: "none", level: "beginner", muscle: "abdominals" },
+    { name: "Side Plank", equipment: "none", level: "beginner", muscle: "abdominals" },
+    { name: "Hanging Leg Raise", equipment: "pull-up bar", level: "intermediate", muscle: "abdominals" },
+    { name: "Russian Twist", equipment: "none", level: "beginner", muscle: "abdominals" },
+    { name: "Mountain Climber", equipment: "none", level: "beginner", muscle: "abdominals" },
+    { name: "Bicycle Crunch", equipment: "none", level: "beginner", muscle: "abdominals" },
+    { name: "Burpee", equipment: "none", level: "intermediate", muscle: "quadriceps" },
+    { name: "Kettlebell Swing", equipment: "kettlebell", level: "intermediate", muscle: "glutes" }
   ],
   'Spor Salonunda': [
-    { name: 'Barbell Bench Press - Medium Grip',         equipment: 'barbell',     level: 'intermediate', muscle: 'chest' },
-    { name: 'Barbell Incline Bench Press - Medium Grip', equipment: 'barbell',     level: 'intermediate', muscle: 'chest' },
-    { name: 'Around The Worlds',                         equipment: 'dumbbell',    level: 'intermediate', muscle: 'chest' },
-    { name: 'Bent-Arm Dumbbell Pullover',                equipment: 'dumbbell',    level: 'intermediate', muscle: 'chest' },
-    { name: 'Barbell Curl',                              equipment: 'barbell',     level: 'beginner',     muscle: 'biceps' },
-    { name: 'Alternate Hammer Curl',                     equipment: 'dumbbell',    level: 'beginner',     muscle: 'biceps' },
-    { name: 'Alternate Incline Dumbbell Curl',           equipment: 'dumbbell',    level: 'intermediate', muscle: 'biceps' },
-    { name: 'Barbell Deadlift',                          equipment: 'barbell',     level: 'intermediate', muscle: 'lower back' },
-    { name: 'Barbell Full Squat',                        equipment: 'barbell',     level: 'intermediate', muscle: 'quadriceps' },
-    { name: 'Barbell Squat',                             equipment: 'barbell',     level: 'intermediate', muscle: 'quadriceps' },
-    { name: 'Barbell Lunge',                             equipment: 'barbell',     level: 'intermediate', muscle: 'quadriceps' },
-    { name: 'Barbell Step Ups',                          equipment: 'barbell',     level: 'intermediate', muscle: 'quadriceps' },
-    { name: 'Barbell Walking Lunge',                     equipment: 'barbell',     level: 'intermediate', muscle: 'quadriceps' },
-    { name: 'Barbell Glute Bridge',                      equipment: 'barbell',     level: 'intermediate', muscle: 'glutes' },
-    { name: 'Barbell Hip Thrust',                        equipment: 'barbell',     level: 'intermediate', muscle: 'glutes' },
-    { name: 'Barbell Rear Delt Row',                     equipment: 'barbell',     level: 'intermediate', muscle: 'shoulders' },
-    { name: 'Barbell Shoulder Press',                    equipment: 'barbell',     level: 'intermediate', muscle: 'shoulders' },
-    { name: 'Alternating Deltoid Raise',                 equipment: 'dumbbell',    level: 'beginner',     muscle: 'shoulders' },
-    { name: 'Arnold Dumbbell Press',                     equipment: 'dumbbell',    level: 'intermediate', muscle: 'shoulders' },
-    { name: 'Bent Over Dumbbell Rear Delt Raise With Head On Bench', equipment: 'dumbbell', level: 'intermediate', muscle: 'shoulders' },
-    { name: 'Alternating Cable Shoulder Press',          equipment: 'cable',       level: 'intermediate', muscle: 'shoulders' },
-    { name: 'Bent Over Low-Pulley Side Lateral',         equipment: 'cable',       level: 'intermediate', muscle: 'shoulders' },
-    { name: 'Alternating Kettlebell Press',              equipment: 'kettlebells', level: 'intermediate', muscle: 'shoulders' },
-    { name: 'Barbell Shrug',                             equipment: 'barbell',     level: 'beginner',     muscle: 'traps' },
-    { name: 'Bent Over Barbell Row',                     equipment: 'barbell',     level: 'intermediate', muscle: 'middle back' },
-    { name: 'Bent Over Two-Dumbbell Row',                equipment: 'dumbbell',    level: 'intermediate', muscle: 'middle back' },
-    { name: 'Alternating Kettlebell Row',                equipment: 'kettlebells', level: 'intermediate', muscle: 'middle back' },
-    { name: 'Bent-Arm Barbell Pullover',                 equipment: 'barbell',     level: 'intermediate', muscle: 'lats' },
-    { name: 'Barbell Seated Calf Raise',                 equipment: 'barbell',     level: 'beginner',     muscle: 'calves' },
-    { name: 'Ab Crunch Machine',                         equipment: 'machine',     level: 'beginner',     muscle: 'abdominals' },
-    { name: 'Bosu Ball Cable Crunch With Side Bends',    equipment: 'cable',       level: 'intermediate', muscle: 'abdominals' },
-    { name: 'Advanced Kettlebell Windmill',              equipment: 'kettlebells', level: 'expert',       muscle: 'abdominals' },
-    { name: 'Bottoms-Up Clean From The Hang Position',   equipment: 'kettlebells', level: 'expert',       muscle: 'forearms' }
+    { name: "Ab Roller", equipment: "other", level: "intermediate", muscle: "abdominals" },
+    { name: "Advanced Kettlebell Windmill", equipment: "kettlebell", level: "expert", muscle: "abdominals" },
+    { name: "Barbell Ab Rollout", equipment: "barbell", level: "intermediate", muscle: "abdominals" },
+    { name: "Bosu Ball Cable Crunch With Side Bends", equipment: "cable", level: "intermediate", muscle: "abdominals" },
+    { name: "Cable Crunch", equipment: "cable", level: "beginner", muscle: "abdominals" },
+    { name: "Cable Judo Flip", equipment: "cable", level: "intermediate", muscle: "abdominals" },
+    { name: "Cable Reverse Crunch", equipment: "cable", level: "intermediate", muscle: "abdominals" },
+    { name: "Cable Russian Twists", equipment: "cable", level: "intermediate", muscle: "abdominals" },
+    { name: "Cable Seated Crunch", equipment: "cable", level: "beginner", muscle: "abdominals" },
+    { name: "Barbell Side Bend", equipment: "barbell", level: "beginner", muscle: "abdominals" },
+    { name: "Bent Press", equipment: "kettlebell", level: "expert", muscle: "abdominals" },
+    { name: "Barbell Rollout from Bench", equipment: "barbell", level: "intermediate", muscle: "abdominals" },
+    { name: "Alternate Hammer Curl", equipment: "dumbbell", level: "beginner", muscle: "biceps" },
+    { name: "Alternate Incline Dumbbell Curl", equipment: "dumbbell", level: "intermediate", muscle: "biceps" },
+    { name: "Barbell Curl", equipment: "barbell", level: "beginner", muscle: "biceps" },
+    { name: "Barbell Curls Lying Against An Incline", equipment: "barbell", level: "intermediate", muscle: "biceps" },
+    { name: "Cable Hammer Curls (Rope Attachment)", equipment: "cable", level: "beginner", muscle: "biceps" },
+    { name: "Cable Preacher Curl", equipment: "cable", level: "intermediate", muscle: "biceps" },
+    { name: "Board Press", equipment: "barbell", level: "intermediate", muscle: "triceps" },
+    { name: "Cable Incline Triceps Extension", equipment: "cable", level: "intermediate", muscle: "triceps" },
+    { name: "Cable Lying Triceps Extension", equipment: "cable", level: "intermediate", muscle: "triceps" },
+    { name: "Cable One Arm Tricep Extension", equipment: "cable", level: "intermediate", muscle: "triceps" },
+    { name: "Cable Rope Overhead Triceps Extension", equipment: "cable", level: "intermediate", muscle: "triceps" },
+    { name: "Barbell Bench Press", equipment: "barbell", level: "intermediate", muscle: "chest" },
+    { name: "Barbell Incline Bench Press", equipment: "barbell", level: "intermediate", muscle: "chest" },
+    { name: "Barbell Guillotine Bench Press", equipment: "barbell", level: "expert", muscle: "chest" },
+    { name: "Around The Worlds", equipment: "dumbbell", level: "intermediate", muscle: "chest" },
+    { name: "Bent-Arm Dumbbell Pullover", equipment: "dumbbell", level: "intermediate", muscle: "chest" },
+    { name: "Bodyweight Flyes", equipment: "ez curl bar", level: "intermediate", muscle: "chest" },
+    { name: "Cable Chest Press", equipment: "cable", level: "beginner", muscle: "chest" },
+    { name: "Cable Crossover", equipment: "cable", level: "intermediate", muscle: "chest" },
+    { name: "Cable Iron Cross", equipment: "cable", level: "intermediate", muscle: "chest" },
+    { name: "Machine Chest Fly", equipment: "machine", level: "beginner", muscle: "chest" },
+    { name: "Alternating Cable Shoulder Press", equipment: "cable", level: "intermediate", muscle: "shoulders" },
+    { name: "Alternating Deltoid Raise", equipment: "dumbbell", level: "beginner", muscle: "shoulders" },
+    { name: "Alternating Kettlebell Press", equipment: "kettlebell", level: "intermediate", muscle: "shoulders" },
+    { name: "Anti-Gravity Press", equipment: "barbell", level: "expert", muscle: "shoulders" },
+    { name: "Arnold Dumbbell Press", equipment: "dumbbell", level: "intermediate", muscle: "shoulders" },
+    { name: "Barbell Incline Shoulder Raise", equipment: "barbell", level: "intermediate", muscle: "shoulders" },
+    { name: "Barbell Rear Delt Row", equipment: "barbell", level: "intermediate", muscle: "shoulders" },
+    { name: "Barbell Shoulder Press", equipment: "barbell", level: "intermediate", muscle: "shoulders" },
+    { name: "Battling Ropes", equipment: "other", level: "intermediate", muscle: "shoulders" },
+    { name: "Bent Over Dumbbell Rear Delt Raise With Head On Bench", equipment: "dumbbell", level: "intermediate", muscle: "shoulders" },
+    { name: "Bent Over Low-Pulley Side Lateral", equipment: "cable", level: "intermediate", muscle: "shoulders" },
+    { name: "Bradford/Rocky Presses", equipment: "barbell", level: "expert", muscle: "shoulders" },
+    { name: "Cable Internal Rotation", equipment: "cable", level: "intermediate", muscle: "shoulders" },
+    { name: "Cable Rear Delt Fly", equipment: "cable", level: "intermediate", muscle: "shoulders" },
+    { name: "Cable Rope Rear-Delt Rows", equipment: "cable", level: "intermediate", muscle: "shoulders" },
+    { name: "Cable Seated Lateral Raise", equipment: "cable", level: "intermediate", muscle: "shoulders" },
+    { name: "Cable Shoulder Press", equipment: "cable", level: "intermediate", muscle: "shoulders" },
+    { name: "Bottoms-Up Clean From The Hang Position", equipment: "kettlebell", level: "expert", muscle: "forearms" },
+    { name: "Cable Wrist Curl", equipment: "cable", level: "beginner", muscle: "forearms" },
+    { name: "Barbell Deadlift", equipment: "barbell", level: "intermediate", muscle: "lower back" },
+    { name: "Atlas Stone Trainer", equipment: "other", level: "expert", muscle: "lower back" },
+    { name: "Atlas Stones", equipment: "other", level: "expert", muscle: "lower back" },
+    { name: "Axle Deadlift", equipment: "other", level: "expert", muscle: "lower back" },
+    { name: "Barbell Full Squat", equipment: "barbell", level: "intermediate", muscle: "quadriceps" },
+    { name: "Barbell Hack Squat", equipment: "barbell", level: "intermediate", muscle: "quadriceps" },
+    { name: "Barbell Lunge", equipment: "barbell", level: "intermediate", muscle: "quadriceps" },
+    { name: "Barbell Side Split Squat", equipment: "barbell", level: "intermediate", muscle: "quadriceps" },
+    { name: "Barbell Squat", equipment: "barbell", level: "intermediate", muscle: "quadriceps" },
+    { name: "Barbell Squat To A Bench", equipment: "barbell", level: "intermediate", muscle: "quadriceps" },
+    { name: "Barbell Step Ups", equipment: "barbell", level: "intermediate", muscle: "quadriceps" },
+    { name: "Barbell Walking Lunge", equipment: "barbell", level: "intermediate", muscle: "quadriceps" },
+    { name: "Bear Crawl Sled Drags", equipment: "other", level: "intermediate", muscle: "quadriceps" },
+    { name: "Bench Sprint", equipment: "other", level: "intermediate", muscle: "quadriceps" },
+    { name: "Box Squat", equipment: "barbell", level: "intermediate", muscle: "quadriceps" },
+    { name: "Cable Deadlifts", equipment: "cable", level: "intermediate", muscle: "quadriceps" },
+    { name: "Cable Hip Adduction", equipment: "cable", level: "beginner", muscle: "quadriceps" },
+    { name: "Backward Drag", equipment: "other", level: "intermediate", muscle: "quadriceps" },
+    { name: "Alternating Hang Clean", equipment: "kettlebell", level: "expert", muscle: "hamstrings" },
+    { name: "Box Jump (Multiple Response)", equipment: "other", level: "intermediate", muscle: "hamstrings" },
+    { name: "Box Skip", equipment: "other", level: "intermediate", muscle: "hamstrings" },
+    { name: "Balance Board", equipment: "other", level: "beginner", muscle: "calves" },
+    { name: "Barbell Seated Calf Raise", equipment: "barbell", level: "beginner", muscle: "calves" },
+    { name: "Calf Press", equipment: "machine", level: "beginner", muscle: "calves" },
+    { name: "Calf Press On The Leg Press Machine", equipment: "machine", level: "beginner", muscle: "calves" },
+    { name: "Calf Raise On A Dumbbell", equipment: "dumbbell", level: "intermediate", muscle: "calves" },
+    { name: "Barbell Glute Bridge", equipment: "barbell", level: "intermediate", muscle: "glutes" },
+    { name: "Barbell Hip Thrust", equipment: "barbell", level: "intermediate", muscle: "glutes" },
+    { name: "Bent-Arm Barbell Pullover", equipment: "barbell", level: "intermediate", muscle: "lats" },
+    { name: "Cable Incline Pushdown", equipment: "cable", level: "intermediate", muscle: "lats" },
+    { name: "Alternating Kettlebell Row", equipment: "kettlebell", level: "intermediate", muscle: "middle back" },
+    { name: "Alternating Renegade Row", equipment: "kettlebell", level: "expert", muscle: "middle back" },
+    { name: "Bent Over Barbell Row", equipment: "barbell", level: "intermediate", muscle: "middle back" },
+    { name: "Bent Over One-Arm Long Bar Row", equipment: "barbell", level: "intermediate", muscle: "middle back" },
+    { name: "Bent Over Two-Arm Long Bar Row", equipment: "barbell", level: "intermediate", muscle: "middle back" },
+    { name: "Bent Over Two-Dumbbell Row", equipment: "dumbbell", level: "intermediate", muscle: "middle back" },
+    { name: "Bodyweight Mid Row", equipment: "other", level: "beginner", muscle: "middle back" },
+    { name: "Barbell Shrug", equipment: "barbell", level: "beginner", muscle: "traps" },
+    { name: "Barbell Shrug Behind The Back", equipment: "barbell", level: "intermediate", muscle: "traps" },
+    { name: "Cable Shrugs", equipment: "cable", level: "beginner", muscle: "traps" },
+    { name: "Calf-Machine Shoulder Shrug", equipment: "machine", level: "beginner", muscle: "traps" },
+    { name: "Decline Bench Press", equipment: "barbell", level: "intermediate", muscle: "chest" },
+    { name: "Close-Grip Bench Press", equipment: "barbell", level: "intermediate", muscle: "triceps" },
+    { name: "Dumbbell Bench Press", equipment: "dumbbell", level: "beginner", muscle: "chest" },
+    { name: "Dumbbell Incline Press", equipment: "dumbbell", level: "intermediate", muscle: "chest" },
+    { name: "Chest Dip", equipment: "other", level: "intermediate", muscle: "chest" },
+    { name: "Lat Pulldown", equipment: "cable", level: "beginner", muscle: "lats" },
+    { name: "Seated Cable Row", equipment: "cable", level: "beginner", muscle: "middle back" },
+    { name: "T-Bar Row", equipment: "barbell", level: "intermediate", muscle: "middle back" },
+    { name: "One-Arm Dumbbell Row", equipment: "dumbbell", level: "beginner", muscle: "lats" },
+    { name: "Deadlift", equipment: "barbell", level: "intermediate", muscle: "lower back" },
+    { name: "Romanian Deadlift", equipment: "barbell", level: "intermediate", muscle: "hamstrings" },
+    { name: "Sumo Deadlift", equipment: "barbell", level: "intermediate", muscle: "lower back" },
+    { name: "Good Morning", equipment: "barbell", level: "intermediate", muscle: "lower back" },
+    { name: "Squat", equipment: "barbell", level: "intermediate", muscle: "quadriceps" },
+    { name: "Front Squat", equipment: "barbell", level: "intermediate", muscle: "quadriceps" },
+    { name: "Goblet Squat", equipment: "dumbbell", level: "beginner", muscle: "quadriceps" },
+    { name: "Bulgarian Split Squat", equipment: "dumbbell", level: "intermediate", muscle: "quadriceps" },
+    { name: "Leg Press", equipment: "machine", level: "beginner", muscle: "quadriceps" },
+    { name: "Leg Extension", equipment: "machine", level: "beginner", muscle: "quadriceps" },
+    { name: "Leg Curl", equipment: "machine", level: "beginner", muscle: "hamstrings" },
+    { name: "Hip Thrust", equipment: "barbell", level: "intermediate", muscle: "glutes" },
+    { name: "Glute Kickback", equipment: "cable", level: "beginner", muscle: "glutes" },
+    { name: "Standing Calf Raise", equipment: "machine", level: "beginner", muscle: "calves" },
+    { name: "Donkey Calf Raise", equipment: "machine", level: "intermediate", muscle: "calves" },
+    { name: "Standing Hip Abduction", equipment: "cable", level: "beginner", muscle: "abductors" },
+    { name: "Overhead Press", equipment: "barbell", level: "intermediate", muscle: "shoulders" },
+    { name: "Dumbbell Shoulder Press", equipment: "dumbbell", level: "beginner", muscle: "shoulders" },
+    { name: "Lateral Raise", equipment: "dumbbell", level: "beginner", muscle: "shoulders" },
+    { name: "Front Raise", equipment: "dumbbell", level: "beginner", muscle: "shoulders" },
+    { name: "Face Pull", equipment: "cable", level: "beginner", muscle: "shoulders" },
+    { name: "Upright Row", equipment: "barbell", level: "intermediate", muscle: "traps" },
+    { name: "Concentration Curl", equipment: "dumbbell", level: "beginner", muscle: "biceps" },
+    { name: "Preacher Curl", equipment: "ez curl bar", level: "intermediate", muscle: "biceps" },
+    { name: "Zottman Curl", equipment: "dumbbell", level: "intermediate", muscle: "biceps" },
+    { name: "Reverse Curl", equipment: "ez curl bar", level: "beginner", muscle: "forearms" },
+    { name: "Wrist Curl", equipment: "barbell", level: "beginner", muscle: "forearms" },
+    { name: "Farmer's Walk", equipment: "kettlebell", level: "beginner", muscle: "forearms" },
+    { name: "Pallof Press", equipment: "cable", level: "intermediate", muscle: "abdominals" },
+    { name: "Neck Curl", equipment: "other", level: "beginner", muscle: "neck" },
+    { name: "Neck Extension", equipment: "other", level: "beginner", muscle: "neck" },
+    { name: "Jump Rope", equipment: "other", level: "beginner", muscle: "calves" },
+    { name: "Kettlebell Swing", equipment: "kettlebell", level: "intermediate", muscle: "glutes" }
   ]
 };
 
 var DAYS_ORDER = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
 
 /* ══════════════════════════════════════════
-   DİNAMİK ANATOMİ SVG HARİTASI (Ön + Arka)
-   Kas grupları data-muscle özniteliğiyle etiketlenir,
-   JS tarafından ilgili gruba göre renklendirilir.
+   DİNAMİK ANATOMİ HARİTASI (Ön + Arka)
+   Gerçek wger.de kas illüstrasyonu (CC BY-SA) — ./anatomy/front.svg
+   ve ./anatomy/back.svg dosyalarından tembel (lazy) yüklenir ve
+   önbelleğe alınır. Kas grupları data-muscle özniteliğiyle
+   etiketlenir, JS tarafından ilgili gruba göre highlight edilir.
    ══════════════════════════════════════════ */
 
-var FRONT_ANATOMY_SVG =
-  '<svg viewBox="0 0 240 500" xmlns="http://www.w3.org/2000/svg">' +
-    '<ellipse cx="120" cy="34" rx="24" ry="28" class="body-outline"></ellipse>' +
-    '<rect x="108" y="58" width="24" height="16" rx="4" class="muscle-region" data-muscle="neck"></rect>' +
-    '<path d="M70,74 Q120,64 170,74 L178,232 Q120,248 62,232 Z" class="body-outline"></path>' +
-    '<ellipse cx="60" cy="92" rx="19" ry="23" class="muscle-region" data-muscle="shoulders"></ellipse>' +
-    '<ellipse cx="180" cy="92" rx="19" ry="23" class="muscle-region" data-muscle="shoulders"></ellipse>' +
-    '<path d="M76,80 Q100,72 119,83 L119,140 Q98,150 77,138 Z" class="muscle-region" data-muscle="chest"></path>' +
-    '<path d="M164,80 Q140,72 121,83 L121,140 Q142,150 163,138 Z" class="muscle-region" data-muscle="chest"></path>' +
-    '<path d="M94,143 L146,143 L151,224 Q120,238 89,224 Z" class="muscle-region" data-muscle="abdominals"></path>' +
-    '<path d="M46,96 L64,96 L59,176 L39,176 Z" class="body-outline"></path>' +
-    '<ellipse cx="51" cy="130" rx="13" ry="28" class="muscle-region" data-muscle="biceps"></ellipse>' +
-    '<path d="M194,96 L176,96 L181,176 L201,176 Z" class="body-outline"></path>' +
-    '<ellipse cx="189" cy="130" rx="13" ry="28" class="muscle-region" data-muscle="biceps"></ellipse>' +
-    '<path d="M39,176 L59,176 L54,242 L35,242 Z" class="body-outline"></path>' +
-    '<ellipse cx="47" cy="207" rx="10" ry="27" class="muscle-region" data-muscle="forearms"></ellipse>' +
-    '<path d="M201,176 L181,176 L186,242 L205,242 Z" class="body-outline"></path>' +
-    '<ellipse cx="193" cy="207" rx="10" ry="27" class="muscle-region" data-muscle="forearms"></ellipse>' +
-    '<ellipse cx="46" cy="250" rx="9" ry="11" class="body-outline"></ellipse>' +
-    '<ellipse cx="194" cy="250" rx="9" ry="11" class="body-outline"></ellipse>' +
-    '<path d="M89,224 L151,224 L161,260 L79,260 Z" class="body-outline"></path>' +
-    '<path d="M108,260 L132,260 L127,302 L113,302 Z" class="muscle-region" data-muscle="adductors"></path>' +
-    '<path d="M79,260 L118,260 L112,442 L68,442 Z" class="body-outline"></path>' +
-    '<path d="M161,260 L122,260 L128,442 L172,442 Z" class="body-outline"></path>' +
-    '<ellipse cx="94" cy="322" rx="19" ry="54" class="muscle-region" data-muscle="quadriceps"></ellipse>' +
-    '<ellipse cx="146" cy="322" rx="19" ry="54" class="muscle-region" data-muscle="quadriceps"></ellipse>' +
-    '<path d="M68,442 L112,442 L108,482 L72,482 Z" class="body-outline"></path>' +
-    '<path d="M172,442 L128,442 L132,482 L168,482 Z" class="body-outline"></path>' +
-    '<ellipse cx="90" cy="490" rx="20" ry="8" class="body-outline"></ellipse>' +
-    '<ellipse cx="150" cy="490" rx="20" ry="8" class="body-outline"></ellipse>' +
-  '</svg>';
+var anatomySVGCache = { front: null, back: null };
 
-var BACK_ANATOMY_SVG =
-  '<svg viewBox="0 0 240 500" xmlns="http://www.w3.org/2000/svg">' +
-    '<ellipse cx="120" cy="34" rx="24" ry="28" class="body-outline"></ellipse>' +
-    '<rect x="108" y="58" width="24" height="14" rx="4" class="body-outline"></rect>' +
-    '<path d="M70,74 Q120,64 170,74 L178,232 Q120,248 62,232 Z" class="body-outline"></path>' +
-    '<path d="M85,64 L155,64 L178,112 L120,150 L62,112 Z" class="muscle-region" data-muscle="traps"></path>' +
-    '<path d="M62,112 L96,122 L91,192 L54,176 Z" class="muscle-region" data-muscle="lats"></path>' +
-    '<path d="M178,112 L144,122 L149,192 L186,176 Z" class="muscle-region" data-muscle="lats"></path>' +
-    '<path d="M96,122 L144,122 L139,180 L101,180 Z" class="muscle-region" data-muscle="middle back"></path>' +
-    '<path d="M104,180 L136,180 L139,228 L101,228 Z" class="muscle-region" data-muscle="lower back"></path>' +
-    '<path d="M46,96 L64,96 L59,176 L39,176 Z" class="body-outline"></path>' +
-    '<ellipse cx="52" cy="130" rx="13" ry="28" class="muscle-region" data-muscle="triceps"></ellipse>' +
-    '<path d="M194,96 L176,96 L181,176 L201,176 Z" class="body-outline"></path>' +
-    '<ellipse cx="188" cy="130" rx="13" ry="28" class="muscle-region" data-muscle="triceps"></ellipse>' +
-    '<path d="M39,176 L59,176 L54,242 L35,242 Z" class="body-outline"></path>' +
-    '<path d="M201,176 L181,176 L186,242 L205,242 Z" class="body-outline"></path>' +
-    '<ellipse cx="46" cy="250" rx="9" ry="11" class="body-outline"></ellipse>' +
-    '<ellipse cx="194" cy="250" rx="9" ry="11" class="body-outline"></ellipse>' +
-    '<path d="M89,224 L151,224 L161,260 L79,260 Z" class="body-outline"></path>' +
-    '<ellipse cx="95" cy="256" rx="23" ry="27" class="muscle-region" data-muscle="glutes"></ellipse>' +
-    '<ellipse cx="145" cy="256" rx="23" ry="27" class="muscle-region" data-muscle="glutes"></ellipse>' +
-    '<ellipse cx="70" cy="272" rx="9" ry="19" class="muscle-region" data-muscle="abductors"></ellipse>' +
-    '<ellipse cx="170" cy="272" rx="9" ry="19" class="muscle-region" data-muscle="abductors"></ellipse>' +
-    '<path d="M79,260 L118,260 L112,442 L68,442 Z" class="body-outline"></path>' +
-    '<path d="M161,260 L122,260 L128,442 L172,442 Z" class="body-outline"></path>' +
-    '<ellipse cx="94" cy="330" rx="18" ry="48" class="muscle-region" data-muscle="hamstrings"></ellipse>' +
-    '<ellipse cx="146" cy="330" rx="18" ry="48" class="muscle-region" data-muscle="hamstrings"></ellipse>' +
-    '<path d="M68,442 L112,442 L108,482 L72,482 Z" class="body-outline"></path>' +
-    '<path d="M172,442 L128,442 L132,482 L168,482 Z" class="body-outline"></path>' +
-    '<ellipse cx="92" cy="415" rx="13" ry="33" class="muscle-region" data-muscle="calves"></ellipse>' +
-    '<ellipse cx="148" cy="415" rx="13" ry="33" class="muscle-region" data-muscle="calves"></ellipse>' +
-    '<ellipse cx="90" cy="490" rx="20" ry="8" class="body-outline"></ellipse>' +
-    '<ellipse cx="150" cy="490" rx="20" ry="8" class="body-outline"></ellipse>' +
-  '</svg>';
-
-function getAnatomySVG(view) {
-  return view === 'back' ? BACK_ANATOMY_SVG : FRONT_ANATOMY_SVG;
+// İlgili görünümün SVG metnini getirir (önbellekteyse tekrar indirmez)
+function loadAnatomySVG(view, callback) {
+  var key = view === 'back' ? 'back' : 'front';
+  if (anatomySVGCache[key]) {
+    callback(anatomySVGCache[key]);
+    return;
+  }
+  fetch('./anatomy/' + key + '.svg')
+    .then(function(res) { return res.ok ? res.text() : Promise.reject(); })
+    .then(function(text) {
+      anatomySVGCache[key] = text;
+      callback(text);
+    })
+    .catch(function() {
+      console.warn('[Anatomi] ' + key + '.svg yüklenemedi (çevrimdışı olabilir).');
+      callback(null);
+    });
 }
 
 // Belirtilen kas grubunu SVG üzerinde highlight eder, diğerlerini nötrler
 function highlightMuscleInSvg(svgWrapEl, muscle) {
   if (!svgWrapEl) return;
-  var regions = svgWrapEl.querySelectorAll('.muscle-region');
+  var regions = svgWrapEl.querySelectorAll('.muscle-overlay');
   regions.forEach(function(el) {
     el.classList.toggle('active', el.getAttribute('data-muscle') === muscle);
   });
 }
 
-// Ön/Arka anatomi panelinin HTML'ini üretir (sepette ve takip kartlarında ortak kullanılır)
+// SVG'yi panele yerleştirir ve ilgili kası highlight eder
+function populateAnatomyPanel(panelEl) {
+  var muscle = panelEl.getAttribute('data-muscle');
+  var view = panelEl.getAttribute('data-current-view');
+  var svgWrap = panelEl.querySelector('.anatomy-svg-wrap');
+
+  loadAnatomySVG(view, function(svgText) {
+    if (!svgText) {
+      svgWrap.innerHTML = '<p class="anatomy-error">Görsel yüklenemedi.</p>';
+      return;
+    }
+    svgWrap.innerHTML = svgText;
+    highlightMuscleInSvg(svgWrap, muscle);
+  });
+}
+
+// Ön/Arka anatomi panelinin HTML iskeletini üretir (sepette ve takip
+// kartlarında ortak kullanılır). SVG içeriği ayrıca populateAnatomyPanel
+// ile (tembel) doldurulur.
 function buildAnatomyPanelHTML(muscle) {
   var defaultView = MUSCLE_VIEW[muscle] || 'front';
   var muscleLabel = MUSCLE_TR[muscle] || muscle;
@@ -552,18 +658,17 @@ function buildAnatomyPanelHTML(muscle) {
         '<button type="button" class="anatomy-view-btn' + (defaultView === 'back' ? ' active' : '') + '" data-view-btn="back">Arka</button>' +
       '</div>' +
       '<p class="muscle-region-label">' + muscleLabel + '</p>' +
-      '<div class="anatomy-svg-wrap">' + getAnatomySVG(defaultView) + '</div>' +
+      '<div class="anatomy-svg-wrap"><p class="anatomy-loading">Yükleniyor…</p></div>' +
+      '<p class="anatomy-credit">Kas illüstrasyonu: wger.de (CC BY-SA 4.0)</p>' +
     '</div>'
   );
 }
 
-// Bir konteynerin içindeki tüm .anatomy-panel'leri ilk render'da highlight eder
+// Bir konteynerin içindeki tüm .anatomy-panel'leri ilk render'da doldurur
 function initAnatomyPanels(containerEl) {
   if (!containerEl) return;
   containerEl.querySelectorAll('.anatomy-panel').forEach(function(panel) {
-    var muscle = panel.getAttribute('data-muscle');
-    var svgWrap = panel.querySelector('.anatomy-svg-wrap');
-    highlightMuscleInSvg(svgWrap, muscle);
+    populateAnatomyPanel(panel);
   });
 }
 
@@ -576,17 +681,13 @@ function handleAnatomyViewToggle(target) {
   if (!panel) return false;
 
   var newView = btn.getAttribute('data-view-btn');
-  var muscle = panel.getAttribute('data-muscle');
   panel.setAttribute('data-current-view', newView);
 
   panel.querySelectorAll('.anatomy-view-btn').forEach(function(b) {
     b.classList.toggle('active', b === btn);
   });
 
-  var svgWrap = panel.querySelector('.anatomy-svg-wrap');
-  svgWrap.innerHTML = getAnatomySVG(newView);
-  highlightMuscleInSvg(svgWrap, muscle);
-
+  populateAnatomyPanel(panel);
   return true;
 }
 
@@ -879,7 +980,8 @@ function buildExerciseCardHTML(weekday, ex) {
 
   var youtubeUrl = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(ex.name + ' nasıl yapılır');
   var levelLabel = ex.level ? (LEVEL_TR[ex.level] || ex.level) : '';
-  var extraMetaParts = [ex.equipment, levelLabel].filter(Boolean);
+  var equipmentLabel = ex.equipment ? (EQUIPMENT_TR[ex.equipment] !== undefined ? EQUIPMENT_TR[ex.equipment] : ex.equipment) : '';
+  var extraMetaParts = [equipmentLabel, levelLabel].filter(Boolean);
   var extraMeta = extraMetaParts.length ? ' · ' + extraMetaParts.join(' · ') : '';
 
   return (
@@ -1006,3 +1108,246 @@ exerciseCardsListEl.classList.remove('hidden');
 
 renderCartList();
 renderWorkoutTracking();
+
+/* ══════════════════════════════════════════
+   BESLENME PLANI — OPEN FOOD FACTS ENTEGRASYONU
+   Gerçek gıda veritabanı ile arama + günlük takip.
+   API: world.openfoodfacts.org (herkese açık, kimlik doğrulama gerekmez)
+   ══════════════════════════════════════════ */
+
+var NUTRITION_KEYS = {
+  log: 'ft_nutrition_log'
+};
+
+function getTodayKey() {
+  var d = new Date();
+  var mm = String(d.getMonth() + 1).padStart(2, '0');
+  var dd = String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + mm + '-' + dd;
+}
+
+function getNutritionLog() { return getJSON(NUTRITION_KEYS.log, {}); }
+function saveNutritionLog(log) { setJSON(NUTRITION_KEYS.log, log); }
+
+function getTodayEntries() {
+  var log = getNutritionLog();
+  return log[getTodayKey()] || [];
+}
+
+// ── DOM REFERANSLARI ───────────────────────────
+var foodSearchInput   = document.getElementById('food-search-input');
+var foodSearchBtn     = document.getElementById('food-search-btn');
+var foodSearchResults = document.getElementById('foodSearchResults');
+var foodLogList       = document.getElementById('foodLogList');
+var foodAmountModal   = document.getElementById('foodAmountModal');
+var foodAmountInput   = document.getElementById('food-amount-input');
+var foodAmountPreview = document.getElementById('foodAmountPreview');
+var closeFoodAmountModalBtn = document.getElementById('closeFoodAmountModal');
+var confirmAddFoodBtn = document.getElementById('confirmAddFoodBtn');
+
+var pendingFoodItem = null; // miktar modalinda bekleyen secili gida
+
+// ── OPEN FOOD FACTS ARAMA ──────────────────────
+function searchFood(query) {
+  foodSearchResults.innerHTML = '<p class="loading-hint">Aranıyor…</p>';
+
+  var url = 'https://world.openfoodfacts.org/cgi/search.pl?search_terms=' +
+    encodeURIComponent(query) +
+    '&search_simple=1&action=process&json=1&page_size=15' +
+    '&fields=product_name,brands,nutriments,image_small_url,code';
+
+  fetch(url)
+    .then(function(res) { return res.ok ? res.json() : Promise.reject(); })
+    .then(function(data) {
+      var products = (data && data.products) ? data.products : [];
+      renderFoodSearchResults(products);
+    })
+    .catch(function() {
+      foodSearchResults.innerHTML = '<p class="loading-hint">⚠️ Gıda araması şu an yapılamıyor. İnternet bağlantını kontrol et.</p>';
+    });
+}
+
+function renderFoodSearchResults(products) {
+  var valid = products.filter(function(p) {
+    return p.product_name && p.nutriments && (p.nutriments['energy-kcal_100g'] || p.nutriments['energy-kcal'] );
+  });
+
+  if (valid.length === 0) {
+    foodSearchResults.innerHTML = '<p class="loading-hint">Sonuç bulunamadı. Farklı bir isimle dene (İngilizce de olabilir).</p>';
+    return;
+  }
+
+  var html = '';
+  valid.forEach(function(p, idx) {
+    var kcal = Math.round(p.nutriments['energy-kcal_100g'] || p.nutriments['energy-kcal'] || 0);
+    var brand = p.brands ? p.brands.split(',')[0].trim() : '';
+    var img = p.image_small_url || '';
+    var imgHtml = img
+      ? '<img class="food-result-img" src="' + img + '" alt="" loading="lazy">'
+      : '<div class="food-result-img"></div>';
+
+    html +=
+      '<div class="food-result-item" data-idx="' + idx + '">' +
+        imgHtml +
+        '<div class="food-result-info">' +
+          '<p class="food-result-name">' + p.product_name + '</p>' +
+          '<p class="food-result-meta">' + (brand ? brand + ' · ' : '') + kcal + ' kcal / 100g</p>' +
+        '</div>' +
+        '<button class="food-result-add" type="button">+</button>' +
+      '</div>';
+  });
+
+  foodSearchResults.innerHTML = html;
+  foodSearchResults._products = valid; // secim icin bellekte tut
+}
+
+foodSearchBtn.addEventListener('click', function() {
+  var q = foodSearchInput.value.trim();
+  if (!q) return;
+  searchFood(q);
+});
+
+foodSearchInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    foodSearchBtn.click();
+  }
+});
+
+foodSearchResults.addEventListener('click', function(e) {
+  var item = e.target.closest('.food-result-item');
+  if (!item) return;
+  var idx = parseInt(item.dataset.idx, 10);
+  var product = foodSearchResults._products[idx];
+  if (!product) return;
+  openFoodAmountModal(product);
+});
+
+// ── MİKTAR MODALI ───────────────────────────────
+function getNutrimentPer100(product, key) {
+  var n = product.nutriments || {};
+  return parseFloat(n[key + '_100g']) || 0;
+}
+
+function openFoodAmountModal(product) {
+  pendingFoodItem = {
+    name: product.product_name,
+    brand: product.brands ? product.brands.split(',')[0].trim() : '',
+    kcal100: getNutrimentPer100(product, 'energy-kcal'),
+    protein100: getNutrimentPer100(product, 'proteins'),
+    carbs100: getNutrimentPer100(product, 'carbohydrates'),
+    fat100: getNutrimentPer100(product, 'fat')
+  };
+  document.getElementById('foodAmountTitle').textContent = pendingFoodItem.name;
+  foodAmountInput.value = 100;
+  updateFoodAmountPreview();
+  foodAmountModal.classList.remove('hidden');
+}
+
+function closeFoodAmountModal() {
+  foodAmountModal.classList.add('hidden');
+  pendingFoodItem = null;
+}
+
+function updateFoodAmountPreview() {
+  if (!pendingFoodItem) return;
+  var grams = parseFloat(foodAmountInput.value) || 0;
+  var factor = grams / 100;
+  var kcal = Math.round(pendingFoodItem.kcal100 * factor);
+  var protein = (pendingFoodItem.protein100 * factor).toFixed(1);
+  var carbs = (pendingFoodItem.carbs100 * factor).toFixed(1);
+  var fat = (pendingFoodItem.fat100 * factor).toFixed(1);
+
+  foodAmountPreview.innerHTML =
+    '<strong>' + kcal + ' kcal</strong><br>' +
+    'Protein: ' + protein + 'g · Karbonhidrat: ' + carbs + 'g · Yağ: ' + fat + 'g';
+}
+
+foodAmountInput.addEventListener('input', updateFoodAmountPreview);
+closeFoodAmountModalBtn.addEventListener('click', closeFoodAmountModal);
+foodAmountModal.addEventListener('click', function(e) {
+  if (e.target === foodAmountModal) closeFoodAmountModal();
+});
+
+confirmAddFoodBtn.addEventListener('click', function() {
+  if (!pendingFoodItem) return;
+  var grams = parseFloat(foodAmountInput.value) || 100;
+  var factor = grams / 100;
+
+  var entry = {
+    id: 'food_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+    name: pendingFoodItem.name,
+    brand: pendingFoodItem.brand,
+    grams: grams,
+    kcal: Math.round(pendingFoodItem.kcal100 * factor),
+    protein: Math.round(pendingFoodItem.protein100 * factor * 10) / 10,
+    carbs: Math.round(pendingFoodItem.carbs100 * factor * 10) / 10,
+    fat: Math.round(pendingFoodItem.fat100 * factor * 10) / 10
+  };
+
+  var log = getNutritionLog();
+  var todayKey = getTodayKey();
+  if (!log[todayKey]) log[todayKey] = [];
+  log[todayKey].push(entry);
+  saveNutritionLog(log);
+
+  closeFoodAmountModal();
+  renderFoodLog();
+  foodSearchInput.value = '';
+  foodSearchResults.innerHTML = '';
+});
+
+// ── GÜNLÜK GÖRÜNÜMÜ ─────────────────────────────
+function renderFoodLog() {
+  var entries = getTodayEntries();
+
+  if (entries.length === 0) {
+    foodLogList.innerHTML = '<p class="empty-hint">Bugün henüz bir şey eklemedin.</p>';
+  } else {
+    var html = '';
+    entries.forEach(function(e) {
+      html +=
+        '<div class="food-log-item">' +
+          '<div>' +
+            '<p class="food-log-item-name">' + e.name + '</p>' +
+            '<p class="food-log-item-meta">' + e.grams + 'g · P:' + e.protein + ' K:' + e.carbs + ' Y:' + e.fat + '</p>' +
+          '</div>' +
+          '<span class="food-log-item-kcal">' + e.kcal + ' kcal</span>' +
+          '<button class="food-log-item-remove" data-id="' + e.id + '" title="Kaldır">✕</button>' +
+        '</div>';
+    });
+    foodLogList.innerHTML = html;
+  }
+
+  updateMacroTotals(entries);
+}
+
+function updateMacroTotals(entries) {
+  var totals = entries.reduce(function(acc, e) {
+    acc.kcal += e.kcal;
+    acc.protein += e.protein;
+    acc.carbs += e.carbs;
+    acc.fat += e.fat;
+    return acc;
+  }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+
+  document.getElementById('macro-kcal').textContent = Math.round(totals.kcal);
+  document.getElementById('macro-protein').textContent = Math.round(totals.protein);
+  document.getElementById('macro-carbs').textContent = Math.round(totals.carbs);
+  document.getElementById('macro-fat').textContent = Math.round(totals.fat);
+}
+
+foodLogList.addEventListener('click', function(e) {
+  var btn = e.target.closest('.food-log-item-remove');
+  if (!btn) return;
+  var id = btn.dataset.id;
+  var log = getNutritionLog();
+  var todayKey = getTodayKey();
+  if (!log[todayKey]) return;
+  log[todayKey] = log[todayKey].filter(function(item) { return item.id !== id; });
+  saveNutritionLog(log);
+  renderFoodLog();
+});
+
+// ── INIT (Beslenme) ─────────────────────────────
+renderFoodLog();

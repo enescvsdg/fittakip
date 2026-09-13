@@ -415,30 +415,43 @@ select.form-input {
 .anatomy-svg-wrap {
   display: flex;
   justify-content: center;
+  align-items: center;
+  min-height: 160px;
+  background: #0d0d0d;
+  border-radius: var(--radius-sm);
+  padding: 10px;
 }
 
 .anatomy-svg-wrap svg {
   width: 100%;
-  max-width: 210px;
+  max-width: 190px;
   height: auto;
 }
 
-.body-outline {
-  fill: #383838;
-  stroke: #444;
-  stroke-width: 1;
+.anatomy-loading,
+.anatomy-error {
+  font-size: 13px;
+  color: var(--text-dim);
+  text-align: center;
 }
 
-.muscle-region {
-  fill: #565656;
-  stroke: #2a2a2a;
-  stroke-width: 1;
-  transition: fill 0.35s ease;
+/* wger.de kas illüstrasyonu: gerçek highlight katmanı,
+   varsayılan olarak görünmez, seçili kas opak turuncu olur */
+.muscle-overlay {
+  fill: #ff3b30;
+  opacity: 0;
+  transition: opacity 0.35s ease;
 }
 
-.muscle-region.active {
-  fill: var(--accent);
-  filter: drop-shadow(0 0 4px var(--accent-glow));
+.muscle-overlay.active {
+  opacity: 0.75;
+}
+
+.anatomy-credit {
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 6px;
 }
 
 /* ── MODAL (artık kullanılmıyor ama eski referanslar için güvenli tutuluyor) ── */
@@ -488,4 +501,215 @@ select.form-input {
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ══════════════════════════════════════════
+   BESLENME PLANI — GIDA GÜNLÜĞÜ
+   ══════════════════════════════════════════ */
+
+.nutrition-summary-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.macro-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.macro-item {
+  text-align: center;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 10px 4px;
+}
+
+.macro-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.macro-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.food-source-note {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: -10px;
+}
+
+.food-search-row {
+  display: flex;
+  gap: 8px;
+}
+
+.food-search-row .form-input {
+  flex: 1;
+}
+
+.btn-search {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 0 20px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-search:active { opacity: 0.85; }
+
+.food-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.food-result-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+.food-result-item:active { border-color: var(--accent); }
+
+.food-result-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--surface-3);
+  flex-shrink: 0;
+}
+
+.food-result-info { flex: 1; min-width: 0; }
+.food-result-name {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.food-result-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.food-result-add {
+  background: var(--accent-glow);
+  color: var(--accent-2);
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 16px;
+  font-weight: 700;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.food-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.food-log-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.food-log-item-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.food-log-item-meta {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.food-log-item-kcal {
+  color: var(--accent);
+  font-weight: 700;
+  white-space: nowrap;
+  margin-left: 10px;
+}
+
+.food-log-item-remove {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 6px;
+  margin-left: 6px;
+}
+.food-log-item-remove:active { color: var(--warning); }
+
+/* ── İKİNCİ MODAL SİSTEMİ (gıda miktarı) ── */
+.modal-overlay-2 {
+  position: fixed;
+  inset: 0;
+  z-index: 350;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay-2.hidden { display: none; }
+
+.modal-box-2 {
+  background: var(--surface);
+  width: 100%;
+  max-width: 420px;
+  margin: 0 20px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.food-amount-preview {
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+.food-amount-preview strong { color: var(--accent); }
+
+.loading-hint {
+  font-size: 13px;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 12px 0;
 }
