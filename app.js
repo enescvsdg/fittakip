@@ -783,6 +783,7 @@ var cartItems = []; // Sepet — henüz kaydedilmemiş hareketler (bellekte tutu
 var builderDaySelect      = document.getElementById('builder-day');
 var builderDayTitleInput  = document.getElementById('builder-day-title');
 var builderLocationSelect = document.getElementById('builder-location');
+var builderRegionSelect   = document.getElementById('builder-region');
 var builderExerciseSelect = document.getElementById('builder-exercise');
 var builderSetsSelect     = document.getElementById('builder-sets');
 var builderRepsSelect     = document.getElementById('builder-reps');
@@ -804,35 +805,42 @@ function fillNumberRange(selectEl, min, max) {
   selectEl.innerHTML = html;
 }
 
-// Hareket dropdown'ını kas grubuna göre kategorize edilmiş (optgroup) şekilde doldurur
-function fillExerciseSelect(location) {
+// "Çalışılacak Bölge" dropdown'ını, seçili mekandaki hareketlerin kas gruplarıyla doldurur
+function fillRegionSelect(location) {
   var list = EXERCISES[location] || [];
-  var groups = {};   // kas_grubu -> [hareket, ...]
-  var order = [];    // ilk görülme sırasına göre kas grubu sırası
+  var seen = {};
+  var html = '';
 
   list.forEach(function(ex) {
+    if (seen[ex.muscle]) return;
+    seen[ex.muscle] = true;
     var label = MUSCLE_TR[ex.muscle] || ex.muscle;
-    if (!groups[label]) {
-      groups[label] = [];
-      order.push(label);
-    }
-    groups[label].push(ex.name);
+    html += '<option value="' + ex.muscle + '">' + label + '</option>';
   });
 
+  builderRegionSelect.innerHTML = html;
+}
+
+// Hareket dropdown'ını, seçili mekan + seçili bölgeye (kas grubu) göre doldurur
+function fillExerciseSelect(location, region) {
+  var list = EXERCISES[location] || [];
   var html = '';
-  order.forEach(function(label) {
-    html += '<optgroup label="' + label + '">';
-    groups[label].forEach(function(name) {
-      html += '<option value="' + name + '">' + name + '</option>';
-    });
-    html += '</optgroup>';
+
+  list.forEach(function(ex) {
+    if (ex.muscle !== region) return;
+    html += '<option value="' + ex.name + '">' + ex.name + '</option>';
   });
 
   builderExerciseSelect.innerHTML = html;
 }
 
 builderLocationSelect.addEventListener('change', function() {
-  fillExerciseSelect(builderLocationSelect.value);
+  fillRegionSelect(builderLocationSelect.value);
+  fillExerciseSelect(builderLocationSelect.value, builderRegionSelect.value);
+});
+
+builderRegionSelect.addEventListener('change', function() {
+  fillExerciseSelect(builderLocationSelect.value, builderRegionSelect.value);
 });
 
 /* ══════════════════════════════════════════
@@ -977,16 +985,25 @@ completeProgramBtn.addEventListener('click', function() {
 
 function renderDayTabs() {
   var daysMap = getWorkoutDaysMap();
+  var filledWeekdays = DAYS_ORDER.filter(function(weekday) {
+    var day = daysMap[weekday];
+    return day && day.exercises && day.exercises.length > 0;
+  });
+
+  if (filledWeekdays.indexOf(activeWeekday) === -1) {
+    activeWeekday = filledWeekdays[0] || 'Pazartesi';
+    localStorage.setItem(KEYS.activeDay, activeWeekday);
+  }
+
   var html = '';
 
-  DAYS_ORDER.forEach(function(weekday) {
+  filledWeekdays.forEach(function(weekday) {
     var day = daysMap[weekday];
-    var hasExercises = day && day.exercises && day.exercises.length > 0;
     var activeClass = weekday === activeWeekday ? ' active' : '';
-    var hasTitle = day && day.title;
+    var hasTitle = day.title;
     var titleHtml = hasTitle ? day.title : '—';
     var titleClass = hasTitle ? '' : ' muted';
-    var badge = hasExercises ? '<span class="day-tab-badge">' + day.exercises.length + '</span>' : '';
+    var badge = '<span class="day-tab-badge">' + day.exercises.length + '</span>';
 
     html +=
       '<button class="day-tab' + activeClass + '" data-weekday="' + weekday + '">' +
@@ -995,6 +1012,10 @@ function renderDayTabs() {
         badge +
       '</button>';
   });
+
+  if (!html) {
+    html = '<p class="empty-hint">Henüz program eklenmedi.</p>';
+  }
 
   dayTabsContainer.innerHTML = html;
 }
@@ -1188,7 +1209,8 @@ updateDashboard();
 
 fillNumberRange(builderSetsSelect, 1, 10);
 fillNumberRange(builderRepsSelect, 1, 20);
-fillExerciseSelect(builderLocationSelect.value);
+fillRegionSelect(builderLocationSelect.value);
+fillExerciseSelect(builderLocationSelect.value, builderRegionSelect.value);
 builderDaySelect.value = activeWeekday;
 
 overallProgressCard.classList.remove('hidden');
