@@ -196,6 +196,19 @@
           <p class="empty-hint">Henüz tartım eklenmedi.</p>
         </div>
       </div>
+
+      <!-- AI AYARLARI -->
+      <div class="form-card">
+        <h2 class="card-heading">🤖 AI Ayarları</h2>
+        <p class="food-source-note">PDF'den program yükleme özelliği için Gemini API anahtarın gerekiyor. Anahtarın sadece bu cihazda saklanır, hiçbir sunucuya gönderilmez.</p>
+        <div class="form-group">
+          <label class="form-label" for="gemini-api-key">Gemini API Anahtarı</label>
+          <input class="form-input" type="password" id="gemini-api-key" placeholder="AIza..." autocomplete="off" />
+        </div>
+        <button class="btn-save" id="save-api-key">Anahtarı Kaydet</button>
+        <p class="save-feedback hidden" id="api-key-feedback">✅ Kaydedildi!</p>
+        <p class="food-source-note">Anahtarın yok mu? <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style="color:var(--accent-2);">aistudio.google.com</a> adresinden ücretsiz alabilirsin.</p>
+      </div>
     </section>
 
     <!-- PAGE: WORKOUT -->
@@ -204,6 +217,12 @@
         <h1 class="page-title">Antrenman Planım</h1>
         <p class="page-subtitle">Her seti tamamladıkça işaretle — ilerlemen kaydedilir.</p>
       </div>
+
+      <!-- PDF'DEN PROGRAM YÜKLE -->
+      <button class="btn-pdf-upload" id="openPdfUploadBtn" type="button">
+        <span>📄</span> PDF'den Program Yükle
+      </button>
+      <input type="file" id="pdfFileInput" accept="application/pdf" class="hidden" />
 
       <!-- ── FORM + SEPET (Builder) ── -->
       <div class="workout-builder">
@@ -403,6 +422,45 @@
       </div>
     </div>
 
+    <!-- PDF PROGRAM YÜKLEME MODALI -->
+    <div class="modal-overlay-2 hidden" id="pdfModal">
+      <div class="modal-box-2">
+        <div class="modal-header">
+          <h2 class="modal-title">PDF'den Program Yükle</h2>
+          <button class="modal-close" id="closePdfModal" aria-label="Kapat">✕</button>
+        </div>
+        <div class="modal-body">
+
+          <!-- ADIM 1: Dosya seçilmeden önce bilgi + buton -->
+          <div id="pdfStepIntro">
+            <p class="food-source-note">PT'nden veya bir yerden aldığın antrenman programı PDF'ini seç — yapay zeka okuyup uygulamana otomatik aktaracak.</p>
+            <button class="btn-save" id="pdfSelectFileBtn" type="button">PDF Dosyası Seç</button>
+          </div>
+
+          <!-- ADIM 2: İşleniyor -->
+          <div id="pdfStepProcessing" class="hidden">
+            <p class="loading-hint" id="pdfProcessingText">PDF okunuyor…</p>
+          </div>
+
+          <!-- ADIM 3: Hata -->
+          <div id="pdfStepError" class="hidden">
+            <p class="loading-hint" id="pdfErrorText">⚠️ Bir hata oluştu.</p>
+            <button class="btn-save" id="pdfRetryBtn" type="button">Tekrar Dene</button>
+          </div>
+
+          <!-- ADIM 4: Önizleme -->
+          <div id="pdfStepPreview" class="hidden">
+            <p class="food-source-note">AI'nın bulduğu program aşağıda — istemediğin satırları silebilirsin. Onaylarsan mevcut programının üzerine <strong>eklenir</strong>, silinmez.</p>
+            <div class="pdf-preview-list" id="pdfPreviewList"></div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save hidden" id="pdfConfirmBtn" type="button">Programı Onayla ve Ekle</button>
+        </div>
+      </div>
+    </div>
+
     <!-- PAGE: SUPPLEMENT -->
     <section class="page hidden" id="page-supplement">
       <div class="page-header">
@@ -446,6 +504,7 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

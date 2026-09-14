@@ -120,6 +120,8 @@ function loadFormData() {
   if (savedGoalType) document.getElementById('goal-type').value = savedGoalType;
   document.getElementById('goal-date').value   = localStorage.getItem(KEYS.goalDate)   || '';
   document.getElementById('goal-weight').value = localStorage.getItem(KEYS.goalWeight) || '';
+
+  document.getElementById('gemini-api-key').value = localStorage.getItem('ft_gemini_api_key') || '';
 }
 
 // ── SAVE FEEDBACK ────────────────────────────
@@ -366,7 +368,8 @@ var MUSCLE_TR = {
   'traps':      'Trapez',
   'triceps':    'Triceps',
   'adductors':  'Bacak İç',
-  'abductors':  'Bacak Dış'
+  'abductors':  'Bacak Dış',
+  'unknown':    'Genel'
 };
 
 // Her kas grubunun anatomik olarak hangi görünümde (ön/arka) göründüğü
@@ -387,7 +390,8 @@ var MUSCLE_VIEW = {
   'hamstrings': 'back',
   'calves':     'back',
   'triceps':    'back',
-  'abductors':  'back'
+  'abductors':  'back',
+  'unknown':    'front'
 };
 
 var LEVEL_TR = { 'beginner': 'Başlangıç', 'intermediate': 'Orta', 'expert': 'İleri' };
@@ -1102,7 +1106,7 @@ function buildExerciseCardHTML(weekday, ex) {
       '<button class="exercise-card-remove" data-weekday="' + weekday + '" data-id="' + ex.id + '" title="Kaldır">✕</button>' +
       '<div class="exercise-card-title-row">' +
         '<button class="exercise-card-name">' + ex.name + '</button>' +
-        '<button class="exercise-card-play" data-youtube="' + youtubeUrl + '" title="Video izle"><span>▶</span></button>' +
+        '<a class="exercise-card-play" href="' + youtubeUrl + '" target="_blank" rel="noopener noreferrer" title="Video izle"><span>▶</span></a>' +
       '</div>' +
       '<p class="exercise-card-sets-reps">' + ex.sets + '×' + ex.reps + extraMeta + '</p>' +
       '<div class="exercise-card-circles">' + circlesHTML + '</div>' +
@@ -1127,12 +1131,6 @@ function renderExerciseCards() {
 
 exerciseCardsListEl.addEventListener('click', function(e) {
   if (handleAnatomyViewToggle(e.target)) return;
-
-  var playBtn = e.target.closest('.exercise-card-play');
-  if (playBtn) {
-    window.open(playBtn.dataset.youtube, '_blank', 'noopener');
-    return;
-  }
 
   var removeBtn = e.target.closest('.exercise-card-remove');
   if (removeBtn) {
@@ -1465,3 +1463,253 @@ foodLogList.addEventListener('click', function(e) {
 
 // ── INIT (Beslenme) ─────────────────────────────
 renderFoodLog();
+
+/* ══════════════════════════════════════════
+   PDF + AI: PROGRAM OTOMATİK AKTARIMI
+   pdf.js (metin çıkarma) + Gemini API (AI ayrıştırma)
+   Anahtar sadece localStorage'da tutulur, koda hiç yazılmaz.
+   ══════════════════════════════════════════ */
+
+var GEMINI_KEY_STORAGE = 'ft_gemini_api_key';
+var GEMINI_MODEL = 'gemini-2.0-flash';
+
+function getGeminiKey() { return localStorage.getItem(GEMINI_KEY_STORAGE) || ''; }
+function saveGeminiKey(key) { localStorage.setItem(GEMINI_KEY_STORAGE, key); }
+
+// pdf.js worker'ını ayarla (kütüphane yüklenmişse)
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+document.getElementById('save-api-key').addEventListener('click', function() {
+  var key = document.getElementById('gemini-api-key').value.trim();
+  saveGeminiKey(key);
+  showFeedback('api-key-feedback');
+});
+
+// ── PDF METİN ÇIKARMA (tamamen tarayıcıda, hiçbir yere gönderilmeden) ──
+function extractPdfText(file) {
+  return file.arrayBuffer().then(function(buffer) {
+    return pdfjsLib.getDocument({ data: buffer }).promise;
+  }).then(function(pdf) {
+    var pagePromises = [];
+    for (var i = 1; i <= pdf.numPages; i++) {
+      pagePromises.push(
+        pdf.getPage(i).then(function(page) {
+          return page.getTextContent();
+        }).then(function(content) {
+          return content.items.map(function(item) { return item.str; }).join(' ');
+        })
+      );
+    }
+    return Promise.all(pagePromises).then(function(pagesText) {
+      return pagesText.join('\n\n');
+    });
+  });
+}
+
+// ── AI PROMPT OLUŞTURMA ──
+function buildGeminiPrompt(pdfText) {
+  return (
+    'Aşağıdaki metin bir antrenman programı içeriyor. Bu programı analiz et ve ' +
+    'SADECE geçerli JSON formatında yanıt ver — başka hiçbir açıklama, yorum veya markdown code-block ekleme.\n\n' +
+    'Format tam olarak şu şekilde olmalı:\n' +
+    '{"Pazartesi": [{"hareket": "Bench Press", "set": 3, "tekrar": 10}], "Salı": [...]}\n\n' +
+    'Kurallar:\n' +
+    '- Gün isimleri SADECE şunlardan biri olmalı: Pazartesi, Salı, Çarşamba, Perşembe, Cuma, Cumartesi, Pazar\n' +
+    '- Metinde "Gün 1", "Day A" gibi isimler varsa sırayla Pazartesi\'den başlayarak eşleştir\n' +
+    '- set ve tekrar sayısal (tam sayı) olmalı; metinde belirtilmemişse 3 set 10 tekrar varsay\n' +
+    '- Hareket isimlerini olduğu gibi koru (İngilizce olabilir)\n' +
+    '- Bir gün için hiç hareket bulamazsan o günü hiç ekleme\n\n' +
+    'Metin:\n' + pdfText.substring(0, 15000)
+  );
+}
+
+// ── GEMINI API ÇAĞRISI ──
+function callGeminiAPI(prompt, apiKey) {
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent';
+
+  return fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey
+    },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }]
+    })
+  }).then(function(res) {
+    if (!res.ok) {
+      return res.json().catch(function() { return null; }).then(function(errData) {
+        var msg = (errData && errData.error && errData.error.message) || ('HTTP ' + res.status);
+        throw new Error(msg);
+      });
+    }
+    return res.json();
+  }).then(function(data) {
+    var text = data && data.candidates && data.candidates[0] &&
+               data.candidates[0].content && data.candidates[0].content.parts &&
+               data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
+    if (!text) throw new Error('AI yanıtı boş geldi.');
+    return text;
+  });
+}
+
+// ── AI YANITINI JSON'A ÇEVİRME (markdown code-block temizliği dahil) ──
+function parseAIJson(rawText) {
+  var cleaned = rawText.trim();
+  cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '');
+  return JSON.parse(cleaned);
+}
+
+// ── HAREKET ADINA GÖRE VERİTABANIMIZDAN EŞLEŞME BUL ──
+function findExerciseMeta(name) {
+  var all = EXERCISES['Evde'].concat(EXERCISES['Spor Salonunda']);
+  var lower = (name || '').trim().toLowerCase();
+  var found = all.find(function(e) { return e.name.toLowerCase() === lower; });
+  if (found) return { muscle: found.muscle, equipment: found.equipment, level: found.level };
+  return { muscle: 'unknown', equipment: '', level: '' };
+}
+
+// ── MODAL ADIM YÖNETİMİ ──
+var pdfModal            = document.getElementById('pdfModal');
+var openPdfUploadBtn     = document.getElementById('openPdfUploadBtn');
+var closePdfModalBtn     = document.getElementById('closePdfModal');
+var pdfFileInput         = document.getElementById('pdfFileInput');
+var pdfSelectFileBtn     = document.getElementById('pdfSelectFileBtn');
+var pdfRetryBtn          = document.getElementById('pdfRetryBtn');
+var pdfConfirmBtn        = document.getElementById('pdfConfirmBtn');
+var pdfPreviewListEl     = document.getElementById('pdfPreviewList');
+
+var pdfParsedProgram = null;
+
+function showPdfStep(step) {
+  ['pdfStepIntro', 'pdfStepProcessing', 'pdfStepError', 'pdfStepPreview'].forEach(function(id) {
+    document.getElementById(id).classList.toggle('hidden', id !== step);
+  });
+  pdfConfirmBtn.classList.toggle('hidden', step !== 'pdfStepPreview');
+}
+
+openPdfUploadBtn.addEventListener('click', function() {
+  if (!getGeminiKey()) {
+    alert('Önce "Kişisel Bilgiler" sayfasından Gemini API anahtarını kaydetmelisin.');
+    showPage('profile');
+    closeMenu();
+    return;
+  }
+  showPdfStep('pdfStepIntro');
+  pdfModal.classList.remove('hidden');
+});
+
+closePdfModalBtn.addEventListener('click', function() {
+  pdfModal.classList.add('hidden');
+});
+
+pdfModal.addEventListener('click', function(e) {
+  if (e.target === pdfModal) pdfModal.classList.add('hidden');
+});
+
+pdfSelectFileBtn.addEventListener('click', function() { pdfFileInput.click(); });
+pdfRetryBtn.addEventListener('click', function() { pdfFileInput.click(); });
+
+pdfFileInput.addEventListener('change', function() {
+  var file = pdfFileInput.files[0];
+  pdfFileInput.value = ''; // aynı dosyayı tekrar seçebilmek için sıfırla
+  if (!file) return;
+  processPdfFile(file);
+});
+
+function processPdfFile(file) {
+  showPdfStep('pdfStepProcessing');
+  document.getElementById('pdfProcessingText').textContent = 'PDF okunuyor…';
+
+  extractPdfText(file).then(function(text) {
+    if (!text || text.trim().length < 20) {
+      throw new Error('PDF içinden metin okunamadı. Taranmış (fotoğraf) bir PDF olabilir.');
+    }
+    document.getElementById('pdfProcessingText').textContent = 'AI programı analiz ediyor…';
+    var prompt = buildGeminiPrompt(text);
+    return callGeminiAPI(prompt, getGeminiKey());
+  }).then(function(rawResponse) {
+    var parsed = parseAIJson(rawResponse);
+    pdfParsedProgram = parsed;
+    renderPdfPreview();
+    showPdfStep('pdfStepPreview');
+  }).catch(function(err) {
+    console.warn('[PDF+AI] Hata:', err);
+    document.getElementById('pdfErrorText').textContent = '⚠️ ' + (err && err.message ? err.message : 'Bilinmeyen bir hata oluştu.');
+    showPdfStep('pdfStepError');
+  });
+}
+
+function renderPdfPreview() {
+  var days = Object.keys(pdfParsedProgram || {});
+
+  if (days.length === 0) {
+    pdfPreviewListEl.innerHTML = '<p class="empty-hint">Program bulunamadı.</p>';
+    pdfConfirmBtn.classList.add('hidden');
+    return;
+  }
+
+  var html = '';
+  days.forEach(function(day) {
+    html += '<div class="pdf-preview-day"><p class="pdf-preview-day-title">' + day + '</p>';
+    pdfParsedProgram[day].forEach(function(item, idx) {
+      html +=
+        '<div class="pdf-preview-exercise">' +
+          '<span class="pdf-preview-exercise-name">' + item.hareket + '</span>' +
+          '<span class="pdf-preview-exercise-meta">' + (item.set || 3) + '×' + (item.tekrar || 10) + '</span>' +
+          '<button class="pdf-preview-remove" data-day="' + day + '" data-idx="' + idx + '">✕</button>' +
+        '</div>';
+    });
+    html += '</div>';
+  });
+
+  pdfPreviewListEl.innerHTML = html;
+  pdfConfirmBtn.classList.remove('hidden');
+}
+
+pdfPreviewListEl.addEventListener('click', function(e) {
+  var btn = e.target.closest('.pdf-preview-remove');
+  if (!btn) return;
+  var day = btn.dataset.day;
+  var idx = parseInt(btn.dataset.idx, 10);
+  pdfParsedProgram[day].splice(idx, 1);
+  if (pdfParsedProgram[day].length === 0) delete pdfParsedProgram[day];
+  renderPdfPreview();
+});
+
+function mergePdfProgramIntoStorage(program) {
+  var daysMap = getWorkoutDaysMap();
+
+  Object.keys(program).forEach(function(weekday) {
+    if (DAYS_ORDER.indexOf(weekday) === -1) return; // güvenlik: sadece geçerli hafta günleri
+    if (!daysMap[weekday]) daysMap[weekday] = { title: '', exercises: [] };
+
+    program[weekday].forEach(function(item) {
+      var meta = findExerciseMeta(item.hareket);
+      var sets = parseInt(item.set, 10) || 3;
+
+      daysMap[weekday].exercises.push({
+        id: 'ex_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+        name: item.hareket,
+        muscle: meta.muscle,
+        equipment: meta.equipment,
+        level: meta.level,
+        sets: sets,
+        reps: parseInt(item.tekrar, 10) || 10,
+        checked: new Array(sets).fill(false)
+      });
+    });
+  });
+
+  saveWorkoutDaysMap(daysMap);
+}
+
+pdfConfirmBtn.addEventListener('click', function() {
+  if (!pdfParsedProgram) return;
+  mergePdfProgramIntoStorage(pdfParsedProgram);
+  pdfModal.classList.add('hidden');
+  pdfParsedProgram = null;
+  renderWorkoutTracking();
+});
