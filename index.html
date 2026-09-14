@@ -224,8 +224,14 @@
       </button>
       <input type="file" id="pdfFileInput" accept="application/pdf" class="hidden" />
 
+      <!-- ANTRENMAN PLANI OLUŞTUR (açılır/kapanır) -->
+      <button class="btn-toggle-builder" id="toggleBuilderBtn" type="button">
+        <span>➕ Antrenman Planı Oluştur</span>
+        <span class="btn-toggle-builder-chevron">⌄</span>
+      </button>
+
       <!-- ── FORM + SEPET (Builder) ── -->
-      <div class="workout-builder">
+      <div class="workout-builder hidden" id="workoutBuilderSection">
 
         <!-- SOL: FORM -->
         <div class="builder-form form-card">
@@ -334,17 +340,32 @@
 
       <div class="exercise-cards-list hidden" id="exerciseCardsList"></div>
 
+      <button class="btn-finish-workout hidden" id="finishWorkoutBtn" type="button">
+        ✅ Antrenmanı Tamamla
+      </button>
+
       <div class="empty-state" id="workout-empty">
         <p class="empty-icon">🏋️</p>
         <p class="empty-text">Bu güne henüz antrenman eklenmedi. Yukarıdaki formla ekleyip "Programı Tamamla" ile kaydet.</p>
       </div>
 
-      <!-- SERBEST NOTLAR -->
+      <!-- KARDİYO PLANLAMASI -->
       <div class="form-card notes-card">
-        <h2 class="card-heading">📝 Genel Notlar (Opsiyonel)</h2>
+        <h2 class="card-heading">🏃 Kardiyo Planlaması</h2>
         <div class="form-group">
-          <label class="form-label" for="input-workout">Ek notlarını buraya yazabilirsin</label>
-          <textarea class="form-textarea" id="input-workout" placeholder="örn. Diz sakatlığı nedeniyle squat yerine leg press yapıyorum..."></textarea>
+          <label class="form-label" for="input-cardio">Kardiyo notlarını buraya yazabilirsin</label>
+          <textarea class="form-textarea" id="input-cardio" placeholder="örn. Antrenman günleri 20dk 110-130bpm nabız aralığında yürüyüş..."></textarea>
+        </div>
+        <button class="btn-save" id="save-cardio">Kaydet</button>
+        <p class="save-feedback hidden" id="cardio-feedback">✅ Kaydedildi!</p>
+      </div>
+
+      <!-- ANTRENMAN UYGULAMA KURALLARI -->
+      <div class="form-card notes-card">
+        <h2 class="card-heading">📋 Antrenman Uygulama Kuralları</h2>
+        <div class="form-group">
+          <label class="form-label" for="input-workout">Kural ve notlarını buraya yazabilirsin</label>
+          <textarea class="form-textarea" id="input-workout" placeholder="örn. Setler arası 60-90 saniye dinlen. Negatifte 2-3 saniye kontrollü indir..."></textarea>
         </div>
         <button class="btn-save" id="save-workout">Kaydet</button>
         <p class="save-feedback hidden" id="workout-feedback">✅ Kaydedildi!</p>
@@ -357,6 +378,12 @@
         <h1 class="page-title">Beslenme Planı</h1>
         <p class="page-subtitle">Gerçek gıda veritabanıyla günlük takip</p>
       </div>
+
+      <!-- PDF'DEN BESLENME/SUPPLEMENT YÜKLE -->
+      <button class="btn-pdf-upload" id="openDietPdfBtn" type="button">
+        <span>📄</span> PDF'den Beslenme/Supplement Planı Yükle
+      </button>
+      <input type="file" id="dietPdfFileInput" accept="application/pdf" class="hidden" />
 
       <!-- BUGÜNÜN ÖZETİ -->
       <div class="nutrition-summary-card">
@@ -402,7 +429,7 @@
 
       <!-- SERBEST NOTLAR -->
       <div class="form-card notes-card">
-        <h2 class="card-heading">📝 Genel Notlar (Opsiyonel)</h2>
+        <h2 class="card-heading">📝 Beslenme Planı Notların</h2>
         <div class="form-group">
           <label class="form-label" for="input-nutrition">Ek notlarını buraya yazabilirsin</label>
           <textarea class="form-textarea" id="input-nutrition" placeholder="Sabah: Yulaf ezmesi, 3 yumurta&#10;Öğle: Tavuk göğsü, pirinç, salata&#10;Ara: Protein bar&#10;Akşam: Balık, sebze..."></textarea>
@@ -471,12 +498,60 @@
       </div>
     </div>
 
+    <!-- BESLENME/SUPPLEMENT PDF YÜKLEME MODALI -->
+    <div class="modal-overlay-2 hidden" id="dietPdfModal">
+      <div class="modal-box-2">
+        <div class="modal-header">
+          <h2 class="modal-title">PDF'den Beslenme/Supplement Yükle</h2>
+          <button class="modal-close" id="closeDietPdfModal" aria-label="Kapat">✕</button>
+        </div>
+        <div class="modal-body">
+
+          <div id="dietPdfStepIntro">
+            <p class="food-source-note">Beslenme veya supplement planı içeren PDF'ini seç — AI ikisini de ayırıp ilgili sayfalara ekleyecek.</p>
+            <button class="btn-save" id="dietPdfSelectFileBtn" type="button">PDF Dosyası Seç</button>
+          </div>
+
+          <div id="dietPdfStepProcessing" class="hidden">
+            <p class="loading-hint" id="dietPdfProcessingText">PDF okunuyor…</p>
+          </div>
+
+          <div id="dietPdfStepError" class="hidden">
+            <p class="loading-hint" id="dietPdfErrorText">⚠️ Bir hata oluştu.</p>
+            <button class="btn-save" id="dietPdfRetryBtn" type="button">Tekrar Dene</button>
+          </div>
+
+          <div id="dietPdfStepPreview" class="hidden">
+            <p class="food-source-note">AI'nın bulduğu bilgiler aşağıda — onaylarsan mevcut notlarının <strong>altına eklenir</strong>, üzerine yazılmaz.</p>
+            <div id="dietPdfPreviewNutrition" class="pdf-preview-day hidden">
+              <p class="pdf-preview-day-title">🍽️ Beslenme Planı</p>
+              <p class="pdf-preview-freetext" id="dietPdfPreviewNutritionText"></p>
+            </div>
+            <div id="dietPdfPreviewSupplement" class="pdf-preview-day hidden">
+              <p class="pdf-preview-day-title">💊 Supplement Planı</p>
+              <p class="pdf-preview-freetext" id="dietPdfPreviewSupplementText"></p>
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save hidden" id="dietPdfConfirmBtn" type="button">Onayla ve Ekle</button>
+        </div>
+      </div>
+    </div>
+
     <!-- PAGE: SUPPLEMENT -->
     <section class="page hidden" id="page-supplement">
       <div class="page-header">
         <h1 class="page-title">Supplement Planı</h1>
         <p class="page-subtitle">Günlük takviyeler</p>
       </div>
+
+      <!-- PDF'DEN BESLENME/SUPPLEMENT YÜKLE -->
+      <button class="btn-pdf-upload" id="openDietPdfBtnSupp" type="button">
+        <span>📄</span> PDF'den Beslenme/Supplement Planı Yükle
+      </button>
+
       <div class="form-card">
         <div class="form-group">
           <label class="form-label" for="input-supplement">Supplement planını buraya yaz</label>

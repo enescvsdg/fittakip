@@ -76,7 +76,8 @@ var KEYS = {
   goalWeight:  'ft_goal_weight',
   weighins:    'ft_weighins',
   workoutDays: 'ft_workout_days_v2',
-  activeDay:   'ft_active_weekday'
+  activeDay:   'ft_active_weekday',
+  cardio:      'ft_cardio_plan'
 };
 
 // ── JSON STORAGE HELPERS ─────────────────────
@@ -113,6 +114,7 @@ function loadFormData() {
   document.getElementById('input-age').value        = localStorage.getItem(KEYS.age)        || '';
   document.getElementById('input-goal').value       = localStorage.getItem(KEYS.goal)       || '';
   document.getElementById('input-workout').value    = localStorage.getItem(KEYS.workout)    || '';
+  document.getElementById('input-cardio').value      = localStorage.getItem(KEYS.cardio)     || '';
   document.getElementById('input-nutrition').value  = localStorage.getItem(KEYS.nutrition)  || '';
   document.getElementById('input-supplement').value = localStorage.getItem(KEYS.supplement) || '';
 
@@ -150,6 +152,10 @@ document.getElementById('save-profile').addEventListener('click', function() {
 document.getElementById('save-workout').addEventListener('click', function() {
   localStorage.setItem(KEYS.workout, document.getElementById('input-workout').value);
   showFeedback('workout-feedback');
+});
+document.getElementById('save-cardio').addEventListener('click', function() {
+  localStorage.setItem(KEYS.cardio, document.getElementById('input-cardio').value);
+  showFeedback('cardio-feedback');
 });
 document.getElementById('save-nutrition').addEventListener('click', function() {
   localStorage.setItem(KEYS.nutrition, document.getElementById('input-nutrition').value);
@@ -478,7 +484,20 @@ var EXERCISES = {
     { name: "Superman", equipment: "none", level: "beginner", muscle: "lower back" },
     { name: "Bird Dog", equipment: "none", level: "beginner", muscle: "lower back" },
     { name: "Neck Lateral Flexion", equipment: "none", level: "beginner", muscle: "neck" },
-    { name: "Neck Flexion (Manual Resistance)", equipment: "none", level: "beginner", muscle: "neck" }
+    { name: "Neck Flexion (Manual Resistance)", equipment: "none", level: "beginner", muscle: "neck" },
+    { name: "Weighted Crunch", equipment: "dumbbell", level: "beginner", muscle: "abdominals" },
+    { name: "Reverse Crunch", equipment: "none", level: "beginner", muscle: "abdominals" },
+    { name: "Standing Knee Raise", equipment: "none", level: "beginner", muscle: "abdominals" },
+    { name: "McGill Curl Up", equipment: "none", level: "intermediate", muscle: "abdominals" },
+    { name: "Band External Rotation", equipment: "bands", level: "beginner", muscle: "shoulders" },
+    { name: "Band Internal Rotation", equipment: "bands", level: "beginner", muscle: "shoulders" },
+    { name: "Scapula Pull Up", equipment: "pull-up bar", level: "intermediate", muscle: "lats" },
+    { name: "Doorway Chest Stretch", equipment: "none", level: "beginner", muscle: "chest" },
+    { name: "Child's Pose Lat Stretch", equipment: "none", level: "beginner", muscle: "lats" },
+    { name: "Wall Lat Stretch", equipment: "none", level: "beginner", muscle: "lats" },
+    { name: "Standing Quadriceps Stretch", equipment: "none", level: "beginner", muscle: "quadriceps" },
+    { name: "Standing Hamstring Stretch", equipment: "none", level: "beginner", muscle: "hamstrings" },
+    { name: "Overhead Triceps Stretch", equipment: "none", level: "beginner", muscle: "triceps" }
   ],
   'Spor Salonunda': [
     { name: "Barbell Bench Press", equipment: "barbell", level: "intermediate", muscle: "chest" },
@@ -502,6 +521,8 @@ var EXERCISES = {
     { name: "Pec Deck Fly", equipment: "machine", level: "beginner", muscle: "chest" },
     { name: "Landmine Press", equipment: "barbell", level: "intermediate", muscle: "chest" },
     { name: "Incline Cable Fly", equipment: "cable", level: "intermediate", muscle: "chest" },
+    { name: "Machine Fly", equipment: "machine", level: "beginner", muscle: "chest" },
+    { name: "Incline Smith Press", equipment: "machine", level: "intermediate", muscle: "chest" },
     { name: "Bent-Arm Barbell Pullover", equipment: "barbell", level: "intermediate", muscle: "lats" },
     { name: "Cable Incline Pushdown", equipment: "cable", level: "intermediate", muscle: "lats" },
     { name: "Lat Pulldown", equipment: "cable", level: "beginner", muscle: "lats" },
@@ -511,6 +532,8 @@ var EXERCISES = {
     { name: "Rope Pullover", equipment: "cable", level: "intermediate", muscle: "lats" },
     { name: "Reverse Pulldown", equipment: "cable", level: "intermediate", muscle: "lats" },
     { name: "Kroc Row", equipment: "dumbbell", level: "expert", muscle: "lats" },
+    { name: "Wide Grip Lat Pulldown", equipment: "cable", level: "beginner", muscle: "lats" },
+    { name: "Close Grip Lat Pulldown", equipment: "cable", level: "beginner", muscle: "lats" },
     { name: "Alternating Kettlebell Row", equipment: "kettlebell", level: "intermediate", muscle: "middle back" },
     { name: "Alternating Renegade Row", equipment: "kettlebell", level: "expert", muscle: "middle back" },
     { name: "Bent Over Barbell Row", equipment: "barbell", level: "intermediate", muscle: "middle back" },
@@ -523,6 +546,7 @@ var EXERCISES = {
     { name: "Chest Supported Row", equipment: "dumbbell", level: "intermediate", muscle: "middle back" },
     { name: "Meadows Row", equipment: "barbell", level: "intermediate", muscle: "middle back" },
     { name: "Machine Row", equipment: "machine", level: "beginner", muscle: "middle back" },
+    { name: "Wide Grip Seated Cable Row", equipment: "cable", level: "beginner", muscle: "middle back" },
     { name: "Alternating Cable Shoulder Press", equipment: "cable", level: "intermediate", muscle: "shoulders" },
     { name: "Alternating Deltoid Raise", equipment: "dumbbell", level: "beginner", muscle: "shoulders" },
     { name: "Alternating Kettlebell Press", equipment: "kettlebell", level: "intermediate", muscle: "shoulders" },
@@ -565,6 +589,7 @@ var EXERCISES = {
     { name: "21s Bicep Curl", equipment: "barbell", level: "intermediate", muscle: "biceps" },
     { name: "Cable Curl", equipment: "cable", level: "beginner", muscle: "biceps" },
     { name: "Incline Dumbbell Curl", equipment: "dumbbell", level: "intermediate", muscle: "biceps" },
+    { name: "Dumbbell Curl", equipment: "dumbbell", level: "beginner", muscle: "biceps" },
     { name: "Board Press", equipment: "barbell", level: "intermediate", muscle: "triceps" },
     { name: "Cable Incline Triceps Extension", equipment: "cable", level: "intermediate", muscle: "triceps" },
     { name: "Cable Lying Triceps Extension", equipment: "cable", level: "intermediate", muscle: "triceps" },
@@ -578,6 +603,7 @@ var EXERCISES = {
     { name: "Triceps Dip Machine", equipment: "machine", level: "beginner", muscle: "triceps" },
     { name: "Triceps Pushdown", equipment: "cable", level: "beginner", muscle: "triceps" },
     { name: "Lying Triceps Extension", equipment: "ez curl bar", level: "intermediate", muscle: "triceps" },
+    { name: "Rope Pushdown", equipment: "cable", level: "beginner", muscle: "triceps" },
     { name: "Bottoms-Up Clean From The Hang Position", equipment: "kettlebell", level: "expert", muscle: "forearms" },
     { name: "Cable Wrist Curl", equipment: "cable", level: "beginner", muscle: "forearms" },
     { name: "Reverse Curl", equipment: "ez curl bar", level: "beginner", muscle: "forearms" },
@@ -1012,7 +1038,25 @@ completeProgramBtn.addEventListener('click', function() {
   feedbackEl.textContent = '✅ Program kaydedildi!';
   showFeedback('program-feedback');
 
+  collapseWorkoutBuilder();
   renderWorkoutTracking();
+});
+
+/* ══════════════════════════════════════════
+   ANTRENMAN PLANI OLUŞTUR — açılır/kapanır bar
+   ══════════════════════════════════════════ */
+
+var toggleBuilderBtn      = document.getElementById('toggleBuilderBtn');
+var workoutBuilderSection = document.getElementById('workoutBuilderSection');
+
+function collapseWorkoutBuilder() {
+  workoutBuilderSection.classList.add('hidden');
+  toggleBuilderBtn.classList.remove('open');
+}
+
+toggleBuilderBtn.addEventListener('click', function() {
+  workoutBuilderSection.classList.toggle('hidden');
+  toggleBuilderBtn.classList.toggle('open', !workoutBuilderSection.classList.contains('hidden'));
 });
 
 /* ══════════════════════════════════════════
@@ -1163,9 +1207,11 @@ function renderExerciseCards() {
   var day = getDay(activeWeekday);
   var hasMain = day.exercises && day.exercises.length > 0;
   var hasPost = day.postWorkout && day.postWorkout.length > 0;
+  var finishBtn = document.getElementById('finishWorkoutBtn');
 
   if (!hasMain && !hasPost) {
     exerciseCardsListEl.innerHTML = '<p class="day-empty">Bu güne henüz egzersiz eklenmedi. Yukarıdaki formla ekleyebilirsin.</p>';
+    finishBtn.classList.add('hidden');
     return;
   }
 
@@ -1184,7 +1230,27 @@ function renderExerciseCards() {
 
   exerciseCardsListEl.innerHTML = html;
   initAnatomyPanels(exerciseCardsListEl);
+  finishBtn.classList.remove('hidden');
 }
+
+document.getElementById('finishWorkoutBtn').addEventListener('click', function() {
+  var confirmed = window.confirm('"' + activeWeekday + '" günündeki tüm hareketleri tamamladın mı? Tüm setler işaretlenecek.');
+  if (!confirmed) return;
+
+  var daysMap = getWorkoutDaysMap();
+  var day = daysMap[activeWeekday];
+  if (!day) return;
+
+  (day.exercises || []).forEach(function(ex) {
+    ex.checked = new Array(ex.sets).fill(true);
+  });
+  (day.postWorkout || []).forEach(function(ex) {
+    ex.checked = new Array(ex.sets).fill(true);
+  });
+
+  saveWorkoutDaysMap(daysMap);
+  renderWorkoutTracking();
+});
 
 
 exerciseCardsListEl.addEventListener('click', function(e) {
@@ -1582,7 +1648,7 @@ function buildGeminiPrompt(pdfText) {
     'Format tam olarak şu şekilde olmalı:\n' +
     '{"Pazartesi": {"hareketler": [{"hareket": "Bench Press", "set": 3, "tekrar": 10, "not": "Dirsek sabit tut"}], ' +
     '"antrenmanSonrasi": [{"hareket": "Doorway Chest Stretch", "set": 3, "tekrar": 1, "not": "30-40 saniye tut. Göğsü hafif ileri ver."}]}, ' +
-    '"Salı": {...}}\n\n' +
+    '"Salı": {...}, "kardiyoPlanlamasi": "...", "antrenmanKurallari": "..."}\n\n' +
     'Gün kuralları:\n' +
     '- Gün isimleri SADECE şunlardan biri olmalı: Pazartesi, Salı, Çarşamba, Perşembe, Cuma, Cumartesi, Pazar\n' +
     '- Metinde "Gün 1", "Upper Day", "Antreman 2" gibi isimler varsa sırayla Pazartesi\'den başlayarak eşleştir\n\n' +
@@ -1602,6 +1668,11 @@ function buildGeminiPrompt(pdfText) {
     'SADECE çalışma (work) setini say, ısınma setini dahil etme\n' +
     '- "Maksimum Tekrar" veya sayı belirtilmemişse tekrar için 12 varsay, set sayısını metinden olduğu gibi al\n' +
     '- Hiçbir sayı bulunamazsa 3 set 10 tekrar varsay\n\n' +
+    'Genel metin alanları (üst düzeyde, günlerin dışında):\n' +
+    '- "kardiyoPlanlamasi": Metinde kardiyo/koşu/yürüyüş/bisiklet planlamasıyla ilgili bir bölüm varsa (örn. "Antrenman Günleri 20dk 110-130bpm"), ' +
+    'bunu olduğu gibi bu alana yaz. Yoksa bu alanı hiç ekleme.\n' +
+    '- "antrenmanKurallari": Metinde genel uygulama kuralları varsa (dinlenme süreleri, ısınma/çalışma seti mantığı, negatif kontrolü, ' +
+    'gün planlaması esnekliği vb.), bunları madde madde (her biri yeni satırda "- " ile başlayarak) bu alana yaz. Yoksa bu alanı hiç ekleme.\n\n' +
     'Genel kural: Bir gün için hiç geçerli hareket (ne ana hareket ne esneme) bulamazsan o günü hiç ekleme. ' +
     'Eğer metnin tamamı bir beslenme/diyet/supplement planıysa (antrenman hareketi hiç yoksa), boş obje {} döndür.\n\n' +
     'Metin:\n' + pdfText.substring(0, 15000)
@@ -1770,7 +1841,7 @@ function processPdfFile(file) {
 }
 
 function renderPdfPreview() {
-  var days = Object.keys(pdfParsedProgram || {});
+  var days = Object.keys(pdfParsedProgram || {}).filter(function(k) { return DAYS_ORDER.indexOf(k) !== -1; });
 
   if (days.length === 0) {
     pdfPreviewListEl.innerHTML = '<p class="empty-hint">Program bulunamadı.</p>';
@@ -1817,6 +1888,16 @@ function renderPdfPreview() {
 
     html += '</div>';
   });
+
+  if (pdfParsedProgram.kardiyoPlanlamasi) {
+    html += '<div class="pdf-preview-day"><p class="pdf-preview-day-title">🏃 Kardiyo Planlaması</p>' +
+            '<p class="pdf-preview-freetext">' + pdfParsedProgram.kardiyoPlanlamasi.replace(/\n/g, '<br>') + '</p></div>';
+  }
+
+  if (pdfParsedProgram.antrenmanKurallari) {
+    html += '<div class="pdf-preview-day"><p class="pdf-preview-day-title">📋 Antrenman Uygulama Kuralları</p>' +
+            '<p class="pdf-preview-freetext">' + pdfParsedProgram.antrenmanKurallari.replace(/\n/g, '<br>') + '</p></div>';
+  }
 
   pdfPreviewListEl.innerHTML = html;
   pdfConfirmBtn.classList.remove('hidden');
@@ -1876,10 +1957,161 @@ function mergePdfProgramIntoStorage(program) {
   saveWorkoutDaysMap(daysMap);
 }
 
+// Var olan not alanına, mevcut içeriği silmeden yeni metni ekler
+function appendToNotesField(storageKey, textareaId, newText) {
+  if (!newText) return;
+  var existing = localStorage.getItem(storageKey) || '';
+  var combined = existing ? (existing + '\n\n---\n\n' + newText) : newText;
+  localStorage.setItem(storageKey, combined);
+  var el = document.getElementById(textareaId);
+  if (el) el.value = combined;
+}
+
 pdfConfirmBtn.addEventListener('click', function() {
   if (!pdfParsedProgram) return;
   mergePdfProgramIntoStorage(pdfParsedProgram);
+  appendToNotesField(KEYS.cardio, 'input-cardio', pdfParsedProgram.kardiyoPlanlamasi);
+  appendToNotesField(KEYS.workout, 'input-workout', pdfParsedProgram.antrenmanKurallari);
   pdfModal.classList.add('hidden');
   pdfParsedProgram = null;
+  collapseWorkoutBuilder();
   renderWorkoutTracking();
+});
+
+/* ══════════════════════════════════════════
+   PDF + AI: BESLENME / SUPPLEMENT PLANI AKTARIMI
+   Aynı pdf.js + Gemini API altyapısını kullanır,
+   antrenman PDF akışından bağımsız, daha basit bir akış.
+   ══════════════════════════════════════════ */
+
+function buildDietPrompt(pdfText) {
+  return (
+    'Aşağıdaki metin bir beslenme/diyet planı ve/veya supplement (takviye)/vitamin planı içeriyor. ' +
+    'Bu metni analiz et ve SADECE geçerli JSON formatında yanıt ver — başka hiçbir açıklama, yorum veya markdown code-block ekleme.\n\n' +
+    'Format tam olarak şu şekilde olmalı:\n' +
+    '{"beslenmePlani": "düzenli metin", "supplementPlani": "düzenli metin"}\n\n' +
+    'Kurallar:\n' +
+    '- "beslenmePlani" alanına SADECE öğün/yemek bilgilerini yaz. Her öğünü "Öğün 1:", "Öğün 2:" gibi başlıklandır, ' +
+    'her satırı "- " ile başlat. Su tüketimi, tuz miktarı gibi genel beslenme notlarını da bu alanın sonuna ekle.\n' +
+    '- "supplementPlani" alanına supplement VE vitamin planındaki tüm maddeleri madde madde ("- " ile başlayarak) yaz.\n' +
+    '- Metinde bu bilgilerden biri yoksa ilgili alanı boş string ("") yap.\n' +
+    '- Metin tamamen bir antrenman programıysa (beslenme/supplement bilgisi hiç yoksa) ikisini de boş string yap.\n' +
+    '- Metni kısaltmadan, olabildiğince eksiksiz aktar.\n\n' +
+    'Metin:\n' + pdfText.substring(0, 15000)
+  );
+}
+
+var dietPdfModal          = document.getElementById('dietPdfModal');
+var openDietPdfBtn        = document.getElementById('openDietPdfBtn');
+var openDietPdfBtnSupp    = document.getElementById('openDietPdfBtnSupp');
+var closeDietPdfModalBtn  = document.getElementById('closeDietPdfModal');
+var dietPdfFileInput      = document.getElementById('dietPdfFileInput');
+var dietPdfSelectFileBtn  = document.getElementById('dietPdfSelectFileBtn');
+var dietPdfRetryBtn       = document.getElementById('dietPdfRetryBtn');
+var dietPdfConfirmBtn     = document.getElementById('dietPdfConfirmBtn');
+
+var dietPdfParsed = null;
+
+function showDietPdfStep(step) {
+  ['dietPdfStepIntro', 'dietPdfStepProcessing', 'dietPdfStepError', 'dietPdfStepPreview'].forEach(function(id) {
+    document.getElementById(id).classList.toggle('hidden', id !== step);
+  });
+  dietPdfConfirmBtn.classList.toggle('hidden', step !== 'dietPdfStepPreview');
+}
+
+function openDietPdfModal() {
+  if (!getGeminiKey()) {
+    alert('Önce "Kişisel Bilgiler" sayfasından Gemini API anahtarını kaydetmelisin.');
+    showPage('profile');
+    closeMenu();
+    return;
+  }
+  showDietPdfStep('dietPdfStepIntro');
+  dietPdfModal.classList.remove('hidden');
+}
+
+openDietPdfBtn.addEventListener('click', openDietPdfModal);
+openDietPdfBtnSupp.addEventListener('click', openDietPdfModal);
+
+closeDietPdfModalBtn.addEventListener('click', function() {
+  dietPdfModal.classList.add('hidden');
+});
+dietPdfModal.addEventListener('click', function(e) {
+  if (e.target === dietPdfModal) dietPdfModal.classList.add('hidden');
+});
+
+dietPdfSelectFileBtn.addEventListener('click', function() { dietPdfFileInput.click(); });
+dietPdfRetryBtn.addEventListener('click', function() { dietPdfFileInput.click(); });
+
+dietPdfFileInput.addEventListener('change', function() {
+  var file = dietPdfFileInput.files[0];
+  dietPdfFileInput.value = '';
+  if (!file) return;
+  processDietPdfFile(file);
+});
+
+function processDietPdfFile(file) {
+  showDietPdfStep('dietPdfStepProcessing');
+  document.getElementById('dietPdfProcessingText').textContent = 'PDF okunuyor…';
+
+  extractPdfText(file).then(function(text) {
+    if (!text || text.trim().length < 20) {
+      throw new Error('PDF içinden metin okunamadı. Taranmış (fotoğraf) bir PDF olabilir.');
+    }
+    document.getElementById('dietPdfProcessingText').textContent = 'AI planı analiz ediyor…';
+    var prompt = buildDietPrompt(text);
+    return callGeminiAPI(prompt, getGeminiKey());
+  }).then(function(rawResponse) {
+    var parsed = parseAIJson(rawResponse);
+
+    if (!parsed.beslenmePlani && !parsed.supplementPlani) {
+      throw new Error(
+        'Bu PDF\'de beslenme veya supplement bilgisi bulunamadı. Bir antrenman programı yüklemiş olabilirsin — ' +
+        'onun için "Antrenman Planı" sayfasındaki PDF yükleme özelliğini kullan.'
+      );
+    }
+
+    dietPdfParsed = parsed;
+    renderDietPdfPreview();
+    showDietPdfStep('dietPdfStepPreview');
+  }).catch(function(err) {
+    console.warn('[Diet PDF+AI] Hata:', err);
+    var rawMsg = (err && err.message) ? err.message : 'Bilinmeyen bir hata oluştu.';
+    var friendlyMsg = rawMsg;
+
+    if (/invalid authentication credentials|OAuth 2 access token/i.test(rawMsg)) {
+      friendlyMsg = 'Google\'ın "AQ." formatlı yeni API anahtarlarında şu an bilinen bir sunucu sorunu var. ' +
+                    'Farklı bir Google hesabıyla yeni bir anahtar oluşturup güncellemeyi dene.';
+    }
+
+    document.getElementById('dietPdfErrorText').textContent = '⚠️ ' + friendlyMsg;
+    showDietPdfStep('dietPdfStepError');
+  });
+}
+
+function renderDietPdfPreview() {
+  var nutritionBlock = document.getElementById('dietPdfPreviewNutrition');
+  var supplementBlock = document.getElementById('dietPdfPreviewSupplement');
+
+  if (dietPdfParsed.beslenmePlani) {
+    nutritionBlock.classList.remove('hidden');
+    document.getElementById('dietPdfPreviewNutritionText').innerHTML = dietPdfParsed.beslenmePlani.replace(/\n/g, '<br>');
+  } else {
+    nutritionBlock.classList.add('hidden');
+  }
+
+  if (dietPdfParsed.supplementPlani) {
+    supplementBlock.classList.remove('hidden');
+    document.getElementById('dietPdfPreviewSupplementText').innerHTML = dietPdfParsed.supplementPlani.replace(/\n/g, '<br>');
+  } else {
+    supplementBlock.classList.add('hidden');
+  }
+}
+
+dietPdfConfirmBtn.addEventListener('click', function() {
+  if (!dietPdfParsed) return;
+  appendToNotesField(KEYS.nutrition, 'input-nutrition', dietPdfParsed.beslenmePlani);
+  appendToNotesField(KEYS.supplement, 'input-supplement', dietPdfParsed.supplementPlani);
+  dietPdfModal.classList.add('hidden');
+  dietPdfParsed = null;
 });

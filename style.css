@@ -791,6 +791,13 @@ select.form-input {
   border-top: 1px dashed rgba(255,255,255,0.1);
 }
 
+.pdf-preview-freetext {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
 .pdf-preview-remove {
   background: none;
   border: none;
@@ -873,3 +880,55 @@ select.form-input {
   border-radius: 20px;
   margin-left: 6px;
 }
+
+/* ══════════════════════════════════════════
+   ANTRENMAN PLANI OLUŞTUR (açılır bar) + ANTRENMANI TAMAMLA
+   ══════════════════════════════════════════ */
+
+.btn-toggle-builder {
+  width: 100%;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 15px 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.btn-toggle-builder:active { background: var(--surface-2); }
+
+.btn-toggle-builder-chevron {
+  color: var(--text-muted);
+  font-size: 16px;
+  transition: transform 0.25s ease;
+}
+.btn-toggle-builder.open .btn-toggle-builder-chevron {
+  transform: rotate(180deg);
+}
+
+.workout-builder {
+  overflow: hidden;
+  animation: fadeSlideIn 0.3s ease both;
+}
+
+.btn-finish-workout {
+  width: 100%;
+  background: linear-gradient(135deg, var(--success), #3d9142);
+  border: none;
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 15px;
+  cursor: pointer;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+.btn-finish-workout:active { opacity: 0.85; }
