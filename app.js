@@ -1471,7 +1471,7 @@ renderFoodLog();
    ══════════════════════════════════════════ */
 
 var GEMINI_KEY_STORAGE = 'ft_gemini_api_key';
-var GEMINI_MODEL = 'gemini-flash-latest';
+var GEMINI_MODEL = 'gemini-2.5-flash';
 
 function getGeminiKey() { return localStorage.getItem(GEMINI_KEY_STORAGE) || ''; }
 function saveGeminiKey(key) { localStorage.setItem(GEMINI_KEY_STORAGE, key); }
@@ -1526,7 +1526,7 @@ function buildGeminiPrompt(pdfText) {
 }
 
 // ── GEMINI API ÇAĞRISI ──
-function callGeminiAPI(prompt, apiKey) {
+function callGeminiAPIOnce(prompt, apiKey) {
   var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(apiKey);
 
   return fetch(url, {
@@ -1541,7 +1541,9 @@ function callGeminiAPI(prompt, apiKey) {
     if (!res.ok) {
       return res.json().catch(function() { return null; }).then(function(errData) {
         var msg = (errData && errData.error && errData.error.message) || ('HTTP ' + res.status);
-        throw new Error(msg);
+        var err = new Error(msg);
+        err.status = res.status;
+        throw err;
       });
     }
     return res.json();
@@ -1551,6 +1553,22 @@ function callGeminiAPI(prompt, apiKey) {
                data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
     if (!text) throw new Error('AI yanıtı boş geldi.');
     return text;
+  });
+}
+
+// "Yoğun talep" / geçici sunucu hatalarında 1 kez daha dener (3 saniye arayla)
+function callGeminiAPI(prompt, apiKey) {
+  return callGeminiAPIOnce(prompt, apiKey).catch(function(err) {
+    var isOverloaded = err.status === 503 || err.status === 429 ||
+                        /high demand|overloaded|unavailable/i.test(err.message || '');
+    if (!isOverloaded) throw err;
+
+    document.getElementById('pdfProcessingText').textContent = 'Model yoğun, 3 saniye sonra tekrar deneniyor…';
+    return new Promise(function(resolve) {
+      setTimeout(resolve, 3000);
+    }).then(function() {
+      return callGeminiAPIOnce(prompt, apiKey);
+    });
   });
 }
 
