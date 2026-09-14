@@ -491,6 +491,9 @@ var EXERCISES = {
     { name: "Cable Crossover", equipment: "cable", level: "intermediate", muscle: "chest" },
     { name: "Cable Iron Cross", equipment: "cable", level: "intermediate", muscle: "chest" },
     { name: "Machine Chest Fly", equipment: "machine", level: "beginner", muscle: "chest" },
+    { name: "Dumbbell Fly", equipment: "dumbbell", level: "beginner", muscle: "chest" },
+    { name: "Cable Fly", equipment: "cable", level: "beginner", muscle: "chest" },
+    { name: "Chest Press Machine", equipment: "machine", level: "beginner", muscle: "chest" },
     { name: "Decline Bench Press", equipment: "barbell", level: "intermediate", muscle: "chest" },
     { name: "Dumbbell Bench Press", equipment: "dumbbell", level: "beginner", muscle: "chest" },
     { name: "Dumbbell Incline Press", equipment: "dumbbell", level: "intermediate", muscle: "chest" },
@@ -505,6 +508,8 @@ var EXERCISES = {
     { name: "One-Arm Dumbbell Row", equipment: "dumbbell", level: "beginner", muscle: "lats" },
     { name: "Straight Arm Pulldown", equipment: "cable", level: "beginner", muscle: "lats" },
     { name: "Single Arm Lat Pulldown", equipment: "cable", level: "intermediate", muscle: "lats" },
+    { name: "Rope Pullover", equipment: "cable", level: "intermediate", muscle: "lats" },
+    { name: "Reverse Pulldown", equipment: "cable", level: "intermediate", muscle: "lats" },
     { name: "Kroc Row", equipment: "dumbbell", level: "expert", muscle: "lats" },
     { name: "Alternating Kettlebell Row", equipment: "kettlebell", level: "intermediate", muscle: "middle back" },
     { name: "Alternating Renegade Row", equipment: "kettlebell", level: "expert", muscle: "middle back" },
@@ -539,6 +544,9 @@ var EXERCISES = {
     { name: "Lateral Raise", equipment: "dumbbell", level: "beginner", muscle: "shoulders" },
     { name: "Front Raise", equipment: "dumbbell", level: "beginner", muscle: "shoulders" },
     { name: "Face Pull", equipment: "cable", level: "beginner", muscle: "shoulders" },
+    { name: "Machine Shoulder Press", equipment: "machine", level: "beginner", muscle: "shoulders" },
+    { name: "Bent Over Lateral Raise", equipment: "dumbbell", level: "beginner", muscle: "shoulders" },
+    { name: "Rear Cable Fly", equipment: "cable", level: "beginner", muscle: "shoulders" },
     { name: "Cuban Press", equipment: "dumbbell", level: "expert", muscle: "shoulders" },
     { name: "Single Arm Landmine Press", equipment: "barbell", level: "intermediate", muscle: "shoulders" },
     { name: "Alternate Hammer Curl", equipment: "dumbbell", level: "beginner", muscle: "biceps" },
@@ -568,6 +576,8 @@ var EXERCISES = {
     { name: "Dumbbell Kickback", equipment: "dumbbell", level: "beginner", muscle: "triceps" },
     { name: "JM Press", equipment: "barbell", level: "expert", muscle: "triceps" },
     { name: "Triceps Dip Machine", equipment: "machine", level: "beginner", muscle: "triceps" },
+    { name: "Triceps Pushdown", equipment: "cable", level: "beginner", muscle: "triceps" },
+    { name: "Lying Triceps Extension", equipment: "ez curl bar", level: "intermediate", muscle: "triceps" },
     { name: "Bottoms-Up Clean From The Hang Position", equipment: "kettlebell", level: "expert", muscle: "forearms" },
     { name: "Cable Wrist Curl", equipment: "cable", level: "beginner", muscle: "forearms" },
     { name: "Reverse Curl", equipment: "ez curl bar", level: "beginner", muscle: "forearms" },
@@ -775,7 +785,9 @@ function getWorkoutDaysMap() { return getJSON(KEYS.workoutDays, {}); }
 function saveWorkoutDaysMap(map) { setJSON(KEYS.workoutDays, map); }
 function getDay(weekday) {
   var map = getWorkoutDaysMap();
-  return map[weekday] || { title: '', exercises: [] };
+  var day = map[weekday] || { title: '', exercises: [] };
+  if (!day.postWorkout) day.postWorkout = [];
+  return day;
 }
 
 var activeWeekday = localStorage.getItem(KEYS.activeDay) || 'Pazartesi';
@@ -791,6 +803,8 @@ var builderRegionSelect   = document.getElementById('builder-region');
 var builderExerciseSelect = document.getElementById('builder-exercise');
 var builderSetsSelect     = document.getElementById('builder-sets');
 var builderRepsSelect     = document.getElementById('builder-reps');
+var builderNoteInput      = document.getElementById('builder-note');
+var builderIsPostCheckbox = document.getElementById('builder-is-post');
 var addToCartBtn          = document.getElementById('addToCartBtn');
 var cartListEl            = document.getElementById('cartList');
 var completeProgramBtn    = document.getElementById('completeProgramBtn');
@@ -859,18 +873,21 @@ function buildCartItemHTML(item, index) {
   metaParts.push(item.sets + '×' + item.reps);
   metaParts.push(muscleLabel);
   var meta = metaParts.join(' · ');
+  var postBadge = item.isPost ? '<span class="cart-item-post-badge">Antrenman Sonrası</span>' : '';
+  var noteHtml = item.note ? '<p class="cart-item-note">📝 ' + item.note + '</p>' : '';
 
   return (
     '<div class="cart-item" data-cart-id="' + item.cartId + '">' +
       '<div class="cart-item-header">' +
         '<span class="cart-item-number">' + (index + 1) + '</span>' +
         '<div class="cart-item-info">' +
-          '<p class="cart-item-name">' + item.name + '</p>' +
+          '<p class="cart-item-name">' + item.name + postBadge + '</p>' +
           '<p class="cart-item-meta">' + meta + '</p>' +
         '</div>' +
         '<span class="cart-item-chevron">⌄</span>' +
         '<button type="button" class="cart-item-remove" data-cart-id="' + item.cartId + '" title="Sil">✕</button>' +
       '</div>' +
+      noteHtml +
       '<div class="cart-item-anatomy-wrap hidden">' + buildAnatomyPanelHTML(item.muscle) + '</div>' +
     '</div>'
   );
@@ -914,6 +931,8 @@ addToCartBtn.addEventListener('click', function() {
   var exerciseName = builderExerciseSelect.value;
   var sets         = parseInt(builderSetsSelect.value, 10);
   var reps         = parseInt(builderRepsSelect.value, 10);
+  var note         = builderNoteInput.value.trim();
+  var isPost       = builderIsPostCheckbox.checked;
 
   var list = EXERCISES[location] || [];
   var found = list.find(function(ex) { return ex.name === exerciseName; });
@@ -928,8 +947,13 @@ addToCartBtn.addEventListener('click', function() {
     equipment: found ? found.equipment : '',
     level: found ? found.level : '',
     sets: sets,
-    reps: reps
+    reps: reps,
+    note: note,
+    isPost: isPost
   });
+
+  builderNoteInput.value = '';
+  builderIsPostCheckbox.checked = false;
 
   renderCartList();
 });
@@ -948,9 +972,10 @@ completeProgramBtn.addEventListener('click', function() {
   var lastWeekday = cartItems[cartItems.length - 1].weekday;
 
   cartItems.forEach(function(item) {
-    if (!daysMap[item.weekday]) daysMap[item.weekday] = { title: '', exercises: [] };
+    if (!daysMap[item.weekday]) daysMap[item.weekday] = { title: '', exercises: [], postWorkout: [] };
+    if (!daysMap[item.weekday].postWorkout) daysMap[item.weekday].postWorkout = [];
 
-    daysMap[item.weekday].exercises.push({
+    var exerciseObj = {
       id: 'ex_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
       name: item.name,
       muscle: item.muscle,
@@ -958,8 +983,15 @@ completeProgramBtn.addEventListener('click', function() {
       level: item.level,
       sets: item.sets,
       reps: item.reps,
+      note: item.note || '',
       checked: new Array(item.sets).fill(false)
-    });
+    };
+
+    if (item.isPost) {
+      daysMap[item.weekday].postWorkout.push(exerciseObj);
+    } else {
+      daysMap[item.weekday].exercises.push(exerciseObj);
+    }
 
     if (item.dayTitle) titlesToApply[item.weekday] = item.dayTitle;
   });
@@ -991,7 +1023,7 @@ function renderDayTabs() {
   var daysMap = getWorkoutDaysMap();
   var filledWeekdays = DAYS_ORDER.filter(function(weekday) {
     var day = daysMap[weekday];
-    return day && day.exercises && day.exercises.length > 0;
+    return day && ((day.exercises && day.exercises.length > 0) || (day.postWorkout && day.postWorkout.length > 0));
   });
 
   if (filledWeekdays.indexOf(activeWeekday) === -1) {
@@ -1007,7 +1039,8 @@ function renderDayTabs() {
     var hasTitle = day.title;
     var titleHtml = hasTitle ? day.title : '—';
     var titleClass = hasTitle ? '' : ' muted';
-    var badge = '<span class="day-tab-badge">' + day.exercises.length + '</span>';
+    var totalCount = day.exercises.length + (day.postWorkout ? day.postWorkout.length : 0);
+    var badge = '<span class="day-tab-badge">' + totalCount + '</span>';
 
     html +=
       '<button class="day-tab' + activeClass + '" data-weekday="' + weekday + '">' +
@@ -1045,6 +1078,10 @@ function renderOverallProgress() {
       totalSets += ex.sets;
       doneSets += ex.checked.filter(Boolean).length;
     });
+    (day.postWorkout || []).forEach(function(ex) {
+      totalSets += ex.sets;
+      doneSets += ex.checked.filter(Boolean).length;
+    });
   });
 
   document.getElementById('overallProgressLabel').textContent = doneSets + ' / ' + totalSets + ' set — toplam program';
@@ -1060,6 +1097,10 @@ function renderDayProgress() {
     totalSets += ex.sets;
     doneSets += ex.checked.filter(Boolean).length;
   });
+  (day.postWorkout || []).forEach(function(ex) {
+    totalSets += ex.sets;
+    doneSets += ex.checked.filter(Boolean).length;
+  });
 
   document.getElementById('dayProgressLabel').textContent = doneSets + ' / ' + totalSets + ' set';
   var pct = totalSets > 0 ? Math.round((doneSets / totalSets) * 100) : 0;
@@ -1071,17 +1112,18 @@ function renderDayProgress() {
 clearDayBtn.addEventListener('click', function() {
   var daysMap = getWorkoutDaysMap();
   var day = daysMap[activeWeekday];
-  if (!day || !day.exercises || day.exercises.length === 0) return;
+  var hasAny = day && ((day.exercises && day.exercises.length > 0) || (day.postWorkout && day.postWorkout.length > 0));
+  if (!hasAny) return;
 
   var confirmed = window.confirm('"' + activeWeekday + '" günündeki tüm antrenmanları silmek istediğine emin misin?');
   if (!confirmed) return;
 
-  daysMap[activeWeekday] = { title: day.title || '', exercises: [] };
+  daysMap[activeWeekday] = { title: day.title || '', exercises: [], postWorkout: [] };
   saveWorkoutDaysMap(daysMap);
   renderWorkoutTracking();
 });
 
-function buildExerciseCardHTML(weekday, ex) {
+function buildExerciseCardHTML(weekday, ex, isPost) {
   var allChecked = ex.checked.length > 0 && ex.checked.every(Boolean);
   var circlesHTML = '';
 
@@ -1090,7 +1132,7 @@ function buildExerciseCardHTML(weekday, ex) {
     var content = isChecked ? '✓' : (i + 1);
     circlesHTML +=
       '<label class="set-circle-label">' +
-        '<input type="checkbox" class="set-checkbox-input" data-weekday="' + weekday + '" data-id="' + ex.id + '" data-index="' + i + '" ' + (isChecked ? 'checked' : '') + '>' +
+        '<input type="checkbox" class="set-checkbox-input" data-weekday="' + weekday + '" data-id="' + ex.id + '" data-index="' + i + '" data-post="' + (isPost ? '1' : '0') + '" ' + (isChecked ? 'checked' : '') + '>' +
         '<span class="set-circle-visual">' + content + '</span>' +
       '</label>';
   }
@@ -1100,16 +1142,18 @@ function buildExerciseCardHTML(weekday, ex) {
   var equipmentLabel = ex.equipment ? (EQUIPMENT_TR[ex.equipment] !== undefined ? EQUIPMENT_TR[ex.equipment] : ex.equipment) : '';
   var extraMetaParts = [equipmentLabel, levelLabel].filter(Boolean);
   var extraMeta = extraMetaParts.length ? ' · ' + extraMetaParts.join(' · ') : '';
+  var noteHtml = ex.note ? '<p class="exercise-card-note">📝 ' + ex.note + '</p>' : '';
 
   return (
-    '<div class="exercise-card' + (allChecked ? ' completed' : '') + '" data-weekday="' + weekday + '" data-id="' + ex.id + '">' +
-      '<button class="exercise-card-remove" data-weekday="' + weekday + '" data-id="' + ex.id + '" title="Kaldır">✕</button>' +
+    '<div class="exercise-card' + (allChecked ? ' completed' : '') + (isPost ? ' post-workout' : '') + '" data-weekday="' + weekday + '" data-id="' + ex.id + '" data-post="' + (isPost ? '1' : '0') + '">' +
+      '<button class="exercise-card-remove" data-weekday="' + weekday + '" data-id="' + ex.id + '" data-post="' + (isPost ? '1' : '0') + '" title="Kaldır">✕</button>' +
       '<div class="exercise-card-title-row">' +
         '<button class="exercise-card-name">' + ex.name + '</button>' +
         '<a class="exercise-card-play" href="' + youtubeUrl + '" target="_blank" rel="noopener noreferrer" title="Video izle"><span>▶</span></a>' +
       '</div>' +
       '<p class="exercise-card-sets-reps">' + ex.sets + '×' + ex.reps + extraMeta + '</p>' +
       '<div class="exercise-card-circles">' + circlesHTML + '</div>' +
+      noteHtml +
       '<div class="exercise-anatomy-wrap hidden">' + buildAnatomyPanelHTML(ex.muscle) + '</div>' +
     '</div>'
   );
@@ -1117,17 +1161,31 @@ function buildExerciseCardHTML(weekday, ex) {
 
 function renderExerciseCards() {
   var day = getDay(activeWeekday);
+  var hasMain = day.exercises && day.exercises.length > 0;
+  var hasPost = day.postWorkout && day.postWorkout.length > 0;
 
-  if (!day.exercises || day.exercises.length === 0) {
+  if (!hasMain && !hasPost) {
     exerciseCardsListEl.innerHTML = '<p class="day-empty">Bu güne henüz egzersiz eklenmedi. Yukarıdaki formla ekleyebilirsin.</p>';
     return;
   }
 
   var html = '';
-  day.exercises.forEach(function(ex) { html += buildExerciseCardHTML(activeWeekday, ex); });
+
+  if (hasMain) {
+    day.exercises.forEach(function(ex) { html += buildExerciseCardHTML(activeWeekday, ex, false); });
+  } else {
+    html += '<p class="day-empty">Bu güne henüz egzersiz eklenmedi.</p>';
+  }
+
+  if (hasPost) {
+    html += '<div class="post-workout-divider"><span>🧘 Antrenman Sonrası</span><span class="divider-line"></span></div>';
+    day.postWorkout.forEach(function(ex) { html += buildExerciseCardHTML(activeWeekday, ex, true); });
+  }
+
   exerciseCardsListEl.innerHTML = html;
   initAnatomyPanels(exerciseCardsListEl);
 }
+
 
 exerciseCardsListEl.addEventListener('click', function(e) {
   if (handleAnatomyViewToggle(e.target)) return;
@@ -1136,10 +1194,15 @@ exerciseCardsListEl.addEventListener('click', function(e) {
   if (removeBtn) {
     var weekday = removeBtn.dataset.weekday;
     var exId = removeBtn.dataset.id;
+    var isPost = removeBtn.dataset.post === '1';
     var daysMap = getWorkoutDaysMap();
     var day = daysMap[weekday];
     if (day) {
-      day.exercises = day.exercises.filter(function(x) { return x.id !== exId; });
+      if (isPost) {
+        day.postWorkout = (day.postWorkout || []).filter(function(x) { return x.id !== exId; });
+      } else {
+        day.exercises = day.exercises.filter(function(x) { return x.id !== exId; });
+      }
       saveWorkoutDaysMap(daysMap);
       renderWorkoutTracking();
     }
@@ -1160,11 +1223,13 @@ exerciseCardsListEl.addEventListener('change', function(e) {
   var weekday = e.target.dataset.weekday;
   var exId = e.target.dataset.id;
   var idx = parseInt(e.target.dataset.index, 10);
+  var isPost = e.target.dataset.post === '1';
 
   var daysMap = getWorkoutDaysMap();
   var day = daysMap[weekday];
   if (!day) return;
-  var ex = day.exercises.find(function(x) { return x.id === exId; });
+  var list = isPost ? (day.postWorkout || []) : day.exercises;
+  var ex = list.find(function(x) { return x.id === exId; });
   if (!ex) return;
 
   ex.checked[idx] = e.target.checked;
@@ -1179,6 +1244,7 @@ exerciseCardsListEl.addEventListener('change', function(e) {
   renderDayProgress();
   renderOverallProgress();
 });
+
 
 function renderWorkoutTracking() {
   renderDayTabs();
@@ -1471,7 +1537,7 @@ renderFoodLog();
    ══════════════════════════════════════════ */
 
 var GEMINI_KEY_STORAGE = 'ft_gemini_api_key';
-var GEMINI_MODEL = 'gemini-2.5-flash';
+var GEMINI_MODEL = 'gemini-3.6-flash';
 
 function getGeminiKey() { return localStorage.getItem(GEMINI_KEY_STORAGE) || ''; }
 function saveGeminiKey(key) { localStorage.setItem(GEMINI_KEY_STORAGE, key); }
@@ -1514,13 +1580,30 @@ function buildGeminiPrompt(pdfText) {
     'Aşağıdaki metin bir antrenman programı içeriyor. Bu programı analiz et ve ' +
     'SADECE geçerli JSON formatında yanıt ver — başka hiçbir açıklama, yorum veya markdown code-block ekleme.\n\n' +
     'Format tam olarak şu şekilde olmalı:\n' +
-    '{"Pazartesi": [{"hareket": "Bench Press", "set": 3, "tekrar": 10}], "Salı": [...]}\n\n' +
-    'Kurallar:\n' +
+    '{"Pazartesi": {"hareketler": [{"hareket": "Bench Press", "set": 3, "tekrar": 10, "not": "Dirsek sabit tut"}], ' +
+    '"antrenmanSonrasi": [{"hareket": "Doorway Chest Stretch", "set": 3, "tekrar": 1, "not": "30-40 saniye tut. Göğsü hafif ileri ver."}]}, ' +
+    '"Salı": {...}}\n\n' +
+    'Gün kuralları:\n' +
     '- Gün isimleri SADECE şunlardan biri olmalı: Pazartesi, Salı, Çarşamba, Perşembe, Cuma, Cumartesi, Pazar\n' +
-    '- Metinde "Gün 1", "Day A" gibi isimler varsa sırayla Pazartesi\'den başlayarak eşleştir\n' +
-    '- set ve tekrar sayısal (tam sayı) olmalı; metinde belirtilmemişse 3 set 10 tekrar varsay\n' +
-    '- Hareket isimlerini olduğu gibi koru (İngilizce olabilir)\n' +
-    '- Bir gün için hiç hareket bulamazsan o günü hiç ekleme\n\n' +
+    '- Metinde "Gün 1", "Upper Day", "Antreman 2" gibi isimler varsa sırayla Pazartesi\'den başlayarak eşleştir\n\n' +
+    'Hareket ve not kuralları ("hareketler" listesi için):\n' +
+    '- Parantez içindeki koçluk/teknik açıklamaları ("Dirsek sabit, yavaş indir" gibi) hareket isminden ÇIKAR ama ' +
+    'AYRI bir "not" alanına metnini olduğu gibi (kısaltmadan) yaz. Not yoksa "not" alanını hiç ekleme.\n' +
+    '- Isınma amaçlı esneme/mobilite hareketlerini BU LİSTEYE EKLEME, onlar "antrenmanSonrasi" listesine gider\n\n' +
+    'Antrenman sonrası (esneme/soğuma) kuralları ("antrenmanSonrasi" listesi için):\n' +
+    '- Metinde "Antrenman Sonrası", "Soğuma", "Cool-down", "Esneme" gibi başlık altında listelenen hareketler buraya gider\n' +
+    '- Metinde böyle bir bölüm YOKSA, o gün için "antrenmanSonrasi" alanını HİÇ EKLEME (boş dizi bile ekleme)\n' +
+    '- Süre bazlı hareketlerde ("3x 30-40sn" gibi) set sayısını al, tekrar alanına 1 yaz, süre bilgisini ve varsa ' +
+    'teknik açıklamayı birleştirip "not" alanına yaz (örn: "30-40 saniye tut. Göğsü hafif ileri ver.")\n\n' +
+    'Set ve tekrar sayısı okuma kuralları (her iki liste için de geçerli):\n' +
+    '- "4x8-10" veya "3x12-15" gibi bir ARALIK varsa, aralığın üst sınırını kullan (8-10 → 10, 12-15 → 15)\n' +
+    '- "3.12" veya "4.10" gibi NOKTA ile ayrılmış sayılar da set.tekrar anlamına gelir (3.12 → 3 set, 12 tekrar)\n' +
+    '- Bir satırda hem "ısınma seti" hem "çalışma seti" ayrı ayrı belirtilmişse (örn. "1x15 Isınma Seti 2x12-15 Çalışma Seti"), ' +
+    'SADECE çalışma (work) setini say, ısınma setini dahil etme\n' +
+    '- "Maksimum Tekrar" veya sayı belirtilmemişse tekrar için 12 varsay, set sayısını metinden olduğu gibi al\n' +
+    '- Hiçbir sayı bulunamazsa 3 set 10 tekrar varsay\n\n' +
+    'Genel kural: Bir gün için hiç geçerli hareket (ne ana hareket ne esneme) bulamazsan o günü hiç ekleme. ' +
+    'Eğer metnin tamamı bir beslenme/diyet/supplement planıysa (antrenman hareketi hiç yoksa), boş obje {} döndür.\n\n' +
     'Metin:\n' + pdfText.substring(0, 15000)
   );
 }
@@ -1649,6 +1732,24 @@ function processPdfFile(file) {
     return callGeminiAPI(prompt, getGeminiKey());
   }).then(function(rawResponse) {
     var parsed = parseAIJson(rawResponse);
+
+    // Toplam gecerli hareket sayisini say (hareketler + antrenmanSonrasi, hem bos {} hem bos gunler icin)
+    var totalExercises = 0;
+    Object.keys(parsed || {}).forEach(function(day) {
+      if (DAYS_ORDER.indexOf(day) === -1) return;
+      var dayData = parsed[day];
+      if (!dayData) return;
+      if (Array.isArray(dayData.hareketler)) totalExercises += dayData.hareketler.length;
+      if (Array.isArray(dayData.antrenmanSonrasi)) totalExercises += dayData.antrenmanSonrasi.length;
+    });
+
+    if (totalExercises === 0) {
+      throw new Error(
+        'Bu PDF\'de bir antrenman programı bulunamadı. Beslenme, supplement veya başka bir tür ' +
+        'PDF yüklemiş olabilirsin — bu özellik sadece antrenman programları için çalışıyor.'
+      );
+    }
+
     pdfParsedProgram = parsed;
     renderPdfPreview();
     showPdfStep('pdfStepPreview');
@@ -1679,15 +1780,41 @@ function renderPdfPreview() {
 
   var html = '';
   days.forEach(function(day) {
+    var dayData = pdfParsedProgram[day] || {};
+    var mainList = dayData.hareketler || [];
+    var postList = dayData.antrenmanSonrasi || [];
+
     html += '<div class="pdf-preview-day"><p class="pdf-preview-day-title">' + day + '</p>';
-    pdfParsedProgram[day].forEach(function(item, idx) {
+
+    mainList.forEach(function(item, idx) {
+      var noteHtml = item.not ? '<p class="pdf-preview-exercise-note">📝 ' + item.not + '</p>' : '';
       html +=
-        '<div class="pdf-preview-exercise">' +
-          '<span class="pdf-preview-exercise-name">' + item.hareket + '</span>' +
-          '<span class="pdf-preview-exercise-meta">' + (item.set || 3) + '×' + (item.tekrar || 10) + '</span>' +
-          '<button class="pdf-preview-remove" data-day="' + day + '" data-idx="' + idx + '">✕</button>' +
+        '<div class="pdf-preview-exercise-wrap">' +
+          '<div class="pdf-preview-exercise">' +
+            '<span class="pdf-preview-exercise-name">' + item.hareket + '</span>' +
+            '<span class="pdf-preview-exercise-meta">' + (item.set || 3) + '×' + (item.tekrar || 10) + '</span>' +
+            '<button class="pdf-preview-remove" data-day="' + day + '" data-list="hareketler" data-idx="' + idx + '">✕</button>' +
+          '</div>' +
+          noteHtml +
         '</div>';
     });
+
+    if (postList.length > 0) {
+      html += '<p class="pdf-preview-post-label">🧘 Antrenman Sonrası</p>';
+      postList.forEach(function(item, idx) {
+        var noteHtml = item.not ? '<p class="pdf-preview-exercise-note">📝 ' + item.not + '</p>' : '';
+        html +=
+          '<div class="pdf-preview-exercise-wrap">' +
+            '<div class="pdf-preview-exercise">' +
+              '<span class="pdf-preview-exercise-name">' + item.hareket + '</span>' +
+              '<span class="pdf-preview-exercise-meta">' + (item.set || 3) + ' set</span>' +
+              '<button class="pdf-preview-remove" data-day="' + day + '" data-list="antrenmanSonrasi" data-idx="' + idx + '">✕</button>' +
+            '</div>' +
+            noteHtml +
+          '</div>';
+      });
+    }
+
     html += '</div>';
   });
 
@@ -1699,33 +1826,50 @@ pdfPreviewListEl.addEventListener('click', function(e) {
   var btn = e.target.closest('.pdf-preview-remove');
   if (!btn) return;
   var day = btn.dataset.day;
+  var listKey = btn.dataset.list;
   var idx = parseInt(btn.dataset.idx, 10);
-  pdfParsedProgram[day].splice(idx, 1);
-  if (pdfParsedProgram[day].length === 0) delete pdfParsedProgram[day];
+
+  pdfParsedProgram[day][listKey].splice(idx, 1);
+  var dayData = pdfParsedProgram[day];
+  var stillHasContent = (dayData.hareketler && dayData.hareketler.length > 0) ||
+                         (dayData.antrenmanSonrasi && dayData.antrenmanSonrasi.length > 0);
+  if (!stillHasContent) delete pdfParsedProgram[day];
+
   renderPdfPreview();
 });
 
 function mergePdfProgramIntoStorage(program) {
   var daysMap = getWorkoutDaysMap();
 
+  function buildExerciseObj(item) {
+    var meta = findExerciseMeta(item.hareket);
+    var sets = parseInt(item.set, 10) || 3;
+    return {
+      id: 'ex_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+      name: item.hareket,
+      muscle: meta.muscle,
+      equipment: meta.equipment,
+      level: meta.level,
+      sets: sets,
+      reps: parseInt(item.tekrar, 10) || 10,
+      note: item.not || '',
+      checked: new Array(sets).fill(false)
+    };
+  }
+
   Object.keys(program).forEach(function(weekday) {
     if (DAYS_ORDER.indexOf(weekday) === -1) return; // güvenlik: sadece geçerli hafta günleri
-    if (!daysMap[weekday]) daysMap[weekday] = { title: '', exercises: [] };
+    if (!daysMap[weekday]) daysMap[weekday] = { title: '', exercises: [], postWorkout: [] };
+    if (!daysMap[weekday].postWorkout) daysMap[weekday].postWorkout = [];
 
-    program[weekday].forEach(function(item) {
-      var meta = findExerciseMeta(item.hareket);
-      var sets = parseInt(item.set, 10) || 3;
+    var dayData = program[weekday] || {};
 
-      daysMap[weekday].exercises.push({
-        id: 'ex_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
-        name: item.hareket,
-        muscle: meta.muscle,
-        equipment: meta.equipment,
-        level: meta.level,
-        sets: sets,
-        reps: parseInt(item.tekrar, 10) || 10,
-        checked: new Array(sets).fill(false)
-      });
+    (dayData.hareketler || []).forEach(function(item) {
+      daysMap[weekday].exercises.push(buildExerciseObj(item));
+    });
+
+    (dayData.antrenmanSonrasi || []).forEach(function(item) {
+      daysMap[weekday].postWorkout.push(buildExerciseObj(item));
     });
   });
 
