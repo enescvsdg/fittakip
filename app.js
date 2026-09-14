@@ -1471,7 +1471,7 @@ renderFoodLog();
    ══════════════════════════════════════════ */
 
 var GEMINI_KEY_STORAGE = 'ft_gemini_api_key';
-var GEMINI_MODEL = 'gemini-2.0-flash';
+var GEMINI_MODEL = 'gemini-flash-latest';
 
 function getGeminiKey() { return localStorage.getItem(GEMINI_KEY_STORAGE) || ''; }
 function saveGeminiKey(key) { localStorage.setItem(GEMINI_KEY_STORAGE, key); }
@@ -1527,13 +1527,12 @@ function buildGeminiPrompt(pdfText) {
 
 // ── GEMINI API ÇAĞRISI ──
 function callGeminiAPI(prompt, apiKey) {
-  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent';
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(apiKey);
 
   return fetch(url, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }]
@@ -1637,7 +1636,16 @@ function processPdfFile(file) {
     showPdfStep('pdfStepPreview');
   }).catch(function(err) {
     console.warn('[PDF+AI] Hata:', err);
-    document.getElementById('pdfErrorText').textContent = '⚠️ ' + (err && err.message ? err.message : 'Bilinmeyen bir hata oluştu.');
+    var rawMsg = (err && err.message) ? err.message : 'Bilinmeyen bir hata oluştu.';
+    var friendlyMsg = rawMsg;
+
+    if (/invalid authentication credentials|OAuth 2 access token/i.test(rawMsg)) {
+      friendlyMsg = 'Google\'ın "AQ." formatlı yeni API anahtarlarında şu an bilinen bir sunucu sorunu var ' +
+                    '(Google tarafında, bizim uygulamamızdan kaynaklanmıyor). Farklı bir Google hesabıyla ' +
+                    'yeni bir anahtar oluşturup Kişisel Bilgiler sayfasından güncellemeyi dene.';
+    }
+
+    document.getElementById('pdfErrorText').textContent = '⚠️ ' + friendlyMsg;
     showPdfStep('pdfStepError');
   });
 }
