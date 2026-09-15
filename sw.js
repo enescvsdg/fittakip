@@ -4,7 +4,7 @@
    fit-takip-v1 → v2 → v3 → v4 → ...
    ══════════════════════════════════════════ */
 
-var CACHE_NAME = 'fit-takip-v26';
+var CACHE_NAME = 'fit-takip-v27';
 
 var STATIC_ASSETS = [
   './',
@@ -59,6 +59,22 @@ self.addEventListener('activate', function(event) {
         );
       })
       .then(function() { return self.clients.claim(); })
+  );
+});
+
+// ── BİLDİRİME TIKLAMA ─────────────────────────
+// Supplement hatırlatmasına dokununca uygulamayı öne getirir
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(function(clientList) {
+        for (var i = 0; i < clientList.length; i++) {
+          if ('focus' in clientList[i]) return clientList[i].focus();
+        }
+        if (self.clients.openWindow) return self.clients.openWindow('./');
+      })
   );
 });
 
