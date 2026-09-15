@@ -65,7 +65,7 @@ Komut sonunda `https://fittakip-push.<hesabın>.workers.dev` gibi bir adres veri
 
 ### 6. Uygulamayı bağla
 
-Telefonda FitTakip'i aç → **Kişisel Bilgiler → 🔔 Bildirim Sunucusu**:
+Telefonda FitTakip'i aç → ☰ menü → **⚙️ Ayarlar → 🔔 Bildirim Sunucusu**:
 
 1. Worker adresini yapıştır
 2. `DEVICE_KEY` olarak belirlediğin parolayı gir

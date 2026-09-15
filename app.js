@@ -3142,7 +3142,7 @@ function renderNotifStatus() {
     notifStatusText.textContent = '🔔 ' + total + ' hatırlatma sunucu üzerinden gönderiliyor — uygulama kapalıyken de gelir.';
   } else if (perm === 'granted') {
     notifStatusBox.classList.add('ok');
-    notifStatusText.textContent = '🔔 ' + total + ' hatırlatma kurulu. Bildirimin gelmesi için uygulamanın açık veya arka planda olması gerekir — sürekli gelsin istersen Kişisel Bilgiler → Bildirim Sunucusu bölümünden bağlan.';
+    notifStatusText.textContent = '🔔 ' + total + ' hatırlatma kurulu. Bildirimin gelmesi için uygulamanın açık veya arka planda olması gerekir — sürekli gelsin istersen Ayarlar → Bildirim Sunucusu bölümünden bağlan.';
   } else if (perm === 'denied') {
     notifStatusText.textContent = '🔕 Bildirim izni reddedilmiş. Saatler kayıtlı ama bildirim gelmez — tarayıcı/site ayarlarından izni açman gerekiyor.';
   } else if (perm === 'unsupported') {
