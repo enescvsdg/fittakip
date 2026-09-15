@@ -887,24 +887,26 @@ select.form-input {
 
 .btn-toggle-builder {
   width: 100%;
-  background: var(--surface);
-  border: 1.5px solid var(--border);
+  background: linear-gradient(135deg, #2a1510 0%, #1e1e1e 80%);
+  border: 1.5px solid var(--accent-glow);
   border-radius: var(--radius-md);
-  color: var(--text);
+  color: var(--accent-2);
   font-family: var(--font);
   font-size: 15px;
   font-weight: 700;
-  padding: 15px 18px;
+  padding: 15px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 8px;
   margin-bottom: 16px;
+  position: relative;
 }
-.btn-toggle-builder:active { background: var(--surface-2); }
+.btn-toggle-builder:active { opacity: 0.85; }
 
 .btn-toggle-builder-chevron {
-  color: var(--text-muted);
+  color: var(--accent-2);
   font-size: 16px;
   transition: transform 0.25s ease;
 }
@@ -932,3 +934,71 @@ select.form-input {
   margin-bottom: 8px;
 }
 .btn-finish-workout:active { opacity: 0.85; }
+
+/* ══════════════════════════════════════════
+   BESLENME PLANI — YEREL VERİTABANI + AI TAHMİN
+   ══════════════════════════════════════════ */
+
+.btn-ai-estimate {
+  background: var(--surface-3);
+  color: var(--accent-2);
+  font-size: 13px;
+  padding: 11px;
+  margin-top: 8px;
+}
+.btn-ai-estimate:active { opacity: 0.8; }
+
+.estimated-badge {
+  background: rgba(255, 152, 0, 0.15);
+  color: var(--warning);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  margin-left: 6px;
+}
+
+.meal-plan-day-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-2);
+  margin-bottom: 8px;
+}
+.meal-plan-day-title:not(:first-child) {
+  margin-top: 16px;
+}
+
+/* ══════════════════════════════════════════
+   USDA VERİTABANI ARAMA SONUÇLARI
+   ══════════════════════════════════════════ */
+
+.usda-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.usda-result-item {
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.usda-result-item:active { border-color: var(--accent-glow); }
+.usda-result-item.selected {
+  border-color: var(--accent);
+  background: linear-gradient(135deg, #2a1510 0%, #1e1e1e 80%);
+}
+
+.usda-result-name {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.usda-result-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}

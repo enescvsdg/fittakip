@@ -197,9 +197,13 @@
         </div>
       </div>
 
-      <!-- AI AYARLARI -->
-      <div class="form-card">
-        <h2 class="card-heading">🤖 AI Ayarları</h2>
+      <!-- AI AYARLARI (açılır/kapanır) -->
+      <button class="btn-toggle-builder" id="toggleAiSettingsBtn" type="button">
+        <span>🤖 AI Ayarları</span>
+        <span class="btn-toggle-builder-chevron">⌄</span>
+      </button>
+
+      <div class="form-card hidden" id="aiSettingsSection">
         <p class="food-source-note">PDF'den program yükleme özelliği için Gemini API anahtarın gerekiyor. Anahtarın sadece bu cihazda saklanır, hiçbir sunucuya gönderilmez.</p>
         <div class="form-group">
           <label class="form-label" for="gemini-api-key">Gemini API Anahtarı</label>
@@ -376,18 +380,76 @@
     <section class="page hidden" id="page-nutrition">
       <div class="page-header">
         <h1 class="page-title">Beslenme Planı</h1>
-        <p class="page-subtitle">Gerçek gıda veritabanıyla günlük takip</p>
+        <p class="page-subtitle">Öğün öğün besin değeriyle takip</p>
       </div>
 
-      <!-- PDF'DEN BESLENME/SUPPLEMENT YÜKLE -->
+      <!-- PDF'DEN BESLENME PLANI YÜKLE -->
       <button class="btn-pdf-upload" id="openDietPdfBtn" type="button">
-        <span>📄</span> PDF'den Beslenme/Supplement Planı Yükle
+        <span>📄</span> PDF'den Beslenme Planı Yükle
       </button>
       <input type="file" id="dietPdfFileInput" accept="application/pdf" class="hidden" />
 
-      <!-- BUGÜNÜN ÖZETİ -->
+      <!-- ÖĞÜN EKLE (açılır/kapanır) -->
+      <button class="btn-toggle-builder" id="toggleMealBuilderBtn" type="button">
+        <span>➕ Öğün Ekle</span>
+        <span class="btn-toggle-builder-chevron">⌄</span>
+      </button>
+
+      <div class="workout-builder hidden" id="mealBuilderSection">
+        <!-- SOL: FORM -->
+        <div class="builder-form form-card">
+          <h2 class="card-heading">➕ Gıda Ekle</h2>
+
+          <div class="form-group">
+            <label class="form-label" for="meal-select">Öğün</label>
+            <select class="form-input" id="meal-select">
+              <option value="Öğün 1">Öğün 1</option>
+              <option value="Öğün 2">Öğün 2</option>
+              <option value="Öğün 3">Öğün 3</option>
+              <option value="Öğün 4">Öğün 4</option>
+              <option value="Ara Öğün">Ara Öğün</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="food-select">Gıda</label>
+            <select class="form-input" id="food-select"></select>
+          </div>
+
+          <div class="form-group hidden" id="custom-food-group">
+            <label class="form-label" for="custom-food-name">Gıda Adı (Türkçe yazabilirsin)</label>
+            <input class="form-input" type="text" id="custom-food-name" placeholder="örn. tavuk göğsü, pilav, elma..." />
+            <button class="btn-save btn-ai-estimate" id="usdaSearchBtn" type="button">🔍 Veritabanında Ara</button>
+            <p class="loading-hint hidden" id="usdaSearchStatus"></p>
+            <div class="usda-results-list" id="usdaResultsList"></div>
+            <button class="btn-save btn-ai-estimate hidden" id="aiEstimateBtn" type="button">🤖 Bulunamadı — AI'dan Tahmini Değer Al</button>
+            <p class="loading-hint hidden" id="aiEstimateStatus"></p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="food-amount">Miktar (gram)</label>
+            <input class="form-input" type="number" id="food-amount" value="100" min="1" max="2000" />
+          </div>
+
+          <div class="food-amount-preview" id="mealFoodPreview">Önce bir gıda seç</div>
+
+          <button class="btn-save" id="addFoodToCartBtn" type="button" disabled>Sepete Ekle</button>
+        </div>
+
+        <!-- SAĞ: SEPET -->
+        <div class="builder-cart form-card">
+          <h2 class="card-heading">🛒 Eklenecek Gıdalar</h2>
+          <div class="cart-list" id="mealCartList">
+            <p class="empty-hint">Henüz gıda eklenmedi.</p>
+          </div>
+          <button class="btn-save" id="completeMealBtn" type="button">Planı Tamamla</button>
+          <p class="save-feedback hidden" id="meal-program-feedback">✅ Plana eklendi!</p>
+        </div>
+      </div>
+
+      <!-- PLANIN TOPLAMI -->
       <div class="nutrition-summary-card">
-        <p class="info-title">📊 Bugünkü Toplam</p>
+        <p class="info-title">📊 Planın Toplamı</p>
         <div class="macro-grid">
           <div class="macro-item">
             <p class="macro-value" id="macro-kcal">0</p>
@@ -408,22 +470,11 @@
         </div>
       </div>
 
-      <!-- GIDA ARAMA -->
+      <!-- BESLENME PLANIM -->
       <div class="form-card">
-        <h2 class="card-heading">🔍 Gıda Ara ve Ekle</h2>
-        <p class="food-source-note">Open Food Facts veritabanı — dünyanın en büyük açık gıda veritabanı</p>
-        <div class="food-search-row">
-          <input class="form-input" type="text" id="food-search-input" placeholder="örn. yulaf ezmesi, tavuk göğsü, muz..." />
-          <button class="btn-search" id="food-search-btn" type="button">Ara</button>
-        </div>
-        <div class="food-search-results" id="foodSearchResults"></div>
-      </div>
-
-      <!-- BUGÜNÜN GÜNLÜĞÜ -->
-      <div class="form-card">
-        <h2 class="card-heading">📋 Bugünün Günlüğü</h2>
-        <div class="food-log-list" id="foodLogList">
-          <p class="empty-hint">Bugün henüz bir şey eklemedin.</p>
+        <h2 class="card-heading">🍽️ Beslenme Planım</h2>
+        <div class="food-log-list" id="mealPlanList">
+          <p class="empty-hint">Henüz bir gıda eklemedin.</p>
         </div>
       </div>
 
@@ -438,26 +489,6 @@
         <p class="save-feedback hidden" id="nutrition-feedback">✅ Kaydedildi!</p>
       </div>
     </section>
-
-    <!-- GIDA MİKTAR MODALI -->
-    <div class="modal-overlay-2 hidden" id="foodAmountModal">
-      <div class="modal-box-2">
-        <div class="modal-header">
-          <h2 class="modal-title" id="foodAmountTitle">Miktar Gir</h2>
-          <button class="modal-close" id="closeFoodAmountModal" aria-label="Kapat">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label" for="food-amount-input">Miktar (gram)</label>
-            <input class="form-input" type="number" id="food-amount-input" value="100" min="1" max="5000" />
-          </div>
-          <div class="food-amount-preview" id="foodAmountPreview"></div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-save" id="confirmAddFoodBtn" type="button">Günlüğe Ekle</button>
-        </div>
-      </div>
-    </div>
 
     <!-- PDF PROGRAM YÜKLEME MODALI -->
     <div class="modal-overlay-2 hidden" id="pdfModal">
@@ -502,7 +533,7 @@
     <div class="modal-overlay-2 hidden" id="dietPdfModal">
       <div class="modal-box-2">
         <div class="modal-header">
-          <h2 class="modal-title">PDF'den Beslenme/Supplement Yükle</h2>
+          <h2 class="modal-title" id="dietPdfModalTitle">PDF'den Beslenme/Supplement Yükle</h2>
           <button class="modal-close" id="closeDietPdfModal" aria-label="Kapat">✕</button>
         </div>
         <div class="modal-body">
@@ -522,15 +553,9 @@
           </div>
 
           <div id="dietPdfStepPreview" class="hidden">
-            <p class="food-source-note">AI'nın bulduğu bilgiler aşağıda — onaylarsan mevcut notlarının <strong>altına eklenir</strong>, üzerine yazılmaz.</p>
-            <div id="dietPdfPreviewNutrition" class="pdf-preview-day hidden">
-              <p class="pdf-preview-day-title">🍽️ Beslenme Planı</p>
-              <p class="pdf-preview-freetext" id="dietPdfPreviewNutritionText"></p>
-            </div>
-            <div id="dietPdfPreviewSupplement" class="pdf-preview-day hidden">
-              <p class="pdf-preview-day-title">💊 Supplement Planı</p>
-              <p class="pdf-preview-freetext" id="dietPdfPreviewSupplementText"></p>
-            </div>
+            <p class="food-source-note">AI'nın bulduğu gıda/supplementler aşağıda — onaylarsan direkt <strong>Beslenme Planı / Supplement Planı</strong> sayfalarına eklenir (mevcut planının üzerine, silmeden).</p>
+            <div id="dietPdfPreviewNutrition" class="pdf-preview-list hidden"></div>
+            <div id="dietPdfPreviewSupplement" class="pdf-preview-list hidden"></div>
           </div>
 
         </div>
@@ -547,14 +572,80 @@
         <p class="page-subtitle">Günlük takviyeler</p>
       </div>
 
-      <!-- PDF'DEN BESLENME/SUPPLEMENT YÜKLE -->
+      <!-- PDF'DEN SUPPLEMENT PLANI YÜKLE -->
       <button class="btn-pdf-upload" id="openDietPdfBtnSupp" type="button">
-        <span>📄</span> PDF'den Beslenme/Supplement Planı Yükle
+        <span>📄</span> PDF'den Supplement Planı Yükle
       </button>
+
+      <!-- SUPPLEMENT EKLE (açılır/kapanır) -->
+      <button class="btn-toggle-builder" id="toggleSuppBuilderBtn" type="button">
+        <span>➕ Supplement Ekle</span>
+        <span class="btn-toggle-builder-chevron">⌄</span>
+      </button>
+
+      <div class="workout-builder hidden" id="suppBuilderSection">
+        <div class="builder-form form-card">
+          <h2 class="card-heading">➕ Supplement Ekle</h2>
+
+          <div class="form-group">
+            <label class="form-label" for="supp-select">Supplement</label>
+            <select class="form-input" id="supp-select"></select>
+          </div>
+
+          <div class="form-group hidden" id="supp-custom-group">
+            <label class="form-label" for="supp-custom-name">Supplement Adı</label>
+            <input class="form-input" type="text" id="supp-custom-name" placeholder="örn. Liventis Pure Beta Alanin" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="supp-dose">Doz</label>
+            <input class="form-input" type="text" id="supp-dose" placeholder="örn. 5g, 1 tablet, 2000 IU, 1 servis" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="supp-timing">Zaman</label>
+            <select class="form-input" id="supp-timing">
+              <option value="Sabah">Sabah</option>
+              <option value="Aç Karnına">Aç Karnına</option>
+              <option value="Öğün İle Birlikte">Öğün İle Birlikte</option>
+              <option value="Antrenman Öncesi">Antrenman Öncesi</option>
+              <option value="Antrenman Esnasında">Antrenman Esnasında</option>
+              <option value="Antrenman Sonrası">Antrenman Sonrası</option>
+              <option value="Akşam / Yatmadan Önce">Akşam / Yatmadan Önce</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="supp-note">Not (Opsiyonel)</label>
+            <input class="form-input" type="text" id="supp-note" placeholder="örn. Su ile karıştır" />
+          </div>
+
+          <div class="food-amount-preview" id="suppInfoPreview">Bu ürün için içerik bilgimiz varsa burada görünür</div>
+
+          <button class="btn-save" id="addSuppToCartBtn" type="button">Sepete Ekle</button>
+        </div>
+
+        <div class="builder-cart form-card">
+          <h2 class="card-heading">🛒 Eklenecek Supplementler</h2>
+          <div class="cart-list" id="suppCartList">
+            <p class="empty-hint">Henüz supplement eklenmedi.</p>
+          </div>
+          <button class="btn-save" id="completeSuppBtn" type="button">Planı Tamamla</button>
+          <p class="save-feedback hidden" id="supp-program-feedback">✅ Plana eklendi!</p>
+        </div>
+      </div>
+
+      <!-- SUPPLEMENT PLANIM -->
+      <div class="form-card">
+        <h2 class="card-heading">💊 Supplement Planım</h2>
+        <div class="food-log-list" id="suppPlanList">
+          <p class="empty-hint">Henüz bir supplement eklemedin.</p>
+        </div>
+      </div>
 
       <div class="form-card">
         <div class="form-group">
-          <label class="form-label" for="input-supplement">Supplement planını buraya yaz</label>
+          <label class="form-label" for="input-supplement">Ek notlarını buraya yazabilirsin</label>
           <textarea class="form-textarea" id="input-supplement" placeholder="Sabah (aç karnına):&#10;- Kreatin 5g&#10;- D3 Vitamini 2000 IU&#10;&#10;Antrenman öncesi:&#10;- Pre-workout&#10;&#10;Antrenman sonrası:&#10;- Whey Protein 30g&#10;- BCAA 5g"></textarea>
         </div>
         <button class="btn-save" id="save-supplement">Kaydet</button>

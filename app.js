@@ -1354,250 +1354,510 @@ renderCartList();
 renderWorkoutTracking();
 
 /* ══════════════════════════════════════════
-   BESLENME PLANI — OPEN FOOD FACTS ENTEGRASYONU
-   Gerçek gıda veritabanı ile arama + günlük takip.
-   API: world.openfoodfacts.org (herkese açık, kimlik doğrulama gerekmez)
+   BESLENME PLANI — YEREL TÜRK MUTFAĞI VERİTABANI + AI TAHMİN
+   Open Food Facts yerine: internetsiz çalışan yerel veritabanı +
+   listede olmayan gıdalar için Gemini API ile tahmini değer.
+   Tüm değerler 100 gram baz alınır, girilen grama göre ölçeklenir.
    ══════════════════════════════════════════ */
 
-var NUTRITION_KEYS = {
-  log: 'ft_nutrition_log'
+var MEAL_KEYS = { plan: 'ft_meal_plan' };
+var MEAL_ORDER = ['Öğün 1', 'Öğün 2', 'Öğün 3', 'Öğün 4', 'Ara Öğün'];
+
+function getMealPlan() { return getJSON(MEAL_KEYS.plan, {}); }
+function saveMealPlan(plan) { setJSON(MEAL_KEYS.plan, plan); }
+
+// (name, kcal100, protein100, carbs100, fat100) — genel beslenme kaynaklarından, 100g için
+var TURKISH_FOODS = {
+  'Tahıllar / Karbonhidrat': [
+    { name: 'Pirinç (pişmiş)', kcal: 130, protein: 2.7, carbs: 28, fat: 0.3 },
+    { name: 'Bulgur (pişmiş)', kcal: 83, protein: 3.1, carbs: 18.6, fat: 0.2 },
+    { name: 'Yulaf Ezmesi (çiğ)', kcal: 389, protein: 16.9, carbs: 66.3, fat: 6.9 },
+    { name: 'Makarna (pişmiş)', kcal: 131, protein: 5, carbs: 25, fat: 1.1 },
+    { name: 'Ekmek (beyaz)', kcal: 265, protein: 9, carbs: 49, fat: 3.2 },
+    { name: 'Tam Buğday Ekmeği', kcal: 247, protein: 13, carbs: 41, fat: 3.4 },
+    { name: 'Karabuğday (pişmiş)', kcal: 92, protein: 3.4, carbs: 19.9, fat: 0.6 },
+    { name: 'Tatlı Patates (haşlanmış)', kcal: 76, protein: 1.4, carbs: 17.7, fat: 0.1 },
+    { name: 'Patates (haşlanmış)', kcal: 87, protein: 1.9, carbs: 20.1, fat: 0.1 },
+    { name: 'Basmati Pirinç (pişmiş)', kcal: 121, protein: 2.5, carbs: 25.2, fat: 0.4 },
+    { name: 'Pirinç Pilavı (tereyağlı)', kcal: 165, protein: 2.5, carbs: 28, fat: 4 },
+    { name: 'Bulgur Pilavı (yağlı)', kcal: 128, protein: 3.2, carbs: 19, fat: 3.8 }
+  ],
+  'Et, Tavuk, Balık, Yumurta': [
+    { name: 'Tavuk Göğsü (ızgara/haşlama)', kcal: 165, protein: 31, carbs: 0, fat: 3.6 },
+    { name: 'Hindi Göğsü', kcal: 135, protein: 30, carbs: 0, fat: 1 },
+    { name: 'Yağsız Kıyma (%5)', kcal: 137, protein: 21, carbs: 0, fat: 5 },
+    { name: 'Dana Bonfile', kcal: 143, protein: 26, carbs: 0, fat: 4 },
+    { name: 'Somon (pişmiş)', kcal: 208, protein: 20, carbs: 0, fat: 13 },
+    { name: 'Levrek', kcal: 97, protein: 18.4, carbs: 0, fat: 2.5 },
+    { name: 'Ton Balığı (suda, süzülmüş)', kcal: 116, protein: 26, carbs: 0, fat: 1 },
+    { name: 'Yumurta (tam)', kcal: 155, protein: 13, carbs: 1.1, fat: 11 },
+    { name: 'Yumurta Akı', kcal: 52, protein: 11, carbs: 0.7, fat: 0.2 }
+  ],
+  'Süt Ürünleri': [
+    { name: 'Lor Peyniri', kcal: 98, protein: 11, carbs: 3.4, fat: 4.3 },
+    { name: 'Yoğurt (sade, tam yağlı)', kcal: 61, protein: 3.5, carbs: 4.7, fat: 3.3 },
+    { name: 'Süzme Yoğurt (Quark)', kcal: 65, protein: 10, carbs: 3.6, fat: 0.2 },
+    { name: 'Süt (tam yağlı)', kcal: 61, protein: 3.2, carbs: 4.8, fat: 3.3 },
+    { name: 'Beyaz Peynir', kcal: 264, protein: 17, carbs: 1.5, fat: 21 },
+    { name: 'Kaşar Peyniri', kcal: 371, protein: 25, carbs: 1.5, fat: 29 },
+    { name: 'Whey Protein Tozu', kcal: 380, protein: 80, carbs: 8, fat: 4 }
+  ],
+  'Sebze': [
+    { name: 'Brokoli (haşlanmış)', kcal: 35, protein: 2.4, carbs: 7.2, fat: 0.4 },
+    { name: 'Karnabahar (haşlanmış)', kcal: 23, protein: 1.8, carbs: 4.1, fat: 0.5 },
+    { name: 'Domates', kcal: 18, protein: 0.9, carbs: 3.9, fat: 0.2 },
+    { name: 'Salatalık', kcal: 15, protein: 0.7, carbs: 3.6, fat: 0.1 },
+    { name: 'Marul', kcal: 15, protein: 1.4, carbs: 2.9, fat: 0.2 },
+    { name: 'Ispanak (haşlanmış)', kcal: 23, protein: 3, carbs: 3.6, fat: 0.3 },
+    { name: 'Kabak (haşlanmış)', kcal: 17, protein: 1.2, carbs: 3.1, fat: 0.3 },
+    { name: 'Roka', kcal: 25, protein: 2.6, carbs: 3.7, fat: 0.7 },
+    { name: 'Kuşkonmaz', kcal: 20, protein: 2.2, carbs: 3.9, fat: 0.1 }
+  ],
+  'Meyve': [
+    { name: 'Elma', kcal: 52, protein: 0.3, carbs: 14, fat: 0.2 },
+    { name: 'Muz', kcal: 89, protein: 1.1, carbs: 23, fat: 0.3 },
+    { name: 'Yaban Mersini', kcal: 57, protein: 0.7, carbs: 14.5, fat: 0.3 },
+    { name: 'Portakal', kcal: 47, protein: 0.9, carbs: 12, fat: 0.1 },
+    { name: 'Orman Meyvesi Karışımı', kcal: 50, protein: 0.8, carbs: 12, fat: 0.3 }
+  ],
+  'Kuruyemiş / Yağlar': [
+    { name: 'Çiğ Badem', kcal: 579, protein: 21, carbs: 22, fat: 50 },
+    { name: 'Ceviz', kcal: 654, protein: 15, carbs: 14, fat: 65 },
+    { name: 'Zeytinyağı', kcal: 884, protein: 0, carbs: 0, fat: 100 },
+    { name: 'Fıstık Ezmesi', kcal: 588, protein: 25, carbs: 20, fat: 50 }
+  ],
+  'Bakliyat': [
+    { name: 'Mercimek (pişmiş)', kcal: 116, protein: 9, carbs: 20, fat: 0.4 },
+    { name: 'Nohut (pişmiş)', kcal: 164, protein: 8.9, carbs: 27.4, fat: 2.6 }
+  ]
 };
 
-function getTodayKey() {
-  var d = new Date();
-  var mm = String(d.getMonth() + 1).padStart(2, '0');
-  var dd = String(d.getDate()).padStart(2, '0');
-  return d.getFullYear() + '-' + mm + '-' + dd;
-}
+// ── DOM REFERANSLARI ────────────────────────────
+var mealSelect          = document.getElementById('meal-select');
+var foodSelect           = document.getElementById('food-select');
+var customFoodGroup      = document.getElementById('custom-food-group');
+var customFoodNameInput  = document.getElementById('custom-food-name');
+var aiEstimateBtn        = document.getElementById('aiEstimateBtn');
+var aiEstimateStatus     = document.getElementById('aiEstimateStatus');
+var foodAmountInput      = document.getElementById('food-amount');
+var mealFoodPreview      = document.getElementById('mealFoodPreview');
+var addFoodToCartBtn     = document.getElementById('addFoodToCartBtn');
+var mealCartListEl       = document.getElementById('mealCartList');
+var completeMealBtn      = document.getElementById('completeMealBtn');
+var mealPlanListEl       = document.getElementById('mealPlanList');
 
-function getNutritionLog() { return getJSON(NUTRITION_KEYS.log, {}); }
-function saveNutritionLog(log) { setJSON(NUTRITION_KEYS.log, log); }
+var mealCartItems = [];
+var currentFoodMeta = null; // { kcal100, protein100, carbs100, fat100, isEstimated }
 
-function getTodayEntries() {
-  var log = getNutritionLog();
-  return log[getTodayKey()] || [];
-}
-
-// ── DOM REFERANSLARI ───────────────────────────
-var foodSearchInput   = document.getElementById('food-search-input');
-var foodSearchBtn     = document.getElementById('food-search-btn');
-var foodSearchResults = document.getElementById('foodSearchResults');
-var foodLogList       = document.getElementById('foodLogList');
-var foodAmountModal   = document.getElementById('foodAmountModal');
-var foodAmountInput   = document.getElementById('food-amount-input');
-var foodAmountPreview = document.getElementById('foodAmountPreview');
-var closeFoodAmountModalBtn = document.getElementById('closeFoodAmountModal');
-var confirmAddFoodBtn = document.getElementById('confirmAddFoodBtn');
-
-var pendingFoodItem = null; // miktar modalinda bekleyen secili gida
-
-// ── OPEN FOOD FACTS ARAMA ──────────────────────
-function searchFood(query) {
-  foodSearchResults.innerHTML = '<p class="loading-hint">Aranıyor…</p>';
-
-  var url = 'https://world.openfoodfacts.org/cgi/search.pl?search_terms=' +
-    encodeURIComponent(query) +
-    '&search_simple=1&action=process&json=1&page_size=15' +
-    '&fields=product_name,brands,nutriments,image_small_url,code';
-
-  fetch(url)
-    .then(function(res) { return res.ok ? res.json() : Promise.reject(); })
-    .then(function(data) {
-      var products = (data && data.products) ? data.products : [];
-      renderFoodSearchResults(products);
-    })
-    .catch(function() {
-      foodSearchResults.innerHTML = '<p class="loading-hint">⚠️ Gıda araması şu an yapılamıyor. İnternet bağlantını kontrol et.</p>';
+// ── GIDA SEÇİM LİSTESİNİ DOLDUR ──────────────────
+function fillFoodSelect() {
+  var html = '';
+  Object.keys(TURKISH_FOODS).forEach(function(category) {
+    html += '<optgroup label="' + category + '">';
+    TURKISH_FOODS[category].forEach(function(f) {
+      html += '<option value="' + f.name + '">' + f.name + '</option>';
     });
+    html += '</optgroup>';
+  });
+  html += '<option value="__custom__">🔍 Listede Yok — Veritabanında Ara</option>';
+  foodSelect.innerHTML = html;
 }
 
-function renderFoodSearchResults(products) {
-  var valid = products.filter(function(p) {
-    return p.product_name && p.nutriments && (p.nutriments['energy-kcal_100g'] || p.nutriments['energy-kcal'] );
-  });
+function findLocalFood(name) {
+  var all = [];
+  Object.keys(TURKISH_FOODS).forEach(function(cat) { all = all.concat(TURKISH_FOODS[cat]); });
+  return all.find(function(f) { return f.name === name; });
+}
 
-  if (valid.length === 0) {
-    foodSearchResults.innerHTML = '<p class="loading-hint">Sonuç bulunamadı. Farklı bir isimle dene (İngilizce de olabilir).</p>';
+function updateMealPreview() {
+  var grams = parseFloat(foodAmountInput.value) || 0;
+
+  if (!currentFoodMeta || grams <= 0) {
+    mealFoodPreview.innerHTML = 'Önce bir gıda seç';
+    addFoodToCartBtn.disabled = true;
     return;
   }
 
-  var html = '';
-  valid.forEach(function(p, idx) {
-    var kcal = Math.round(p.nutriments['energy-kcal_100g'] || p.nutriments['energy-kcal'] || 0);
-    var brand = p.brands ? p.brands.split(',')[0].trim() : '';
-    var img = p.image_small_url || '';
-    var imgHtml = img
-      ? '<img class="food-result-img" src="' + img + '" alt="" loading="lazy">'
-      : '<div class="food-result-img"></div>';
+  var factor = grams / 100;
+  var kcal = Math.round(currentFoodMeta.kcal100 * factor);
+  var protein = (currentFoodMeta.protein100 * factor).toFixed(1);
+  var carbs = (currentFoodMeta.carbs100 * factor).toFixed(1);
+  var fat = (currentFoodMeta.fat100 * factor).toFixed(1);
+  var badge = currentFoodMeta.isEstimated ? '<span class="estimated-badge">~ Tahmini</span>' : '';
 
+  mealFoodPreview.innerHTML =
+    '<strong>' + kcal + ' kcal</strong>' + badge + '<br>' +
+    'Protein: ' + protein + 'g · Karbonhidrat: ' + carbs + 'g · Yağ: ' + fat + 'g (100g için: ' +
+    currentFoodMeta.kcal100 + ' kcal)';
+  addFoodToCartBtn.disabled = false;
+}
+
+foodSelect.addEventListener('change', function() {
+  if (foodSelect.value === '__custom__') {
+    customFoodGroup.classList.remove('hidden');
+    customFoodNameInput.value = '';
+    usdaSearchStatus.classList.add('hidden');
+    aiEstimateStatus.classList.add('hidden');
+    aiEstimateBtn.classList.add('hidden');
+    usdaResultsListEl.innerHTML = '';
+    currentFoodMeta = null;
+    updateMealPreview();
+    return;
+  }
+  customFoodGroup.classList.add('hidden');
+  var found = findLocalFood(foodSelect.value);
+  currentFoodMeta = found
+    ? { kcal100: found.kcal, protein100: found.protein, carbs100: found.carbs, fat100: found.fat, isEstimated: false }
+    : null;
+  updateMealPreview();
+});
+
+foodAmountInput.addEventListener('input', updateMealPreview);
+
+// ── USDA FOODDATA CENTRAL ARAMA (gerçek, resmi veritabanı) ──
+// DEMO_KEY: kayıt gerektirmeyen, paylaşılan, saatte 30 istekle sınırlı anahtar.
+// Türkçe gıda adı önce Gemini ile İngilizceye çevrilir, sonra USDA'da aranır.
+var usdaSearchBtn      = document.getElementById('usdaSearchBtn');
+var usdaSearchStatus   = document.getElementById('usdaSearchStatus');
+var usdaResultsListEl  = document.getElementById('usdaResultsList');
+
+function buildFoodTranslatePrompt(turkishName) {
+  return (
+    'Şu Türkçe gıda/yemek adını, bir besin veritabanında aranabilecek en basit ve yaygın İngilizce terime çevir. ' +
+    'SADECE İngilizce terimi yaz — tırnak işareti, açıklama veya başka hiçbir şey ekleme.\n' +
+    'Örnekler: "tavuk göğsü" -> chicken breast, "pilav" -> rice, "yulaf ezmesi" -> oats.\n' +
+    'Gıda: "' + turkishName + '"'
+  );
+}
+
+function searchUSDAFood(englishTerm) {
+  var url = 'https://api.nal.usda.gov/fdc/v1/foods/search?api_key=DEMO_KEY&query=' +
+    encodeURIComponent(englishTerm) + '&pageSize=8&dataType=' + encodeURIComponent('Foundation,SR Legacy,Branded');
+
+  return fetch(url).then(function(res) {
+    if (!res.ok) throw new Error('USDA veritabanı isteği başarısız (HTTP ' + res.status + ')');
+    return res.json();
+  }).then(function(data) { return data.foods || []; });
+}
+
+function extractUSDAMacros(food) {
+  var nutrients = food.foodNutrients || [];
+  function find(ids) {
+    for (var i = 0; i < ids.length; i++) {
+      var n = nutrients.find(function(x) { return x.nutrientId === ids[i]; });
+      if (n && typeof n.value === 'number') return n.value;
+    }
+    return 0;
+  }
+  return {
+    kcal100: find([1008, 2047, 2048]),
+    protein100: find([1003]),
+    carbs100: find([1005]),
+    fat100: find([1004])
+  };
+}
+
+function renderUSDAResults(foods) {
+  var html = '';
+  foods.forEach(function(food, idx) {
+    var macros = extractUSDAMacros(food);
     html +=
-      '<div class="food-result-item" data-idx="' + idx + '">' +
-        imgHtml +
-        '<div class="food-result-info">' +
-          '<p class="food-result-name">' + p.product_name + '</p>' +
-          '<p class="food-result-meta">' + (brand ? brand + ' · ' : '') + kcal + ' kcal / 100g</p>' +
-        '</div>' +
-        '<button class="food-result-add" type="button">+</button>' +
+      '<div class="usda-result-item" data-idx="' + idx + '">' +
+        '<p class="usda-result-name">' + food.description + '</p>' +
+        '<p class="usda-result-meta">' + Math.round(macros.kcal100) + ' kcal / 100g · ' + (food.dataType || '') + '</p>' +
       '</div>';
   });
-
-  foodSearchResults.innerHTML = html;
-  foodSearchResults._products = valid; // secim icin bellekte tut
+  usdaResultsListEl.innerHTML = html;
+  usdaResultsListEl._foods = foods;
 }
 
-foodSearchBtn.addEventListener('click', function() {
-  var q = foodSearchInput.value.trim();
-  if (!q) return;
-  searchFood(q);
-});
-
-foodSearchInput.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    foodSearchBtn.click();
-  }
-});
-
-foodSearchResults.addEventListener('click', function(e) {
-  var item = e.target.closest('.food-result-item');
+usdaResultsListEl.addEventListener('click', function(e) {
+  var item = e.target.closest('.usda-result-item');
   if (!item) return;
   var idx = parseInt(item.dataset.idx, 10);
-  var product = foodSearchResults._products[idx];
-  if (!product) return;
-  openFoodAmountModal(product);
-});
+  var food = usdaResultsListEl._foods[idx];
+  var macros = extractUSDAMacros(food);
 
-// ── MİKTAR MODALI ───────────────────────────────
-function getNutrimentPer100(product, key) {
-  var n = product.nutriments || {};
-  return parseFloat(n[key + '_100g']) || 0;
-}
-
-function openFoodAmountModal(product) {
-  pendingFoodItem = {
-    name: product.product_name,
-    brand: product.brands ? product.brands.split(',')[0].trim() : '',
-    kcal100: getNutrimentPer100(product, 'energy-kcal'),
-    protein100: getNutrimentPer100(product, 'proteins'),
-    carbs100: getNutrimentPer100(product, 'carbohydrates'),
-    fat100: getNutrimentPer100(product, 'fat')
-  };
-  document.getElementById('foodAmountTitle').textContent = pendingFoodItem.name;
-  foodAmountInput.value = 100;
-  updateFoodAmountPreview();
-  foodAmountModal.classList.remove('hidden');
-}
-
-function closeFoodAmountModal() {
-  foodAmountModal.classList.add('hidden');
-  pendingFoodItem = null;
-}
-
-function updateFoodAmountPreview() {
-  if (!pendingFoodItem) return;
-  var grams = parseFloat(foodAmountInput.value) || 0;
-  var factor = grams / 100;
-  var kcal = Math.round(pendingFoodItem.kcal100 * factor);
-  var protein = (pendingFoodItem.protein100 * factor).toFixed(1);
-  var carbs = (pendingFoodItem.carbs100 * factor).toFixed(1);
-  var fat = (pendingFoodItem.fat100 * factor).toFixed(1);
-
-  foodAmountPreview.innerHTML =
-    '<strong>' + kcal + ' kcal</strong><br>' +
-    'Protein: ' + protein + 'g · Karbonhidrat: ' + carbs + 'g · Yağ: ' + fat + 'g';
-}
-
-foodAmountInput.addEventListener('input', updateFoodAmountPreview);
-closeFoodAmountModalBtn.addEventListener('click', closeFoodAmountModal);
-foodAmountModal.addEventListener('click', function(e) {
-  if (e.target === foodAmountModal) closeFoodAmountModal();
-});
-
-confirmAddFoodBtn.addEventListener('click', function() {
-  if (!pendingFoodItem) return;
-  var grams = parseFloat(foodAmountInput.value) || 100;
-  var factor = grams / 100;
-
-  var entry = {
-    id: 'food_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-    name: pendingFoodItem.name,
-    brand: pendingFoodItem.brand,
-    grams: grams,
-    kcal: Math.round(pendingFoodItem.kcal100 * factor),
-    protein: Math.round(pendingFoodItem.protein100 * factor * 10) / 10,
-    carbs: Math.round(pendingFoodItem.carbs100 * factor * 10) / 10,
-    fat: Math.round(pendingFoodItem.fat100 * factor * 10) / 10
+  currentFoodMeta = {
+    kcal100: macros.kcal100,
+    protein100: macros.protein100,
+    carbs100: macros.carbs100,
+    fat100: macros.fat100,
+    isEstimated: false
   };
 
-  var log = getNutritionLog();
-  var todayKey = getTodayKey();
-  if (!log[todayKey]) log[todayKey] = [];
-  log[todayKey].push(entry);
-  saveNutritionLog(log);
-
-  closeFoodAmountModal();
-  renderFoodLog();
-  foodSearchInput.value = '';
-  foodSearchResults.innerHTML = '';
+  usdaResultsListEl.querySelectorAll('.usda-result-item').forEach(function(el) { el.classList.remove('selected'); });
+  item.classList.add('selected');
+  updateMealPreview();
 });
 
-// ── GÜNLÜK GÖRÜNÜMÜ ─────────────────────────────
-function renderFoodLog() {
-  var entries = getTodayEntries();
-
-  if (entries.length === 0) {
-    foodLogList.innerHTML = '<p class="empty-hint">Bugün henüz bir şey eklemedin.</p>';
-  } else {
-    var html = '';
-    entries.forEach(function(e) {
-      html +=
-        '<div class="food-log-item">' +
-          '<div>' +
-            '<p class="food-log-item-name">' + e.name + '</p>' +
-            '<p class="food-log-item-meta">' + e.grams + 'g · P:' + e.protein + ' K:' + e.carbs + ' Y:' + e.fat + '</p>' +
-          '</div>' +
-          '<span class="food-log-item-kcal">' + e.kcal + ' kcal</span>' +
-          '<button class="food-log-item-remove" data-id="' + e.id + '" title="Kaldır">✕</button>' +
-        '</div>';
-    });
-    foodLogList.innerHTML = html;
+usdaSearchBtn.addEventListener('click', function() {
+  var turkishName = customFoodNameInput.value.trim();
+  if (!turkishName) {
+    usdaSearchStatus.textContent = '⚠️ Önce gıda adı yaz.';
+    usdaSearchStatus.classList.remove('hidden');
+    return;
+  }
+  if (!getGeminiKey()) {
+    alert('Önce "Kişisel Bilgiler" sayfasından Gemini API anahtarını kaydetmelisin.');
+    showPage('profile');
+    closeMenu();
+    return;
   }
 
-  updateMacroTotals(entries);
+  usdaSearchStatus.textContent = '🔍 Çevriliyor ve veritabanında aranıyor…';
+  usdaSearchStatus.classList.remove('hidden');
+  usdaResultsListEl.innerHTML = '';
+  aiEstimateBtn.classList.add('hidden');
+  aiEstimateStatus.classList.add('hidden');
+  usdaSearchBtn.disabled = true;
+
+  callGeminiAPI(buildFoodTranslatePrompt(turkishName), getGeminiKey())
+    .then(function(englishTerm) {
+      var cleanTerm = englishTerm.trim().replace(/^["']|["']$/g, '');
+      return searchUSDAFood(cleanTerm);
+    })
+    .then(function(foods) {
+      if (foods.length === 0) {
+        usdaSearchStatus.textContent = '⚠️ Veritabanında bulunamadı.';
+        aiEstimateBtn.classList.remove('hidden');
+        return;
+      }
+      usdaSearchStatus.classList.add('hidden');
+      renderUSDAResults(foods);
+    })
+    .catch(function(err) {
+      console.warn('[USDA Arama] Hata:', err);
+      usdaSearchStatus.textContent = '⚠️ Arama başarısız: ' + (err && err.message ? err.message : 'bilinmeyen hata');
+      aiEstimateBtn.classList.remove('hidden');
+    })
+    .finally(function() {
+      usdaSearchBtn.disabled = false;
+    });
+});
+
+// ── AI İLE TAHMİNİ DEĞER ALMA (son çare — USDA'da da bulunamazsa) ──
+function buildNutritionEstimatePrompt(foodName) {
+  return (
+    'Şu gıdanın 100 gramındaki YAKLAŞIK besin değerlerini tahmin et: "' + foodName + '". ' +
+    'SADECE geçerli JSON formatında yanıt ver, başka hiçbir açıklama ekleme.\n' +
+    'Format: {"kcal": 150, "protein": 10, "carbs": 20, "fat": 5}\n' +
+    'Değerler 100 gram için sayısal olmalı.'
+  );
 }
 
-function updateMacroTotals(entries) {
-  var totals = entries.reduce(function(acc, e) {
-    acc.kcal += e.kcal;
-    acc.protein += e.protein;
-    acc.carbs += e.carbs;
-    acc.fat += e.fat;
-    return acc;
-  }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+aiEstimateBtn.addEventListener('click', function() {
+  var foodName = customFoodNameInput.value.trim();
+  if (!foodName) {
+    aiEstimateStatus.textContent = '⚠️ Önce gıda adı yaz.';
+    aiEstimateStatus.classList.remove('hidden');
+    return;
+  }
+  if (!getGeminiKey()) {
+    alert('Önce "Kişisel Bilgiler" sayfasından Gemini API anahtarını kaydetmelisin.');
+    showPage('profile');
+    closeMenu();
+    return;
+  }
 
+  aiEstimateStatus.textContent = '🤖 AI\'dan tahmini değer alınıyor…';
+  aiEstimateStatus.classList.remove('hidden');
+  aiEstimateBtn.disabled = true;
+
+  callGeminiAPI(buildNutritionEstimatePrompt(foodName), getGeminiKey())
+    .then(function(rawResponse) {
+      var parsed = parseAIJson(rawResponse);
+      currentFoodMeta = {
+        kcal100: parseFloat(parsed.kcal) || 0,
+        protein100: parseFloat(parsed.protein) || 0,
+        carbs100: parseFloat(parsed.carbs) || 0,
+        fat100: parseFloat(parsed.fat) || 0,
+        isEstimated: true
+      };
+      aiEstimateStatus.textContent = '✅ Tahmini değer alındı (100g için ' + currentFoodMeta.kcal100 + ' kcal)';
+      updateMealPreview();
+    })
+    .catch(function(err) {
+      console.warn('[Beslenme AI Tahmin] Hata:', err);
+      aiEstimateStatus.textContent = '⚠️ ' + (err && err.message ? err.message : 'Tahmin alınamadı.');
+      currentFoodMeta = null;
+      updateMealPreview();
+    })
+    .finally(function() {
+      aiEstimateBtn.disabled = false;
+    });
+});
+
+// ── SEPET (ÖĞÜN) MANTIĞI ──────────────────────────
+function buildMealCartItemHTML(item, index) {
+  var badge = item.isEstimated ? '<span class="estimated-badge">~ Tahmini</span>' : '';
+  return (
+    '<div class="cart-item" data-cart-id="' + item.cartId + '">' +
+      '<div class="cart-item-header">' +
+        '<span class="cart-item-number">' + (index + 1) + '</span>' +
+        '<div class="cart-item-info">' +
+          '<p class="cart-item-name">' + item.name + badge + '</p>' +
+          '<p class="cart-item-meta">' + item.meal + ' · ' + item.grams + 'g · ' + item.kcal + ' kcal</p>' +
+        '</div>' +
+        '<button type="button" class="cart-item-remove" data-cart-id="' + item.cartId + '" title="Sil">✕</button>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function renderMealCartList() {
+  if (mealCartItems.length === 0) {
+    mealCartListEl.innerHTML = '<p class="empty-hint">Henüz gıda eklenmedi.</p>';
+    return;
+  }
+  var html = '';
+  mealCartItems.forEach(function(item, idx) { html += buildMealCartItemHTML(item, idx); });
+  mealCartListEl.innerHTML = html;
+}
+
+mealCartListEl.addEventListener('click', function(e) {
+  var btn = e.target.closest('.cart-item-remove');
+  if (!btn) return;
+  mealCartItems = mealCartItems.filter(function(it) { return it.cartId !== btn.dataset.cartId; });
+  renderMealCartList();
+});
+
+addFoodToCartBtn.addEventListener('click', function() {
+  if (!currentFoodMeta) return;
+  var grams = parseFloat(foodAmountInput.value) || 100;
+  var factor = grams / 100;
+  var name = foodSelect.value === '__custom__' ? customFoodNameInput.value.trim() : foodSelect.value;
+  if (!name) return;
+
+  mealCartItems.push({
+    cartId: 'meal_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+    meal: mealSelect.value,
+    name: name,
+    grams: grams,
+    kcal100: currentFoodMeta.kcal100,
+    protein100: currentFoodMeta.protein100,
+    carbs100: currentFoodMeta.carbs100,
+    fat100: currentFoodMeta.fat100,
+    kcal: Math.round(currentFoodMeta.kcal100 * factor),
+    protein: Math.round(currentFoodMeta.protein100 * factor * 10) / 10,
+    carbs: Math.round(currentFoodMeta.carbs100 * factor * 10) / 10,
+    fat: Math.round(currentFoodMeta.fat100 * factor * 10) / 10,
+    isEstimated: !!currentFoodMeta.isEstimated
+  });
+
+  renderMealCartList();
+});
+
+completeMealBtn.addEventListener('click', function() {
+  var feedbackEl = document.getElementById('meal-program-feedback');
+
+  if (mealCartItems.length === 0) {
+    feedbackEl.textContent = '⚠️ Sepet boş — önce gıda ekle.';
+    showFeedback('meal-program-feedback');
+    return;
+  }
+
+  var plan = getMealPlan();
+  mealCartItems.forEach(function(item) {
+    if (!plan[item.meal]) plan[item.meal] = [];
+    plan[item.meal].push({
+      id: 'food_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+      name: item.name,
+      grams: item.grams,
+      kcal100: item.kcal100,
+      protein100: item.protein100,
+      carbs100: item.carbs100,
+      fat100: item.fat100,
+      kcal: item.kcal,
+      protein: item.protein,
+      carbs: item.carbs,
+      fat: item.fat,
+      isEstimated: item.isEstimated
+    });
+  });
+  saveMealPlan(plan);
+
+  mealCartItems = [];
+  renderMealCartList();
+  mealBuilderSection.classList.add('hidden');
+  toggleMealBuilderBtn.classList.remove('open');
+
+  feedbackEl.textContent = '✅ Plana eklendi!';
+  showFeedback('meal-program-feedback');
+
+  renderMealPlanView();
+});
+
+// ── PLAN GÖRÜNÜMÜ + TOPLAM MAKRO ─────────────────
+function renderMealPlanView() {
+  var plan = getMealPlan();
+  var mealsWithFood = MEAL_ORDER.filter(function(m) { return plan[m] && plan[m].length > 0; });
+
+  if (mealsWithFood.length === 0) {
+    mealPlanListEl.innerHTML = '<p class="empty-hint">Henüz bir gıda eklemedin.</p>';
+  } else {
+    var html = '';
+    mealsWithFood.forEach(function(meal) {
+      html += '<p class="meal-plan-day-title">' + meal + '</p>';
+      plan[meal].forEach(function(item) {
+        var badge = item.isEstimated ? '<span class="estimated-badge">~ Tahmini</span>' : '';
+        html +=
+          '<div class="food-log-item">' +
+            '<div>' +
+              '<p class="food-log-item-name">' + item.name + badge + '</p>' +
+              '<p class="food-log-item-meta">' + item.grams + 'g · P:' + item.protein + ' K:' + item.carbs + ' Y:' + item.fat + '</p>' +
+            '</div>' +
+            '<span class="food-log-item-kcal">' + item.kcal + ' kcal</span>' +
+            '<button class="food-log-item-remove" data-meal="' + meal + '" data-id="' + item.id + '" title="Kaldır">✕</button>' +
+          '</div>';
+      });
+    });
+    mealPlanListEl.innerHTML = html;
+  }
+
+  var totals = { kcal: 0, protein: 0, carbs: 0, fat: 0 };
+  MEAL_ORDER.forEach(function(meal) {
+    (plan[meal] || []).forEach(function(item) {
+      totals.kcal += item.kcal;
+      totals.protein += item.protein;
+      totals.carbs += item.carbs;
+      totals.fat += item.fat;
+    });
+  });
   document.getElementById('macro-kcal').textContent = Math.round(totals.kcal);
   document.getElementById('macro-protein').textContent = Math.round(totals.protein);
   document.getElementById('macro-carbs').textContent = Math.round(totals.carbs);
   document.getElementById('macro-fat').textContent = Math.round(totals.fat);
 }
 
-foodLogList.addEventListener('click', function(e) {
+mealPlanListEl.addEventListener('click', function(e) {
   var btn = e.target.closest('.food-log-item-remove');
   if (!btn) return;
-  var id = btn.dataset.id;
-  var log = getNutritionLog();
-  var todayKey = getTodayKey();
-  if (!log[todayKey]) return;
-  log[todayKey] = log[todayKey].filter(function(item) { return item.id !== id; });
-  saveNutritionLog(log);
-  renderFoodLog();
+  var plan = getMealPlan();
+  var meal = btn.dataset.meal;
+  if (!plan[meal]) return;
+  plan[meal] = plan[meal].filter(function(item) { return item.id !== btn.dataset.id; });
+  saveMealPlan(plan);
+  renderMealPlanView();
+});
+
+// ── ÖĞÜN EKLE BARI (açılır/kapanır) ───────────────
+var toggleMealBuilderBtn = document.getElementById('toggleMealBuilderBtn');
+var mealBuilderSection   = document.getElementById('mealBuilderSection');
+
+toggleMealBuilderBtn.addEventListener('click', function() {
+  mealBuilderSection.classList.toggle('hidden');
+  toggleMealBuilderBtn.classList.toggle('open', !mealBuilderSection.classList.contains('hidden'));
 });
 
 // ── INIT (Beslenme) ─────────────────────────────
-renderFoodLog();
+fillFoodSelect();
+renderMealCartList();
+renderMealPlanView();
 
 /* ══════════════════════════════════════════
    PDF + AI: PROGRAM OTOMATİK AKTARIMI
+
    pdf.js (metin çıkarma) + Gemini API (AI ayrıştırma)
    Anahtar sadece localStorage'da tutulur, koda hiç yazılmaz.
    ══════════════════════════════════════════ */
@@ -1617,6 +1877,15 @@ document.getElementById('save-api-key').addEventListener('click', function() {
   var key = document.getElementById('gemini-api-key').value.trim();
   saveGeminiKey(key);
   showFeedback('api-key-feedback');
+});
+
+// ── AI AYARLARI BARI (açılır/kapanır) ─────────────
+var toggleAiSettingsBtn = document.getElementById('toggleAiSettingsBtn');
+var aiSettingsSection   = document.getElementById('aiSettingsSection');
+
+toggleAiSettingsBtn.addEventListener('click', function() {
+  aiSettingsSection.classList.toggle('hidden');
+  toggleAiSettingsBtn.classList.toggle('open', !aiSettingsSection.classList.contains('hidden'));
 });
 
 // ── PDF METİN ÇIKARMA (tamamen tarayıcıda, hiçbir yere gönderilmeden) ──
@@ -1979,6 +2248,221 @@ pdfConfirmBtn.addEventListener('click', function() {
 });
 
 /* ══════════════════════════════════════════
+   SUPPLEMENT PLANI — YAPILANDIRILMIŞ EKLEME SİSTEMİ
+   Meal builder ile aynı mantık: seç/yaz + doz + zaman + not,
+   sepete ekle, planı tamamla. Liventis'ten doğrulanan gerçek
+   ürün bilgileri + yaygın supplementlerin genel doz aralıkları.
+   ══════════════════════════════════════════ */
+
+var SUPP_KEYS = { plan: 'ft_supplement_plan' };
+var SUPP_TIMING_ORDER = ['Sabah', 'Aç Karnına', 'Öğün İle Birlikte', 'Antrenman Öncesi', 'Antrenman Esnasında', 'Antrenman Sonrası', 'Akşam / Yatmadan Önce'];
+
+function getSupplementPlan() { return getJSON(SUPP_KEYS.plan, {}); }
+function saveSupplementPlan(plan) { setJSON(SUPP_KEYS.plan, plan); }
+
+// Liventis ürün sayfalarından doğrulanmış + yaygın supplementlerin genel bilgileri
+var SUPPLEMENT_DB = [
+  { name: 'Liventis Pure Creatine (Kreatin)', defaultDose: '5g', info: 'Liventis ürün sayfasından doğrulandı: serviste 5g kreatin monohidrat, ilave şeker yok.' },
+  { name: 'Kreatin Monohidrat (genel)', defaultDose: '5g', info: 'Standart doz günde 3-5g, performans ve kas gücünü destekler.' },
+  { name: 'Whey Protein', defaultDose: '1 ölçek (~30g)', info: 'Ortalama 1 ölçek ~20-25g protein, ~100-130 kcal içerir (markaya göre değişir).' },
+  { name: 'Liventis Whey Protein', defaultDose: '1 ölçek (30g)', info: 'Peynir altı suyu proteini + kreatin/glutamin/BCAA (4:1:1) + DigeZyme enzim kompleksi içerir.' },
+  { name: 'EAA (Esansiyel Amino Asit)', defaultDose: '10g', info: '9 esansiyel amino asidi sağlar, genelde kalorisi düşüktür.' },
+  { name: 'BCAA', defaultDose: '5g', info: 'Lösin/İzolösin/Valin karışımı, genelde 2:1:1 oranında.' },
+  { name: 'Glutamin', defaultDose: '5-10g', info: 'Toparlanma ve bağırsak sağlığını destekler.' },
+  { name: 'L-Carnitine', defaultDose: '1 servis (~500-1000mg)', info: 'Yağ metabolizmasını desteklediği öne sürülür, antrenman öncesi alınır.' },
+  { name: 'Beta Alanin', defaultDose: '3-5g', info: 'Kas yorgunluğunu geciktirmeye yardımcı olabilir, ciltte karıncalanma normaldir.' },
+  { name: 'D3 Vitamini', defaultDose: '2000 IU', info: 'Kemik sağlığı ve bağışıklık için.' },
+  { name: 'D3K2 Vitamini', defaultDose: '1000-4000 IU', info: 'D3 + K2 kombinasyonu, kalsiyum metabolizmasını destekler.' },
+  { name: 'Multivitamin', defaultDose: '1 tablet/servis', info: 'Genel vitamin/mineral desteği.' },
+  { name: 'Omega 3', defaultDose: '1000mg', info: 'Balık yağı, EPA/DHA içerir.' },
+  { name: 'C Vitamini', defaultDose: '500-1000mg', info: 'Antioksidan, bağışıklık desteği.' },
+  { name: 'Magnezyum', defaultDose: '300-400mg', info: 'Kas fonksiyonu ve uyku kalitesini destekleyebilir.' },
+  { name: 'Çinko', defaultDose: '15-30mg', info: 'Bağışıklık ve hormon dengesi için.' },
+  { name: 'ZMA', defaultDose: '1 servis', info: 'Çinko + Magnezyum + B6 kombinasyonu, genelde gece alınır.' },
+  { name: 'Berberin', defaultDose: '500mg', info: 'Kan şekeri dengesi için kullanılır, öğün öncesi alınır.' },
+  { name: 'Psyllium Husk', defaultDose: '5g', info: 'Çözünür lif, sindirimi destekler, bol suyla alınmalı.' },
+  { name: 'Probiyotik', defaultDose: '1 kapsül', info: 'Bağırsak florasını destekler.' },
+  { name: 'Pre-Workout', defaultDose: '1 ölçek', info: 'Genelde kafein + beta alanin + sitrülin içerir.' }
+];
+
+var suppSelect         = document.getElementById('supp-select');
+var suppCustomGroup    = document.getElementById('supp-custom-group');
+var suppCustomNameInput= document.getElementById('supp-custom-name');
+var suppDoseInput      = document.getElementById('supp-dose');
+var suppTimingSelect   = document.getElementById('supp-timing');
+var suppNoteInput      = document.getElementById('supp-note');
+var suppInfoPreview    = document.getElementById('suppInfoPreview');
+var addSuppToCartBtn   = document.getElementById('addSuppToCartBtn');
+var suppCartListEl     = document.getElementById('suppCartList');
+var completeSuppBtn    = document.getElementById('completeSuppBtn');
+var suppPlanListEl     = document.getElementById('suppPlanList');
+
+var suppCartItems = [];
+
+function fillSuppSelect() {
+  var html = '';
+  SUPPLEMENT_DB.forEach(function(s) {
+    html += '<option value="' + s.name + '">' + s.name + '</option>';
+  });
+  html += '<option value="__custom__">✏️ Listede Yok — Kendim Yazayım</option>';
+  suppSelect.innerHTML = html;
+}
+
+function findSupplementInfo(name) {
+  return SUPPLEMENT_DB.find(function(s) { return s.name === name; });
+}
+
+suppSelect.addEventListener('change', function() {
+  if (suppSelect.value === '__custom__') {
+    suppCustomGroup.classList.remove('hidden');
+    suppCustomNameInput.value = '';
+    suppDoseInput.value = '';
+    suppInfoPreview.textContent = 'Bu ürün için içerik bilgimiz varsa burada görünür';
+    return;
+  }
+  suppCustomGroup.classList.add('hidden');
+  var found = findSupplementInfo(suppSelect.value);
+  if (found) {
+    suppDoseInput.value = found.defaultDose;
+    suppInfoPreview.textContent = 'ℹ️ ' + found.info;
+  } else {
+    suppInfoPreview.textContent = 'Bu ürün için içerik bilgimiz varsa burada görünür';
+  }
+});
+
+function buildSuppCartItemHTML(item, index) {
+  return (
+    '<div class="cart-item" data-cart-id="' + item.cartId + '">' +
+      '<div class="cart-item-header">' +
+        '<span class="cart-item-number">' + (index + 1) + '</span>' +
+        '<div class="cart-item-info">' +
+          '<p class="cart-item-name">' + item.name + '</p>' +
+          '<p class="cart-item-meta">' + item.dose + ' · ' + item.timing + '</p>' +
+        '</div>' +
+        '<button type="button" class="cart-item-remove" data-cart-id="' + item.cartId + '" title="Sil">✕</button>' +
+      '</div>' +
+      (item.note ? '<p class="cart-item-note">📝 ' + item.note + '</p>' : '') +
+    '</div>'
+  );
+}
+
+function renderSuppCartList() {
+  if (suppCartItems.length === 0) {
+    suppCartListEl.innerHTML = '<p class="empty-hint">Henüz supplement eklenmedi.</p>';
+    return;
+  }
+  var html = '';
+  suppCartItems.forEach(function(item, idx) { html += buildSuppCartItemHTML(item, idx); });
+  suppCartListEl.innerHTML = html;
+}
+
+suppCartListEl.addEventListener('click', function(e) {
+  var btn = e.target.closest('.cart-item-remove');
+  if (!btn) return;
+  suppCartItems = suppCartItems.filter(function(it) { return it.cartId !== btn.dataset.cartId; });
+  renderSuppCartList();
+});
+
+addSuppToCartBtn.addEventListener('click', function() {
+  var name = suppSelect.value === '__custom__' ? suppCustomNameInput.value.trim() : suppSelect.value;
+  if (!name) return;
+  var dose = suppDoseInput.value.trim() || '—';
+
+  suppCartItems.push({
+    cartId: 'supp_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+    name: name,
+    dose: dose,
+    timing: suppTimingSelect.value,
+    note: suppNoteInput.value.trim()
+  });
+
+  suppNoteInput.value = '';
+  renderSuppCartList();
+});
+
+completeSuppBtn.addEventListener('click', function() {
+  var feedbackEl = document.getElementById('supp-program-feedback');
+
+  if (suppCartItems.length === 0) {
+    feedbackEl.textContent = '⚠️ Sepet boş — önce supplement ekle.';
+    showFeedback('supp-program-feedback');
+    return;
+  }
+
+  var plan = getSupplementPlan();
+  suppCartItems.forEach(function(item) {
+    if (!plan[item.timing]) plan[item.timing] = [];
+    plan[item.timing].push({
+      id: 'supp_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+      name: item.name,
+      dose: item.dose,
+      note: item.note
+    });
+  });
+  saveSupplementPlan(plan);
+
+  suppCartItems = [];
+  renderSuppCartList();
+  suppBuilderSection.classList.add('hidden');
+  toggleSuppBuilderBtn.classList.remove('open');
+
+  feedbackEl.textContent = '✅ Plana eklendi!';
+  showFeedback('supp-program-feedback');
+
+  renderSupplementPlanView();
+});
+
+function renderSupplementPlanView() {
+  var plan = getSupplementPlan();
+  var timingsWithItems = SUPP_TIMING_ORDER.filter(function(t) { return plan[t] && plan[t].length > 0; });
+
+  if (timingsWithItems.length === 0) {
+    suppPlanListEl.innerHTML = '<p class="empty-hint">Henüz bir supplement eklemedin.</p>';
+    return;
+  }
+
+  var html = '';
+  timingsWithItems.forEach(function(timing) {
+    html += '<p class="meal-plan-day-title">' + timing + '</p>';
+    plan[timing].forEach(function(item) {
+      html +=
+        '<div class="food-log-item">' +
+          '<div>' +
+            '<p class="food-log-item-name">' + item.name + '</p>' +
+            '<p class="food-log-item-meta">' + item.dose + (item.note ? ' · ' + item.note : '') + '</p>' +
+          '</div>' +
+          '<button class="food-log-item-remove" data-timing="' + timing + '" data-id="' + item.id + '" title="Kaldır">✕</button>' +
+        '</div>';
+    });
+  });
+  suppPlanListEl.innerHTML = html;
+}
+
+suppPlanListEl.addEventListener('click', function(e) {
+  var btn = e.target.closest('.food-log-item-remove');
+  if (!btn) return;
+  var plan = getSupplementPlan();
+  var timing = btn.dataset.timing;
+  if (!plan[timing]) return;
+  plan[timing] = plan[timing].filter(function(item) { return item.id !== btn.dataset.id; });
+  saveSupplementPlan(plan);
+  renderSupplementPlanView();
+});
+
+var toggleSuppBuilderBtn = document.getElementById('toggleSuppBuilderBtn');
+var suppBuilderSection   = document.getElementById('suppBuilderSection');
+
+toggleSuppBuilderBtn.addEventListener('click', function() {
+  suppBuilderSection.classList.toggle('hidden');
+  toggleSuppBuilderBtn.classList.toggle('open', !suppBuilderSection.classList.contains('hidden'));
+});
+
+// ── INIT (Supplement) ────────────────────────────
+fillSuppSelect();
+renderSuppCartList();
+renderSupplementPlanView();
+
+/* ══════════════════════════════════════════
    PDF + AI: BESLENME / SUPPLEMENT PLANI AKTARIMI
    Aynı pdf.js + Gemini API altyapısını kullanır,
    antrenman PDF akışından bağımsız, daha basit bir akış.
@@ -1989,14 +2473,24 @@ function buildDietPrompt(pdfText) {
     'Aşağıdaki metin bir beslenme/diyet planı ve/veya supplement (takviye)/vitamin planı içeriyor. ' +
     'Bu metni analiz et ve SADECE geçerli JSON formatında yanıt ver — başka hiçbir açıklama, yorum veya markdown code-block ekleme.\n\n' +
     'Format tam olarak şu şekilde olmalı:\n' +
-    '{"beslenmePlani": "düzenli metin", "supplementPlani": "düzenli metin"}\n\n' +
-    'Kurallar:\n' +
-    '- "beslenmePlani" alanına SADECE öğün/yemek bilgilerini yaz. Her öğünü "Öğün 1:", "Öğün 2:" gibi başlıklandır, ' +
-    'her satırı "- " ile başlat. Su tüketimi, tuz miktarı gibi genel beslenme notlarını da bu alanın sonuna ekle.\n' +
-    '- "supplementPlani" alanına supplement VE vitamin planındaki tüm maddeleri madde madde ("- " ile başlayarak) yaz.\n' +
-    '- Metinde bu bilgilerden biri yoksa ilgili alanı boş string ("") yap.\n' +
-    '- Metin tamamen bir antrenman programıysa (beslenme/supplement bilgisi hiç yoksa) ikisini de boş string yap.\n' +
-    '- Metni kısaltmadan, olabildiğince eksiksiz aktar.\n\n' +
+    '{"beslenmePlani": {"Öğün 1": [{"gida": "Yumurta", "gram": 200, "kcal100": 155, "protein100": 13, "carbs100": 1.1, "fat100": 11}], ' +
+    '"Öğün 2": [...], "Öğün 3": [...], "Öğün 4": [...], "Ara Öğün": [...]}, ' +
+    '"supplementPlani": [{"isim": "Kreatin", "doz": "5g", "zaman": "Antrenman Öncesi"}]}\n\n' +
+    'Beslenme kuralları:\n' +
+    '- Öğün başlıklarını (Kahvaltı/Öğün1 -> "Öğün 1", Öğle/Öğün2 -> "Öğün 2", Akşam/Öğün3 -> "Öğün 3", Öğün4 -> "Öğün 4", ara öğün/atıştırmalık -> "Ara Öğün") bu 5 isimden birine eşleştir.\n' +
+    '- Her gıda için "gida" (sade Türkçe isim, "veya" ile verilen alternatiflerden sadece ilkini al, parantezleri çıkar), ' +
+    '"gram" (sayı, belirtilmemişse 100) alanlarını doldur.\n' +
+    '- Her gıda için 100 GRAM başına YAKLAŞIK "kcal100", "protein100", "carbs100", "fat100" değerlerini de SEN tahmin ederek doldur ' +
+    '(bunlar sistem tarafından gerçek bir veritabanıyla eşleşirse geçersiz sayılıp gerçek değerle değiştirilecek, ' +
+    'eşleşmezse senin verdiğin kullanılacak — bu yüzden makul ve gerçekçi değerler ver).\n' +
+    '- O öğünde hiç gıda yoksa o öğünü hiç ekleme.\n\n' +
+    'Supplement kuralları:\n' +
+    '- Supplement VE vitamin planındaki HER maddeyi ayrı bir obje olarak "supplementPlani" dizisine ekle.\n' +
+    '- "isim" (ürün/madde adı, marka varsa dahil et), "doz" (miktar, örn. "5g", "1 tablet", "2000 IU", "1 servis"), ' +
+    '"zaman" (SADECE şunlardan biri: "Sabah", "Aç Karnına", "Öğün İle Birlikte", "Antrenman Öncesi", "Antrenman Esnasında", ' +
+    '"Antrenman Sonrası", "Akşam / Yatmadan Önce" — metinde net değilse en yakınını seç) alanlarını doldur.\n\n' +
+    'Genel kural: Metinde bu bilgilerden biri hiç yoksa ilgili alanı boş obje {} veya boş dizi [] yap. ' +
+    'Metin tamamen bir antrenman programıysa (beslenme/supplement bilgisi hiç yoksa) ikisini de boş yap.\n\n' +
     'Metin:\n' + pdfText.substring(0, 15000)
   );
 }
@@ -2019,19 +2513,20 @@ function showDietPdfStep(step) {
   dietPdfConfirmBtn.classList.toggle('hidden', step !== 'dietPdfStepPreview');
 }
 
-function openDietPdfModal() {
+function openDietPdfModal(title) {
   if (!getGeminiKey()) {
     alert('Önce "Kişisel Bilgiler" sayfasından Gemini API anahtarını kaydetmelisin.');
     showPage('profile');
     closeMenu();
     return;
   }
+  document.getElementById('dietPdfModalTitle').textContent = title;
   showDietPdfStep('dietPdfStepIntro');
   dietPdfModal.classList.remove('hidden');
 }
 
-openDietPdfBtn.addEventListener('click', openDietPdfModal);
-openDietPdfBtnSupp.addEventListener('click', openDietPdfModal);
+openDietPdfBtn.addEventListener('click', function() { openDietPdfModal("PDF'den Beslenme Planı Yükle"); });
+openDietPdfBtnSupp.addEventListener('click', function() { openDietPdfModal("PDF'den Supplement Planı Yükle"); });
 
 closeDietPdfModalBtn.addEventListener('click', function() {
   dietPdfModal.classList.add('hidden');
@@ -2064,7 +2559,15 @@ function processDietPdfFile(file) {
   }).then(function(rawResponse) {
     var parsed = parseAIJson(rawResponse);
 
-    if (!parsed.beslenmePlani && !parsed.supplementPlani) {
+    var foodCount = 0;
+    MEAL_ORDER.forEach(function(meal) {
+      if (parsed.beslenmePlani && Array.isArray(parsed.beslenmePlani[meal])) {
+        foodCount += parsed.beslenmePlani[meal].length;
+      }
+    });
+    var suppCount = Array.isArray(parsed.supplementPlani) ? parsed.supplementPlani.length : 0;
+
+    if (foodCount === 0 && suppCount === 0) {
       throw new Error(
         'Bu PDF\'de beslenme veya supplement bilgisi bulunamadı. Bir antrenman programı yüklemiş olabilirsin — ' +
         'onun için "Antrenman Planı" sayfasındaki PDF yükleme özelliğini kullan.'
@@ -2089,29 +2592,129 @@ function processDietPdfFile(file) {
   });
 }
 
+// Yerel Türk mutfağı veritabanında (parçalı/esnek) eşleşme arar
+function findLocalFoodFuzzy(name) {
+  var all = [];
+  Object.keys(TURKISH_FOODS).forEach(function(cat) { all = all.concat(TURKISH_FOODS[cat]); });
+  var lower = (name || '').trim().toLowerCase();
+  if (!lower) return null;
+
+  var exact = all.find(function(f) { return f.name.toLowerCase() === lower; });
+  if (exact) return exact;
+
+  return all.find(function(f) {
+    var base = f.name.toLowerCase().split(' (')[0];
+    return f.name.toLowerCase().indexOf(lower) !== -1 || lower.indexOf(base) !== -1;
+  }) || null;
+}
+
 function renderDietPdfPreview() {
   var nutritionBlock = document.getElementById('dietPdfPreviewNutrition');
   var supplementBlock = document.getElementById('dietPdfPreviewSupplement');
+  var beslenme = dietPdfParsed.beslenmePlani || {};
+  var supplement = dietPdfParsed.supplementPlani || [];
 
-  if (dietPdfParsed.beslenmePlani) {
+  var mealsWithFood = MEAL_ORDER.filter(function(m) { return Array.isArray(beslenme[m]) && beslenme[m].length > 0; });
+
+  if (mealsWithFood.length > 0) {
+    var html = '<p class="pdf-preview-day-title">🍽️ Beslenme Planı</p>';
+    mealsWithFood.forEach(function(meal) {
+      html += '<p class="pdf-preview-post-label">' + meal + '</p>';
+      beslenme[meal].forEach(function(item) {
+        var matched = findLocalFoodFuzzy(item.gida);
+        var badge = matched ? '' : ' <span class="estimated-badge">~ Tahmini</span>';
+        html +=
+          '<div class="pdf-preview-exercise-wrap"><div class="pdf-preview-exercise">' +
+            '<span class="pdf-preview-exercise-name">' + item.gida + badge + '</span>' +
+            '<span class="pdf-preview-exercise-meta">' + (item.gram || 100) + 'g</span>' +
+          '</div></div>';
+      });
+    });
+    nutritionBlock.innerHTML = html;
     nutritionBlock.classList.remove('hidden');
-    document.getElementById('dietPdfPreviewNutritionText').innerHTML = dietPdfParsed.beslenmePlani.replace(/\n/g, '<br>');
   } else {
     nutritionBlock.classList.add('hidden');
   }
 
-  if (dietPdfParsed.supplementPlani) {
+  if (supplement.length > 0) {
+    var html2 = '<p class="pdf-preview-day-title">💊 Supplement Planı</p>';
+    supplement.forEach(function(item) {
+      html2 +=
+        '<div class="pdf-preview-exercise-wrap"><div class="pdf-preview-exercise">' +
+          '<span class="pdf-preview-exercise-name">' + item.isim + '</span>' +
+          '<span class="pdf-preview-exercise-meta">' + (item.doz || '') + ' · ' + (item.zaman || '') + '</span>' +
+        '</div></div>';
+    });
+    supplementBlock.innerHTML = html2;
     supplementBlock.classList.remove('hidden');
-    document.getElementById('dietPdfPreviewSupplementText').innerHTML = dietPdfParsed.supplementPlani.replace(/\n/g, '<br>');
   } else {
     supplementBlock.classList.add('hidden');
   }
 }
 
+function mergeDietPlanIntoStorage(beslenmePlani) {
+  var plan = getMealPlan();
+
+  MEAL_ORDER.forEach(function(meal) {
+    var items = beslenmePlani[meal];
+    if (!Array.isArray(items) || items.length === 0) return;
+    if (!plan[meal]) plan[meal] = [];
+
+    items.forEach(function(item) {
+      var grams = parseFloat(item.gram) || 100;
+      var matched = findLocalFoodFuzzy(item.gida);
+      var kcal100 = matched ? matched.kcal : (parseFloat(item.kcal100) || 0);
+      var protein100 = matched ? matched.protein : (parseFloat(item.protein100) || 0);
+      var carbs100 = matched ? matched.carbs : (parseFloat(item.carbs100) || 0);
+      var fat100 = matched ? matched.fat : (parseFloat(item.fat100) || 0);
+      var factor = grams / 100;
+
+      plan[meal].push({
+        id: 'food_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+        name: item.gida,
+        grams: grams,
+        kcal100: kcal100, protein100: protein100, carbs100: carbs100, fat100: fat100,
+        kcal: Math.round(kcal100 * factor),
+        protein: Math.round(protein100 * factor * 10) / 10,
+        carbs: Math.round(carbs100 * factor * 10) / 10,
+        fat: Math.round(fat100 * factor * 10) / 10,
+        isEstimated: !matched
+      });
+    });
+  });
+
+  saveMealPlan(plan);
+}
+
+function mergeSupplementPlanIntoStorage(supplementPlani) {
+  var plan = getSupplementPlan();
+
+  supplementPlani.forEach(function(item) {
+    var timing = SUPP_TIMING_ORDER.indexOf(item.zaman) !== -1 ? item.zaman : 'Sabah';
+    if (!plan[timing]) plan[timing] = [];
+    plan[timing].push({
+      id: 'supp_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+      name: item.isim,
+      dose: item.doz || '',
+      note: ''
+    });
+  });
+
+  saveSupplementPlan(plan);
+}
+
 dietPdfConfirmBtn.addEventListener('click', function() {
   if (!dietPdfParsed) return;
-  appendToNotesField(KEYS.nutrition, 'input-nutrition', dietPdfParsed.beslenmePlani);
-  appendToNotesField(KEYS.supplement, 'input-supplement', dietPdfParsed.supplementPlani);
+
+  if (dietPdfParsed.beslenmePlani) {
+    mergeDietPlanIntoStorage(dietPdfParsed.beslenmePlani);
+    renderMealPlanView();
+  }
+  if (Array.isArray(dietPdfParsed.supplementPlani) && dietPdfParsed.supplementPlani.length > 0) {
+    mergeSupplementPlanIntoStorage(dietPdfParsed.supplementPlani);
+    renderSupplementPlanView();
+  }
+
   dietPdfModal.classList.add('hidden');
   dietPdfParsed = null;
 });
