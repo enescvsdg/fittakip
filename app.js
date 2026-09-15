@@ -29,7 +29,12 @@ function showPage(pageId) {
     btn.classList.toggle('active', btn.dataset.page === pageId);
   });
 
-  if (pageId === 'home') updateDashboard();
+  if (pageId === 'home') {
+    updateDashboard();
+    renderConsistency();
+    renderStrengthSection();
+    renderCalendar();
+  }
 }
 
 // ── MENU TOGGLE ─────────────────────────────
@@ -99,6 +104,12 @@ function setJSON(key, value) {
 
 function getWeighIns() { return getJSON(KEYS.weighins, []); }
 function saveWeighIns(list) { setJSON(KEYS.weighins, list); }
+
+// Bugünün tarihini YYYY-MM-DD formatında döndürür (yerel saat)
+function getTodayKey() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
 
 // ── TARİH FORMATLAMA ─────────────────────────
 function formatDateTR(dateStr) {
@@ -348,6 +359,65 @@ function updateDashboard() {
     updateChart();
     updateGoalStatus();
   }
+  renderNextAction();
+}
+
+/* ══════════════════════════════════════════
+   "BUGÜN NE YAPMALIYIM?" — akıllı öneri
+   Günün planı + tamamlanma + saat bilgisine göre sıradaki adım.
+   ══════════════════════════════════════════ */
+
+function renderNextAction() {
+  var card = document.getElementById('nextActionCard');
+  var iconEl = document.getElementById('nextActionIcon');
+  var titleEl = document.getElementById('nextActionTitle');
+  var goBtn = document.getElementById('nextActionGo');
+  if (!card) return;
+
+  var TR_DAYS = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+  var todayName = TR_DAYS[new Date().getDay()];
+
+  var daysMap = getWorkoutDaysMap();
+  var todayPlan = daysMap[todayName];
+  var hasWorkoutToday = todayPlan && ((todayPlan.exercises && todayPlan.exercises.length > 0) || (todayPlan.postWorkout && todayPlan.postWorkout.length > 0));
+
+  // Bugün antrenman geçmişe kaydedilmiş mi?
+  var doneToday = getWorkoutHistory().some(function(s) { return s.date === getTodayKey(); });
+
+  var action = null;
+
+  if (hasWorkoutToday && !doneToday) {
+    var title = todayPlan.title ? todayPlan.title : (todayName + ' Antrenmanı');
+    action = { icon: '🏋️', text: title + ' seni bekliyor', page: 'workout', weekday: todayName };
+  } else if (hasWorkoutToday && doneToday) {
+    action = { icon: '✅', text: 'Bugünkü antrenmanı tamamladın, harika!', page: 'workout' };
+  } else {
+    // Bugün plan yok — hiç program var mı?
+    var anyPlan = Object.keys(daysMap).some(function(k) {
+      var d = daysMap[k];
+      return d && ((d.exercises && d.exercises.length) || (d.postWorkout && d.postWorkout.length));
+    });
+    if (!anyPlan) {
+      action = { icon: '📋', text: 'Henüz antrenman planın yok — hadi bir tane oluştur', page: 'workout' };
+    } else {
+      action = { icon: '😌', text: 'Bugün dinlenme günü — planında antrenman yok', page: 'workout' };
+    }
+  }
+
+  if (!action) { card.classList.add('hidden'); return; }
+
+  iconEl.textContent = action.icon;
+  titleEl.textContent = action.text;
+  card.classList.remove('hidden');
+
+  goBtn.onclick = function() {
+    if (action.weekday) {
+      activeWeekday = action.weekday;
+      localStorage.setItem(KEYS.activeDay, activeWeekday);
+    }
+    showPage(action.page);
+    if (action.page === 'workout') renderWorkoutTracking();
+  };
 }
 
 /* ══════════════════════════════════════════
@@ -1169,16 +1239,31 @@ clearDayBtn.addEventListener('click', function() {
 
 function buildExerciseCardHTML(weekday, ex, isPost) {
   var allChecked = ex.checked.length > 0 && ex.checked.every(Boolean);
-  var circlesHTML = '';
+  if (!ex.weights) ex.weights = new Array(ex.sets).fill('');
+  var setsHTML = '';
+
+  // Son performans (geçmişten) — varsa göster
+  var lastPerf = getLastPerformance(ex.name);
+  var lastPerfHTML = '';
+  if (lastPerf) {
+    lastPerfHTML = '<p class="exercise-card-last">Son: ' + lastPerf.summary + '</p>';
+  }
 
   for (var i = 0; i < ex.sets; i++) {
     var isChecked = !!ex.checked[i];
-    var content = isChecked ? '✓' : (i + 1);
-    circlesHTML +=
-      '<label class="set-circle-label">' +
-        '<input type="checkbox" class="set-checkbox-input" data-weekday="' + weekday + '" data-id="' + ex.id + '" data-index="' + i + '" data-post="' + (isPost ? '1' : '0') + '" ' + (isChecked ? 'checked' : '') + '>' +
-        '<span class="set-circle-visual">' + content + '</span>' +
-      '</label>';
+    var w = ex.weights[i] || '';
+    setsHTML +=
+      '<div class="set-row' + (isChecked ? ' done' : '') + '" data-index="' + i + '">' +
+        '<span class="set-row-num">' + (i + 1) + '. set</span>' +
+        '<input type="number" class="set-weight-input" inputmode="decimal" placeholder="kg" value="' + w + '" ' +
+          'data-weekday="' + weekday + '" data-id="' + ex.id + '" data-index="' + i + '" data-post="' + (isPost ? '1' : '0') + '">' +
+        '<span class="set-row-x">×</span>' +
+        '<span class="set-row-reps">' + ex.reps + '</span>' +
+        '<label class="set-check-label">' +
+          '<input type="checkbox" class="set-checkbox-input" data-weekday="' + weekday + '" data-id="' + ex.id + '" data-index="' + i + '" data-post="' + (isPost ? '1' : '0') + '" ' + (isChecked ? 'checked' : '') + '>' +
+          '<span class="set-check-visual">' + (isChecked ? '✓' : '') + '</span>' +
+        '</label>' +
+      '</div>';
   }
 
   var youtubeUrl = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(ex.name + ' nasıl yapılır');
@@ -1195,8 +1280,9 @@ function buildExerciseCardHTML(weekday, ex, isPost) {
         '<button class="exercise-card-name">' + ex.name + '</button>' +
         '<a class="exercise-card-play" href="' + youtubeUrl + '" target="_blank" rel="noopener noreferrer" title="Video izle"><span>▶</span></a>' +
       '</div>' +
-      '<p class="exercise-card-sets-reps">' + ex.sets + '×' + ex.reps + extraMeta + '</p>' +
-      '<div class="exercise-card-circles">' + circlesHTML + '</div>' +
+      '<p class="exercise-card-sets-reps">Hedef: ' + ex.sets + '×' + ex.reps + extraMeta + '</p>' +
+      lastPerfHTML +
+      '<div class="exercise-card-sets">' + setsHTML + '</div>' +
       noteHtml +
       '<div class="exercise-anatomy-wrap hidden">' + buildAnatomyPanelHTML(ex.muscle) + '</div>' +
     '</div>'
@@ -1234,21 +1320,47 @@ function renderExerciseCards() {
 }
 
 document.getElementById('finishWorkoutBtn').addEventListener('click', function() {
-  var confirmed = window.confirm('"' + activeWeekday + '" günündeki tüm hareketleri tamamladın mı? Tüm setler işaretlenecek.');
+  var day = getDay(activeWeekday);
+  var allEx = (day.exercises || []).concat(day.postWorkout || []);
+  var anyChecked = allEx.some(function(ex) { return ex.checked && ex.checked.some(Boolean); });
+
+  var msg;
+  if (anyChecked) {
+    msg = '"' + activeWeekday + '" antrenmanını bitiriyorsun. İşaretlediğin setler (ağırlık/tekrar) geçmişe kaydedilecek ve ilerleme takibinde kullanılacak. Onaylıyor musun?';
+  } else {
+    msg = 'Henüz hiç set işaretlemedin. Yine de tüm hareketleri tamamlanmış say ve geçmişe kaydet? (Ağırlık girmediğin setler ağırlıksız kaydedilir.)';
+  }
+  var confirmed = window.confirm(msg);
   if (!confirmed) return;
 
   var daysMap = getWorkoutDaysMap();
-  var day = daysMap[activeWeekday];
-  if (!day) return;
+  var dayRef = daysMap[activeWeekday];
+  if (!dayRef) return;
 
-  (day.exercises || []).forEach(function(ex) {
-    ex.checked = new Array(ex.sets).fill(true);
-  });
-  (day.postWorkout || []).forEach(function(ex) {
-    ex.checked = new Array(ex.sets).fill(true);
-  });
+  // Hiç set işaretlenmemişse hepsini tamamlanmış say
+  if (!anyChecked) {
+    (dayRef.exercises || []).forEach(function(ex) { ex.checked = new Array(ex.sets).fill(true); });
+    (dayRef.postWorkout || []).forEach(function(ex) { ex.checked = new Array(ex.sets).fill(true); });
+    saveWorkoutDaysMap(daysMap);
+  }
 
-  saveWorkoutDaysMap(daysMap);
+  // Geçmişe kaydet
+  saveSessionToHistory(activeWeekday);
+
+  // Bir sonraki antrenman için setleri sıfırla (plan kalır, işaretler/ağırlıklar temizlenir)
+  var finalMap = getWorkoutDaysMap();
+  var dayReset = finalMap[activeWeekday];
+  (dayReset.exercises || []).forEach(function(ex) {
+    ex.checked = new Array(ex.sets).fill(false);
+    ex.weights = new Array(ex.sets).fill('');
+  });
+  (dayReset.postWorkout || []).forEach(function(ex) {
+    ex.checked = new Array(ex.sets).fill(false);
+    ex.weights = new Array(ex.sets).fill('');
+  });
+  saveWorkoutDaysMap(finalMap);
+
+  alert('✅ Antrenman kaydedildi! İlerlemeni "Analiz" sayfasından takip edebilirsin.');
   renderWorkoutTracking();
 });
 
@@ -1302,13 +1414,368 @@ exerciseCardsListEl.addEventListener('change', function(e) {
   saveWorkoutDaysMap(daysMap);
 
   var visual = e.target.nextElementSibling;
-  visual.textContent = e.target.checked ? '✓' : (idx + 1);
+  visual.textContent = e.target.checked ? '✓' : '';
+
+  var row = e.target.closest('.set-row');
+  if (row) row.classList.toggle('done', e.target.checked);
 
   var card = e.target.closest('.exercise-card');
   card.classList.toggle('completed', ex.checked.every(Boolean));
 
   renderDayProgress();
   renderOverallProgress();
+});
+
+// Ağırlık girişi (kg) — yazıldıkça kaydet
+exerciseCardsListEl.addEventListener('input', function(e) {
+  if (!e.target.classList.contains('set-weight-input')) return;
+
+  var weekday = e.target.dataset.weekday;
+  var exId = e.target.dataset.id;
+  var idx = parseInt(e.target.dataset.index, 10);
+  var isPost = e.target.dataset.post === '1';
+
+  var daysMap = getWorkoutDaysMap();
+  var day = daysMap[weekday];
+  if (!day) return;
+  var list = isPost ? (day.postWorkout || []) : day.exercises;
+  var ex = list.find(function(x) { return x.id === exId; });
+  if (!ex) return;
+
+  if (!ex.weights) ex.weights = new Array(ex.sets).fill('');
+  ex.weights[idx] = e.target.value;
+  saveWorkoutDaysMap(daysMap);
+});
+
+/* ══════════════════════════════════════════
+   ANTRENMAN GEÇMİŞİ (History) + SON PERFORMANS
+   Bir gün "Antrenmanı Tamamla" ile bitince o günün her
+   hareketinin ağırlık/tekrar verisi tarih damgasıyla saklanır.
+   ══════════════════════════════════════════ */
+
+var HISTORY_KEY = 'ft_workout_history';
+
+function getWorkoutHistory() { return getJSON(HISTORY_KEY, []); }
+function saveWorkoutHistory(h) { setJSON(HISTORY_KEY, h); }
+
+// Bir hareketin en son kaydedilen performansını (özet metin + veri) döndürür
+function getLastPerformance(exerciseName) {
+  var history = getWorkoutHistory();
+  for (var i = history.length - 1; i >= 0; i--) {
+    var session = history[i];
+    var found = (session.exercises || []).find(function(e) { return e.name === exerciseName; });
+    if (found && found.sets && found.sets.length) {
+      var parts = found.sets.map(function(s) {
+        return (s.weight ? s.weight + 'kg' : '—') + '×' + s.reps;
+      });
+      return { summary: parts.join(', '), date: session.date, sets: found.sets };
+    }
+  }
+  return null;
+}
+
+// Bugünün aktif gününü geçmişe kaydeder (tamamlanmış hareketleri)
+function saveSessionToHistory(weekday) {
+  var day = getDay(weekday);
+  var allEx = (day.exercises || []).concat(day.postWorkout || []);
+
+  var recorded = [];
+  allEx.forEach(function(ex) {
+    var sets = [];
+    for (var i = 0; i < ex.sets; i++) {
+      if (ex.checked && ex.checked[i]) {
+        sets.push({
+          weight: (ex.weights && ex.weights[i]) ? parseFloat(ex.weights[i]) || 0 : 0,
+          reps: ex.reps
+        });
+      }
+    }
+    if (sets.length > 0) {
+      recorded.push({ name: ex.name, muscle: ex.muscle, sets: sets });
+    }
+  });
+
+  if (recorded.length === 0) return;
+
+  var history = getWorkoutHistory();
+  history.push({
+    date: getTodayKey(),
+    weekday: weekday,
+    title: day.title || '',
+    exercises: recorded
+  });
+  saveWorkoutHistory(history);
+}
+
+/* ══════════════════════════════════════════
+   ANALİZ: SÜREKLİLİK + GÜÇ İLERLEMESİ GRAFİĞİ
+   ══════════════════════════════════════════ */
+
+function parseDateKey(key) {
+  var parts = (key || '').split('-');
+  if (parts.length !== 3) return null;
+  return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+}
+
+function renderConsistency() {
+  var history = getWorkoutHistory();
+  var emptyEl = document.getElementById('consistency-empty');
+
+  if (history.length === 0) {
+    document.getElementById('stat-week-workouts').textContent = '0';
+    document.getElementById('stat-month-workouts').textContent = '0';
+    document.getElementById('stat-streak').textContent = '0';
+    emptyEl.classList.remove('hidden');
+    return;
+  }
+  emptyEl.classList.add('hidden');
+
+  var now = new Date();
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // Bu haftanın başlangıcı (Pazartesi)
+  var dayOfWeek = (today.getDay() + 6) % 7; // Pzt=0
+  var weekStart = new Date(today); weekStart.setDate(today.getDate() - dayOfWeek);
+  var monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
+  var weekCount = 0, monthCount = 0;
+  var workoutDates = {};
+
+  history.forEach(function(session) {
+    var d = parseDateKey(session.date);
+    if (!d) return;
+    workoutDates[session.date] = true;
+    if (d >= weekStart) weekCount++;
+    if (d >= monthStart) monthCount++;
+  });
+
+  // Seri (streak): bugünden veya dünden geriye doğru kesintisiz antrenman günleri
+  var streak = 0;
+  var cursor = new Date(today);
+  function keyOf(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  // Bugün antrenman yoksa dünden başla
+  if (!workoutDates[keyOf(cursor)]) cursor.setDate(cursor.getDate() - 1);
+  while (workoutDates[keyOf(cursor)]) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  document.getElementById('stat-week-workouts').textContent = weekCount;
+  document.getElementById('stat-month-workouts').textContent = monthCount;
+  document.getElementById('stat-streak').textContent = streak;
+}
+
+var strengthChartInstance = null;
+
+function renderStrengthSection() {
+  var history = getWorkoutHistory();
+  var emptyEl = document.getElementById('strength-empty');
+  var selectGroup = document.getElementById('strength-select-group');
+  var summaryEl = document.getElementById('strength-summary');
+  var select = document.getElementById('strength-exercise-select');
+
+  // Geçmişte en az bir kez ağırlık girilmiş hareketleri topla
+  var exerciseNames = {};
+  history.forEach(function(session) {
+    (session.exercises || []).forEach(function(ex) {
+      var maxW = Math.max.apply(null, ex.sets.map(function(s) { return s.weight || 0; }));
+      if (maxW > 0) exerciseNames[ex.name] = true;
+    });
+  });
+  var names = Object.keys(exerciseNames);
+
+  if (names.length === 0) {
+    emptyEl.classList.remove('hidden');
+    selectGroup.classList.add('hidden');
+    summaryEl.innerHTML = '';
+    if (strengthChartInstance) { strengthChartInstance.destroy(); strengthChartInstance = null; }
+    return;
+  }
+  emptyEl.classList.add('hidden');
+  selectGroup.classList.remove('hidden');
+
+  // Seçim listesini doldur (önceki seçimi koru)
+  var prev = select.value;
+  select.innerHTML = names.map(function(n) { return '<option value="' + n + '">' + n + '</option>'; }).join('');
+  if (names.indexOf(prev) !== -1) select.value = prev;
+
+  drawStrengthChart(select.value);
+}
+
+function drawStrengthChart(exerciseName) {
+  var history = getWorkoutHistory();
+  var points = [];
+
+  history.forEach(function(session) {
+    var ex = (session.exercises || []).find(function(e) { return e.name === exerciseName; });
+    if (!ex) return;
+    var maxW = Math.max.apply(null, ex.sets.map(function(s) { return s.weight || 0; }));
+    if (maxW > 0) {
+      points.push({ date: session.date, weight: maxW });
+    }
+  });
+
+  if (points.length === 0) return;
+
+  var labels = points.map(function(p) {
+    var d = parseDateKey(p.date);
+    return d ? (d.getDate() + '/' + (d.getMonth() + 1)) : p.date;
+  });
+  var data = points.map(function(p) { return p.weight; });
+
+  var ctx = document.getElementById('strengthChart').getContext('2d');
+  if (strengthChartInstance) strengthChartInstance.destroy();
+
+  strengthChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: exerciseName + ' (en yüksek kg)',
+        data: data,
+        borderColor: '#ff5c2b',
+        backgroundColor: 'rgba(255,92,43,0.1)',
+        borderWidth: 2,
+        pointRadius: 4,
+        pointBackgroundColor: '#ff5c2b',
+        tension: 0.25,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#aaa' } } },
+      scales: {
+        x: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+
+  // Özet: ilk → son değişim
+  var first = data[0], last = data[data.length - 1];
+  var diff = last - first;
+  var summaryEl = document.getElementById('strength-summary');
+  if (data.length >= 2 && diff !== 0) {
+    var arrow = diff > 0 ? '📈' : '📉';
+    var sign = diff > 0 ? '+' : '';
+    summaryEl.innerHTML = arrow + ' İlk kayıt: <strong>' + first + 'kg</strong> → Son: <strong>' + last + 'kg</strong> (' + sign + diff + 'kg)';
+  } else {
+    summaryEl.innerHTML = 'Toplam ' + data.length + ' kayıt. En yüksek: <strong>' + Math.max.apply(null, data) + 'kg</strong>';
+  }
+}
+
+document.getElementById('strength-exercise-select').addEventListener('change', function() {
+  drawStrengthChart(this.value);
+});
+
+/* ══════════════════════════════════════════
+   AKTİVİTE TAKVİMİ
+   Antrenman geçmişi + tartım kayıtlarını aylık gösterir.
+   ══════════════════════════════════════════ */
+
+var MONTHS_TR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+                 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+
+var calViewDate = new Date();
+
+function buildActivityMap() {
+  var map = {}; // 'YYYY-MM-DD' -> { workout: [...], weight: number }
+
+  getWorkoutHistory().forEach(function(session) {
+    if (!map[session.date]) map[session.date] = {};
+    if (!map[session.date].workouts) map[session.date].workouts = [];
+    map[session.date].workouts.push(session);
+  });
+
+  getWeighIns().forEach(function(w) {
+    if (!w.date) return;
+    if (!map[w.date]) map[w.date] = {};
+    map[w.date].weight = w.weight;
+  });
+
+  return map;
+}
+
+function renderCalendar() {
+  var grid = document.getElementById('calendarGrid');
+  var title = document.getElementById('calendar-title');
+  if (!grid) return;
+
+  var year = calViewDate.getFullYear();
+  var month = calViewDate.getMonth();
+  title.textContent = MONTHS_TR[month] + ' ' + year;
+
+  var activityMap = buildActivityMap();
+  var firstDay = new Date(year, month, 1);
+  var startOffset = (firstDay.getDay() + 6) % 7; // Pzt=0
+  var daysInMonth = new Date(year, month + 1, 0).getDate();
+  var todayKey = getTodayKey();
+
+  var html = '';
+  for (var i = 0; i < startOffset; i++) {
+    html += '<div class="cal-cell empty"></div>';
+  }
+
+  for (var d = 1; d <= daysInMonth; d++) {
+    var key = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+    var act = activityMap[key];
+    var classes = 'cal-cell';
+    if (key === todayKey) classes += ' today';
+    if (act) classes += ' has-activity';
+
+    var dots = '';
+    if (act) {
+      if (act.workouts && act.workouts.length) dots += '<span class="cal-dot cal-workout"></span>';
+      if (act.weight != null) dots += '<span class="cal-dot cal-weight"></span>';
+    }
+
+    html += '<div class="' + classes + '" data-date="' + key + '"><span>' + d + '</span><span class="cal-dots">' + dots + '</span></div>';
+  }
+
+  grid.innerHTML = html;
+  document.getElementById('calendarDayDetail').classList.add('hidden');
+}
+
+document.getElementById('calPrevBtn').addEventListener('click', function() {
+  calViewDate.setMonth(calViewDate.getMonth() - 1);
+  renderCalendar();
+});
+document.getElementById('calNextBtn').addEventListener('click', function() {
+  calViewDate.setMonth(calViewDate.getMonth() + 1);
+  renderCalendar();
+});
+
+document.getElementById('calendarGrid').addEventListener('click', function(e) {
+  var cell = e.target.closest('.cal-cell.has-activity');
+  if (!cell) return;
+  var key = cell.dataset.date;
+  var activityMap = buildActivityMap();
+  var act = activityMap[key];
+  if (!act) return;
+
+  var detail = document.getElementById('calendarDayDetail');
+  var html = '<p class="calendar-day-detail-title">' + formatDateTR(key) + '</p>';
+
+  if (act.workouts && act.workouts.length) {
+    act.workouts.forEach(function(session) {
+      html += '🏋️ <strong>' + (session.title || session.weekday || 'Antrenman') + '</strong><br>';
+      (session.exercises || []).forEach(function(ex) {
+        var best = Math.max.apply(null, ex.sets.map(function(s) { return s.weight || 0; }));
+        var setInfo = ex.sets.length + ' set' + (best > 0 ? ' · en yüksek ' + best + 'kg' : '');
+        html += '&nbsp;&nbsp;• ' + ex.name + ' (' + setInfo + ')<br>';
+      });
+    });
+  }
+  if (act.weight != null) {
+    html += '⚖️ Tartım: <strong>' + act.weight + ' kg</strong><br>';
+  }
+
+  detail.innerHTML = html;
+  detail.classList.remove('hidden');
 });
 
 
@@ -1888,6 +2355,110 @@ toggleAiSettingsBtn.addEventListener('click', function() {
   toggleAiSettingsBtn.classList.toggle('open', !aiSettingsSection.classList.contains('hidden'));
 });
 
+/* ══════════════════════════════════════════
+   YEDEKLEME / GERİ YÜKLEME (JSON Export/Import)
+   Tüm ft_* localStorage anahtarlarını tek dosyaya alır/geri yükler.
+   Veri modeli ileride değişse bile bu liste dinamik taranır.
+   ══════════════════════════════════════════ */
+
+// Yedeğe dahil edilecek tüm anahtarlar (dinamik: ft_ ile başlayan her şey)
+function collectAllFitKeys() {
+  var keys = [];
+  for (var i = 0; i < localStorage.length; i++) {
+    var k = localStorage.key(i);
+    if (k && k.indexOf('ft_') === 0) keys.push(k);
+  }
+  return keys;
+}
+
+var toggleBackupBtn = document.getElementById('toggleBackupBtn');
+var backupSection   = document.getElementById('backupSection');
+
+toggleBackupBtn.addEventListener('click', function() {
+  backupSection.classList.toggle('hidden');
+  toggleBackupBtn.classList.toggle('open', !backupSection.classList.contains('hidden'));
+});
+
+document.getElementById('exportDataBtn').addEventListener('click', function() {
+  var data = {};
+  collectAllFitKeys().forEach(function(k) {
+    data[k] = localStorage.getItem(k);
+  });
+
+  var backup = {
+    app: 'FitTakip',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    data: data
+  };
+
+  var blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var d = new Date();
+  var stamp = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  a.href = url;
+  a.download = 'fittakip-yedek-' + stamp + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  var fb = document.getElementById('backup-feedback');
+  fb.textContent = '✅ Yedek indirildi!';
+  showFeedback('backup-feedback');
+});
+
+var importDataInput = document.getElementById('importDataInput');
+document.getElementById('importDataBtn').addEventListener('click', function() {
+  importDataInput.click();
+});
+
+importDataInput.addEventListener('change', function() {
+  var file = importDataInput.files[0];
+  importDataInput.value = '';
+  if (!file) return;
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var parsed;
+    try {
+      parsed = JSON.parse(e.target.result);
+    } catch (err) {
+      alert('⚠️ Dosya okunamadı — geçerli bir FitTakip yedek dosyası değil.');
+      return;
+    }
+
+    if (!parsed || parsed.app !== 'FitTakip' || !parsed.data || typeof parsed.data !== 'object') {
+      alert('⚠️ Bu bir FitTakip yedek dosyası gibi görünmüyor. Geri yükleme iptal edildi.');
+      return;
+    }
+
+    var keyCount = Object.keys(parsed.data).length;
+    var dateStr = parsed.exportedAt ? new Date(parsed.exportedAt).toLocaleString('tr-TR') : 'bilinmeyen tarih';
+    var confirmed = window.confirm(
+      'Bu yedek ' + dateStr + ' tarihli ve ' + keyCount + ' veri kaydı içeriyor.\n\n' +
+      'Geri yüklersen MEVCUT tüm verilerinin üzerine yazılacak. Devam edilsin mi?'
+    );
+    if (!confirmed) return;
+
+    // Önce mevcut ft_ anahtarlarını temizle, sonra yedekten yükle
+    collectAllFitKeys().forEach(function(k) { localStorage.removeItem(k); });
+    Object.keys(parsed.data).forEach(function(k) {
+      if (k.indexOf('ft_') === 0 && typeof parsed.data[k] === 'string') {
+        localStorage.setItem(k, parsed.data[k]);
+      }
+    });
+
+    alert('✅ Veriler geri yüklendi! Uygulama yeniden yükleniyor.');
+    window.location.reload();
+  };
+  reader.onerror = function() {
+    alert('⚠️ Dosya okunurken bir hata oluştu.');
+  };
+  reader.readAsText(file);
+});
+
 // ── PDF METİN ÇIKARMA (tamamen tarayıcıda, hiçbir yere gönderilmeden) ──
 function extractPdfText(file) {
   return file.arrayBuffer().then(function(buffer) {
@@ -2262,15 +2833,37 @@ function saveSupplementPlan(plan) { setJSON(SUPP_KEYS.plan, plan); }
 
 // Liventis ürün sayfalarından doğrulanmış + yaygın supplementlerin genel bilgileri
 var SUPPLEMENT_DB = [
-  { name: 'Liventis Pure Creatine (Kreatin)', defaultDose: '5g', info: 'Liventis ürün sayfasından doğrulandı: serviste 5g kreatin monohidrat, ilave şeker yok.' },
+  // ── KREATİN ──
+  { name: 'Liventis Pure Creatine (Kreatin)', defaultDose: '5g', info: 'Liventis ürün sayfası: serviste 5g kreatin monohidrat, ilave şeker yok, mikronize yapı.' },
+  { name: 'HIQ Creatine Monohydrate (TakeHiQ)', defaultDose: '5g', info: 'HIQ Nutrition ürün sayfası: serviste 5g, 200 mesh mikronize kreatin monohidrat, aromasız.' },
+  { name: 'Hardline Kreatin', defaultDose: '5g', info: 'Hardline ürün verisi: 1 tatlı kaşığı (5g) ~20 kcal.' },
   { name: 'Kreatin Monohidrat (genel)', defaultDose: '5g', info: 'Standart doz günde 3-5g, performans ve kas gücünü destekler.' },
-  { name: 'Whey Protein', defaultDose: '1 ölçek (~30g)', info: 'Ortalama 1 ölçek ~20-25g protein, ~100-130 kcal içerir (markaya göre değişir).' },
-  { name: 'Liventis Whey Protein', defaultDose: '1 ölçek (30g)', info: 'Peynir altı suyu proteini + kreatin/glutamin/BCAA (4:1:1) + DigeZyme enzim kompleksi içerir.' },
-  { name: 'EAA (Esansiyel Amino Asit)', defaultDose: '10g', info: '9 esansiyel amino asidi sağlar, genelde kalorisi düşüktür.' },
-  { name: 'BCAA', defaultDose: '5g', info: 'Lösin/İzolösin/Valin karışımı, genelde 2:1:1 oranında.' },
-  { name: 'Glutamin', defaultDose: '5-10g', info: 'Toparlanma ve bağırsak sağlığını destekler.' },
+
+  // ── WHEY PROTEIN (marka bazlı, gerçek servis/protein verisiyle) ──
+  { name: 'ProteinOcean Whey Protein', defaultDose: '1 ölçek (25g)', info: 'ProteinOcean ürün verisi: 25g serviste ~19g protein, ~111 kcal.' },
+  { name: 'ProteinOcean Whey İzole', defaultDose: '1 ölçek (25g)', info: 'ProteinOcean ürün verisi: serviste 1g altı şeker, sadece %1 yağ — yüksek saflıkta izole whey.' },
+  { name: 'BigJoy BigWhey Protein', defaultDose: '1 ölçek (33g)', info: 'BigJoy ürün verisi: 33g serviste 24g protein, ~120-135 kcal (aromaya göre değişir).' },
+  { name: 'Hardline Whey 3 Matrix', defaultDose: '1 ölçek (30g)', info: 'Hardline ürün verisi: 30g serviste ~24g protein + serviste ~2-3g kreatin monohidrat dahil (3 farklı whey karışımı).' },
+  { name: 'HIQ High Pro+ Whey (TakeHiQ)', defaultDose: '1 ölçek (~30g)', info: 'HIQ Nutrition ürün verisi: serviste 24g protein (WPC80+WPI90 karışımı), düşük yağ/karbonhidrat.' },
+  { name: 'Supplementler.com Whey Protein', defaultDose: '1 ölçek (~30g)', info: 'Supplementler.com ürün verisi: serviste 5,3g BCAA + 10,9g EAA + 3,8g glutamin öncüsü sağlayan whey karışımı.' },
+  { name: 'Liventis Whey Protein', defaultDose: '1 ölçek (30g)', info: 'Liventis ürün sayfası: peynir altı suyu proteini + kreatin/glutamin/BCAA (4:1:1) + DigeZyme enzim kompleksi içerir.' },
+  { name: 'Whey Protein (diğer/genel)', defaultDose: '1 ölçek (~30g)', info: 'Ortalama 1 ölçek ~20-25g protein, ~100-130 kcal içerir (markaya göre değişir).' },
+
+  // ── AMİNO ASİT (EAA / BCAA / GLUTAMİN) ──
+  { name: 'Supplementler.com EAA Powder', defaultDose: '1 ölçek', info: 'Supplementler.com ürün verisi: serviste 7,5g EAA + 3,4g BCAA, 9 esansiyel amino asit profili tam.' },
+  { name: 'Supplementler.com BCAA 2:1:1', defaultDose: '1 ölçek', info: 'Supplementler.com ürün verisi: 2:1:1 oranında lösin/izolösin/valin, fermente vegan hammadde.' },
+  { name: 'Liventis Pure Glutamin', defaultDose: '10g', info: 'Liventis ürün sayfası: saf glutamin amino asidi, GMP sertifikalı üretim.' },
+  { name: 'EAA (Esansiyel Amino Asit, genel)', defaultDose: '10g', info: '9 esansiyel amino asidi sağlar, genelde kalorisi düşüktür.' },
+  { name: 'BCAA (genel)', defaultDose: '5g', info: 'Lösin/İzolösin/Valin karışımı, genelde 2:1:1 oranında.' },
+  { name: 'Glutamin (genel)', defaultDose: '5-10g', info: 'Toparlanma ve bağırsak sağlığını destekler.' },
+
+  // ── DİĞER PERFORMANS DESTEKLERİ ──
+  { name: 'Liventis Pure Beta Alanin', defaultDose: '3-5g', info: 'Liventis saf beta alanin formülü, kas yorgunluğunu geciktirmeye yardımcı olabilir.' },
   { name: 'L-Carnitine', defaultDose: '1 servis (~500-1000mg)', info: 'Yağ metabolizmasını desteklediği öne sürülür, antrenman öncesi alınır.' },
-  { name: 'Beta Alanin', defaultDose: '3-5g', info: 'Kas yorgunluğunu geciktirmeye yardımcı olabilir, ciltte karıncalanma normaldir.' },
+  { name: 'Beta Alanin (genel)', defaultDose: '3-5g', info: 'Kas yorgunluğunu geciktirmeye yardımcı olabilir, ciltte karıncalanma normaldir.' },
+  { name: 'Pre-Workout', defaultDose: '1 ölçek', info: 'Genelde kafein + beta alanin + sitrülin içerir.' },
+
+  // ── VİTAMİN / MİNERAL ──
   { name: 'D3 Vitamini', defaultDose: '2000 IU', info: 'Kemik sağlığı ve bağışıklık için.' },
   { name: 'D3K2 Vitamini', defaultDose: '1000-4000 IU', info: 'D3 + K2 kombinasyonu, kalsiyum metabolizmasını destekler.' },
   { name: 'Multivitamin', defaultDose: '1 tablet/servis', info: 'Genel vitamin/mineral desteği.' },
@@ -2281,8 +2874,7 @@ var SUPPLEMENT_DB = [
   { name: 'ZMA', defaultDose: '1 servis', info: 'Çinko + Magnezyum + B6 kombinasyonu, genelde gece alınır.' },
   { name: 'Berberin', defaultDose: '500mg', info: 'Kan şekeri dengesi için kullanılır, öğün öncesi alınır.' },
   { name: 'Psyllium Husk', defaultDose: '5g', info: 'Çözünür lif, sindirimi destekler, bol suyla alınmalı.' },
-  { name: 'Probiyotik', defaultDose: '1 kapsül', info: 'Bağırsak florasını destekler.' },
-  { name: 'Pre-Workout', defaultDose: '1 ölçek', info: 'Genelde kafein + beta alanin + sitrülin içerir.' }
+  { name: 'Probiyotik', defaultDose: '1 kapsül', info: 'Bağırsak florasını destekler.' }
 ];
 
 var suppSelect         = document.getElementById('supp-select');

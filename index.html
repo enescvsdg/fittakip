@@ -82,6 +82,16 @@
         <p class="page-subtitle">Güncel sağlık verilerin</p>
       </div>
 
+      <!-- BUGÜN NE YAPMALIYIM? -->
+      <div class="next-action-card hidden" id="nextActionCard">
+        <div class="next-action-icon" id="nextActionIcon">💡</div>
+        <div class="next-action-text">
+          <p class="next-action-label">Sıradaki adımın</p>
+          <p class="next-action-title" id="nextActionTitle">–</p>
+        </div>
+        <button class="next-action-go" id="nextActionGo" type="button">Git →</button>
+      </div>
+
       <div class="cards-grid">
         <div class="stat-card accent-card">
           <p class="card-label">Güncel Kilo</p>
@@ -126,6 +136,61 @@
         <div class="status-message status-neutral" id="goal-status-message">
           Hedef ve tartım verisi ekleyerek analizi başlat.
         </div>
+      </div>
+
+      <!-- SÜREKLİLİK / TUTARLILIK -->
+      <div class="chart-card" id="consistency-card">
+        <p class="info-title">🔥 Süreklilik</p>
+        <div class="cards-grid" style="margin-top:12px;">
+          <div class="stat-card">
+            <p class="card-label">Bu Hafta</p>
+            <p class="card-value" id="stat-week-workouts">0</p>
+            <p class="card-unit">antrenman</p>
+          </div>
+          <div class="stat-card">
+            <p class="card-label">Bu Ay</p>
+            <p class="card-value" id="stat-month-workouts">0</p>
+            <p class="card-unit">antrenman</p>
+          </div>
+          <div class="stat-card accent-card">
+            <p class="card-label">Seri</p>
+            <p class="card-value" id="stat-streak">0</p>
+            <p class="card-unit">gün</p>
+          </div>
+        </div>
+        <p class="chart-empty" id="consistency-empty">Henüz tamamlanmış antrenman yok. Antrenman sayfasından bir günü "Antrenmanı Tamamla" ile bitirince burada görünecek.</p>
+      </div>
+
+      <!-- GÜÇ İLERLEMESİ -->
+      <div class="chart-card" id="strength-card">
+        <p class="info-title">💪 Güç İlerlemesi</p>
+        <p class="food-source-note">Tamamladığın antrenmanlardaki hareketlerin ağırlık değişimi</p>
+        <div class="form-group" id="strength-select-group" style="margin-top:10px;">
+          <select class="form-input" id="strength-exercise-select"></select>
+        </div>
+        <div class="chart-container">
+          <canvas id="strengthChart"></canvas>
+        </div>
+        <div class="strength-summary" id="strength-summary"></div>
+        <p class="chart-empty" id="strength-empty">Henüz güç verisi yok. Bir antrenmanı ağırlık girerek tamamladığında ilerlemen burada grafiklenecek.</p>
+      </div>
+
+      <!-- AKTİVİTE TAKVİMİ -->
+      <div class="chart-card" id="calendar-card">
+        <div class="calendar-header">
+          <button class="calendar-nav-btn" id="calPrevBtn" type="button">‹</button>
+          <p class="info-title" id="calendar-title" style="margin:0;">Takvim</p>
+          <button class="calendar-nav-btn" id="calNextBtn" type="button">›</button>
+        </div>
+        <div class="calendar-weekdays">
+          <span>Pzt</span><span>Sal</span><span>Çar</span><span>Per</span><span>Cum</span><span>Cmt</span><span>Paz</span>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+        <div class="calendar-legend">
+          <span><span class="cal-dot cal-workout"></span> Antrenman</span>
+          <span><span class="cal-dot cal-weight"></span> Tartım</span>
+        </div>
+        <div class="calendar-day-detail hidden" id="calendarDayDetail"></div>
       </div>
     </section>
 
@@ -212,6 +277,21 @@
         <button class="btn-save" id="save-api-key">Anahtarı Kaydet</button>
         <p class="save-feedback hidden" id="api-key-feedback">✅ Kaydedildi!</p>
         <p class="food-source-note">Anahtarın yok mu? <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style="color:var(--accent-2);">aistudio.google.com</a> adresinden ücretsiz alabilirsin.</p>
+      </div>
+
+      <!-- YEDEKLEME / GERİ YÜKLEME (açılır/kapanır) -->
+      <button class="btn-toggle-builder" id="toggleBackupBtn" type="button">
+        <span>💾 Yedekleme ve Geri Yükleme</span>
+        <span class="btn-toggle-builder-chevron">⌄</span>
+      </button>
+
+      <div class="form-card hidden" id="backupSection">
+        <p class="food-source-note">Tüm verilerini (profil, antrenman, beslenme, supplement, tartım geçmişi, ayarlar) tek bir dosyaya yedekle. Telefonunu değiştirdiğinde veya veri kaybına karşı bu dosyayı geri yükleyebilirsin.</p>
+        <button class="btn-save" id="exportDataBtn" type="button">📥 Verileri Yedekle (İndir)</button>
+        <p class="food-source-note" style="margin-top:16px;">Daha önce aldığın bir yedeği geri yükle. <strong>Mevcut verilerinin üzerine yazılır</strong>, dikkatli ol.</p>
+        <input type="file" id="importDataInput" accept="application/json,.json" class="hidden" />
+        <button class="btn-save" id="importDataBtn" type="button" style="background:var(--surface-3);color:var(--text);">📤 Yedekten Geri Yükle</button>
+        <p class="save-feedback hidden" id="backup-feedback">✅ Tamamlandı!</p>
       </div>
     </section>
 
