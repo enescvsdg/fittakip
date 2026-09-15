@@ -751,6 +751,21 @@ select.form-input {
 
 .supp-time-modal-name { margin-bottom: 16px; color: var(--text); font-weight: 600; }
 
+.push-state {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--text-dim);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  margin-bottom: 16px;
+  font-size: 12px; line-height: 1.5;
+  color: var(--text-muted);
+}
+.push-state.ok      { border-left-color: var(--success); }
+.push-state.warn    { border-left-color: var(--warning); }
+.push-state.busy    { border-left-color: var(--accent); }
+
 .time-input { font-family: var(--font); }
 .time-input::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
 

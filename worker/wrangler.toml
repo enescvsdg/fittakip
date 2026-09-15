@@ -1,0 +1,23 @@
+name = "fittakip-push"
+main = "src/worker.js"
+compatibility_date = "2025-09-01"
+
+# Her dakika uyanıp saati gelen hatırlatmaları gönderir
+[triggers]
+crons = ["* * * * *"]
+
+# "wrangler kv namespace create REMINDERS" komutunun verdiği id'yi buraya yapıştır
+[[kv_namespaces]]
+binding = "REMINDERS"
+id = "BURAYA_KV_NAMESPACE_ID"
+
+[vars]
+# Push servisleri sorun olursa iletişim için bu adresi kullanır
+VAPID_SUBJECT = "mailto:enescvsdg@gmail.com"
+# Uygulamanın yayınlandığı adres (CORS). Tüm adreslere izin vermek için "*" yaz.
+ALLOWED_ORIGIN = "https://enescvsdg.github.io"
+
+# Secret olarak ayrıca şunlar gerekiyor (wrangler secret put ... ile):
+#   VAPID_PUBLIC_KEY   — generate-vapid-keys.mjs çıktısındaki açık anahtar
+#   VAPID_PRIVATE_JWK  — aynı çıktıdaki özel anahtar (JWK, JSON metni)
+#   DEVICE_KEY         — uygulamaya gireceğin cihaz anahtarı

@@ -288,6 +288,37 @@
         <button class="btn-save" id="importDataBtn" type="button" style="background:var(--surface-3);color:var(--text);">📤 Yedekten Geri Yükle</button>
         <p class="save-feedback hidden" id="backup-feedback">✅ Tamamlandı!</p>
       </div>
+
+      <!-- BİLDİRİM SUNUCUSU (açılır/kapanır) -->
+      <button class="btn-toggle-builder" id="togglePushBtn" type="button">
+        <span>🔔 Bildirim Sunucusu</span>
+        <span class="btn-toggle-builder-chevron">⌄</span>
+      </button>
+
+      <div class="form-card hidden" id="pushSection">
+        <p class="food-source-note">Supplement hatırlatmalarının <strong>uygulama kapalıyken de</strong> gelmesi için kendi Cloudflare Worker'ına bağlan. Bağlanmazsan hatırlatmalar yalnızca uygulama açıkken çalışır.</p>
+
+        <div class="push-state" id="pushState">
+          <span id="pushStateText">Bağlı değil</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="push-server-url">Worker Adresi</label>
+          <input class="form-input" type="url" id="push-server-url" placeholder="https://fittakip-push.xxx.workers.dev" autocomplete="off" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="push-device-key">Cihaz Anahtarı</label>
+          <input class="form-input" type="password" id="push-device-key" placeholder="Worker'a verdiğin DEVICE_KEY" autocomplete="off" />
+        </div>
+
+        <button class="btn-save" id="pushConnectBtn" type="button">Bağlan ve Bildirimleri Aç</button>
+        <button class="btn-save btn-secondary hidden" id="pushTestBtn" type="button">🔔 Test Bildirimi Gönder</button>
+        <button class="btn-save btn-secondary hidden" id="pushDisconnectBtn" type="button">Bağlantıyı Kes</button>
+        <p class="save-feedback hidden" id="push-feedback">✅ Tamamlandı!</p>
+
+        <p class="food-source-note" id="pushIosHint">Kurulum adımları depodaki <strong>worker/README.md</strong> dosyasında. iPhone kullanıyorsan uygulamayı Safari'den <strong>"Ana Ekrana Ekle"</strong> ile kurmadan bildirim alamazsın.</p>
+      </div>
     </section>
 
     <!-- PAGE: WORKOUT -->
