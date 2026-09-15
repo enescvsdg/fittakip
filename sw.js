@@ -4,7 +4,7 @@
    fit-takip-v1 → v2 → v3 → v4 → ...
    ══════════════════════════════════════════ */
 
-var CACHE_NAME = 'fit-takip-v26';
+var CACHE_NAME = 'fit-takip-v29';
 
 var STATIC_ASSETS = [
   './',
@@ -59,6 +59,54 @@ self.addEventListener('activate', function(event) {
         );
       })
       .then(function() { return self.clients.claim(); })
+  );
+});
+
+// ── PUSH (sunucudan gelen bildirim) ───────────
+// Uygulama tamamen kapalıyken de çalışır
+self.addEventListener('push', function(event) {
+  var data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (e) { data = {}; }
+
+  var title = data.title || '💊 FitTakip';
+  var options = {
+    body: data.body || 'Supplement alma zamanı geldi.',
+    icon: 'icons/icon-192.png',
+    badge: 'icons/icon-192.png',
+    tag: data.tag || 'supp-push',
+    renotify: true,
+    vibrate: [120, 60, 120],
+    data: { page: 'supplement' }
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Push aboneliği tarayıcı tarafından yenilenirse uygulamaya haber ver
+self.addEventListener('pushsubscriptionchange', function(event) {
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(function(clientList) {
+        clientList.forEach(function(client) {
+          client.postMessage({ type: 'push-subscription-changed' });
+        });
+      })
+  );
+});
+
+// ── BİLDİRİME TIKLAMA ─────────────────────────
+// Supplement hatırlatmasına dokununca uygulamayı öne getirir
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(function(clientList) {
+        for (var i = 0; i < clientList.length; i++) {
+          if ('focus' in clientList[i]) return clientList[i].focus();
+        }
+        if (self.clients.openWindow) return self.clients.openWindow('./');
+      })
   );
 });
 

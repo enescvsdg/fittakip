@@ -2557,7 +2557,13 @@ function callGeminiAPI(prompt, apiKey) {
                         /high demand|overloaded|unavailable/i.test(err.message || '');
     if (!isOverloaded) throw err;
 
-    document.getElementById('pdfProcessingText').textContent = 'Model yoğun, 3 saniye sonra tekrar deneniyor…';
+    // Hangi PDF modalı açıksa onun metnini güncelle
+    ['pdfProcessingText', 'dietPdfProcessingText'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el && el.closest('.modal-overlay-2') && !el.closest('.modal-overlay-2').classList.contains('hidden')) {
+        el.textContent = 'Model yoğun, 3 saniye sonra tekrar deneniyor…';
+      }
+    });
     return new Promise(function(resolve) {
       setTimeout(resolve, 3000);
     }).then(function() {
@@ -2829,7 +2835,7 @@ var SUPP_KEYS = { plan: 'ft_supplement_plan' };
 var SUPP_TIMING_ORDER = ['Sabah', 'Aç Karnına', 'Öğün İle Birlikte', 'Antrenman Öncesi', 'Antrenman Esnasında', 'Antrenman Sonrası', 'Akşam / Yatmadan Önce'];
 
 function getSupplementPlan() { return getJSON(SUPP_KEYS.plan, {}); }
-function saveSupplementPlan(plan) { setJSON(SUPP_KEYS.plan, plan); }
+function saveSupplementPlan(plan) { setJSON(SUPP_KEYS.plan, plan); schedulePushSync(); }
 
 // Liventis ürün sayfalarından doğrulanmış + yaygın supplementlerin genel bilgileri
 var SUPPLEMENT_DB = [
@@ -3017,20 +3023,35 @@ function renderSupplementPlanView() {
   timingsWithItems.forEach(function(timing) {
     html += '<p class="meal-plan-day-title">' + timing + '</p>';
     plan[timing].forEach(function(item) {
+      var hasTime = !!item.reminder;
       html +=
         '<div class="food-log-item">' +
           '<div>' +
             '<p class="food-log-item-name">' + item.name + '</p>' +
             '<p class="food-log-item-meta">' + item.dose + (item.note ? ' · ' + item.note : '') + '</p>' +
           '</div>' +
-          '<button class="food-log-item-remove" data-timing="' + timing + '" data-id="' + item.id + '" title="Kaldır">✕</button>' +
+          '<div class="supp-item-actions">' +
+            '<button class="supp-time-btn' + (hasTime ? ' has-time' : '') + '" ' +
+              'data-timing="' + timing + '" data-id="' + item.id + '" ' +
+              'title="' + (hasTime ? 'Hatırlatma saatini değiştir' : 'Hatırlatma saati ekle') + '">' +
+              '⏰' + (hasTime ? ' ' + item.reminder : '') +
+            '</button>' +
+            '<button class="food-log-item-remove" data-timing="' + timing + '" data-id="' + item.id + '" title="Kaldır">✕</button>' +
+          '</div>' +
         '</div>';
     });
   });
   suppPlanListEl.innerHTML = html;
+  renderNotifStatus();
 }
 
 suppPlanListEl.addEventListener('click', function(e) {
+  var timeBtn = e.target.closest('.supp-time-btn');
+  if (timeBtn) {
+    openSuppTimeModal(timeBtn.dataset.timing, timeBtn.dataset.id);
+    return;
+  }
+
   var btn = e.target.closest('.food-log-item-remove');
   if (!btn) return;
   var plan = getSupplementPlan();
@@ -3049,10 +3070,497 @@ toggleSuppBuilderBtn.addEventListener('click', function() {
   toggleSuppBuilderBtn.classList.toggle('open', !suppBuilderSection.classList.contains('hidden'));
 });
 
+/* ══════════════════════════════════════════
+   SUPPLEMENT HATIRLATMA (saat + bildirim)
+   ══════════════════════════════════════════ */
+
+var suppTimeModal        = document.getElementById('suppTimeModal');
+var suppTimeInput        = document.getElementById('supp-time-input');
+var suppTimeModalNameEl  = document.getElementById('suppTimeModalName');
+var suppTimeQuickRow     = document.getElementById('suppTimeQuickRow');
+var saveSuppTimeBtn      = document.getElementById('saveSuppTimeBtn');
+var clearSuppTimeBtn     = document.getElementById('clearSuppTimeBtn');
+var closeSuppTimeModalBtn= document.getElementById('closeSuppTimeModal');
+var suppTimeNoteEl       = document.getElementById('suppTimeNote');
+var notifStatusBox       = document.getElementById('notifStatusBox');
+var notifStatusText      = document.getElementById('notifStatusText');
+var notifEnableBtn       = document.getElementById('notifEnableBtn');
+
+var REMINDER_FIRED_KEY = 'ft_supp_reminder_fired';
+var REMINDER_GRACE_MIN = 60;   // saati kaçırdıysak 60 dk içinde yine de hatırlat
+var activeReminderTarget = null;
+
+// Zaman etiketine göre mantıklı varsayılan saat
+var TIMING_DEFAULT_TIME = {
+  'Sabah': '08:00',
+  'Aç Karnına': '07:30',
+  'Öğün İle Birlikte': '13:00',
+  'Antrenman Öncesi': '17:00',
+  'Antrenman Esnasında': '18:00',
+  'Antrenman Sonrası': '19:00',
+  'Akşam / Yatmadan Önce': '22:30'
+};
+
+function notifSupported() { return typeof Notification !== 'undefined'; }
+function notifPermission() { return notifSupported() ? Notification.permission : 'unsupported'; }
+
+function requestNotifPermission() {
+  if (!notifSupported()) { renderNotifStatus(); return; }
+  if (Notification.permission !== 'default') { renderNotifStatus(); return; }
+  try {
+    var result = Notification.requestPermission(function() { renderNotifStatus(); });
+    if (result && typeof result.then === 'function') {
+      result.then(function() { renderNotifStatus(); });
+    }
+  } catch (e) {
+    console.warn('[Bildirim] İzin istenemedi:', e);
+  }
+}
+
+function countReminders() {
+  var plan = getSupplementPlan();
+  var count = 0;
+  Object.keys(plan).forEach(function(timing) {
+    (plan[timing] || []).forEach(function(item) { if (item.reminder) count++; });
+  });
+  return count;
+}
+
+function renderNotifStatus() {
+  if (!notifStatusBox) return;
+
+  var total = countReminders();
+  if (total === 0) { notifStatusBox.classList.add('hidden'); return; }
+
+  notifStatusBox.classList.remove('hidden');
+  notifStatusBox.classList.remove('ok');
+  notifEnableBtn.classList.add('hidden');
+
+  var perm = notifPermission();
+  if (perm === 'granted' && isPushActive()) {
+    notifStatusBox.classList.add('ok');
+    notifStatusText.textContent = '🔔 ' + total + ' hatırlatma sunucu üzerinden gönderiliyor — uygulama kapalıyken de gelir.';
+  } else if (perm === 'granted') {
+    notifStatusBox.classList.add('ok');
+    notifStatusText.textContent = '🔔 ' + total + ' hatırlatma kurulu. Bildirimin gelmesi için uygulamanın açık veya arka planda olması gerekir — sürekli gelsin istersen Ayarlar → Bildirim Sunucusu bölümünden bağlan.';
+  } else if (perm === 'denied') {
+    notifStatusText.textContent = '🔕 Bildirim izni reddedilmiş. Saatler kayıtlı ama bildirim gelmez — tarayıcı/site ayarlarından izni açman gerekiyor.';
+  } else if (perm === 'unsupported') {
+    notifStatusText.textContent = '🔕 Bu cihaz/tarayıcı bildirimi desteklemiyor. Saatler yine de planında görünür.';
+  } else {
+    notifStatusText.textContent = '🔔 Hatırlatmaların çalışması için bildirim izni gerekiyor.';
+    notifEnableBtn.classList.remove('hidden');
+  }
+}
+
+if (notifEnableBtn) {
+  notifEnableBtn.addEventListener('click', requestNotifPermission);
+}
+
+// ── MODAL ────────────────────────────────────────
+function findSuppItem(timing, id) {
+  var list = getSupplementPlan()[timing] || [];
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].id === id) return list[i];
+  }
+  return null;
+}
+
+function markQuickTimeBtn(value) {
+  suppTimeQuickRow.querySelectorAll('.time-quick-btn').forEach(function(btn) {
+    btn.classList.toggle('selected', btn.dataset.time === value);
+  });
+}
+
+function openSuppTimeModal(timing, id) {
+  var item = findSuppItem(timing, id);
+  if (!item) return;
+
+  activeReminderTarget = { timing: timing, id: id };
+  suppTimeModalNameEl.textContent = item.name +
+    (item.dose && item.dose !== '—' ? ' · ' + item.dose : '') + ' — ' + timing;
+  suppTimeInput.value = item.reminder || TIMING_DEFAULT_TIME[timing] || '08:00';
+  markQuickTimeBtn(suppTimeInput.value);
+  clearSuppTimeBtn.classList.toggle('hidden', !item.reminder);
+
+  suppTimeNoteEl.textContent = notifPermission() === 'denied'
+    ? '⚠️ Bildirim izni kapalı — saat kaydedilir ama bildirim gelmez.'
+    : 'Her gün bu saatte telefonuna bildirim gönderilecek.';
+
+  suppTimeModal.classList.remove('hidden');
+}
+
+function closeSuppTimeModal() {
+  suppTimeModal.classList.add('hidden');
+  activeReminderTarget = null;
+}
+
+closeSuppTimeModalBtn.addEventListener('click', closeSuppTimeModal);
+suppTimeModal.addEventListener('click', function(e) {
+  if (e.target === suppTimeModal) closeSuppTimeModal();
+});
+
+suppTimeQuickRow.addEventListener('click', function(e) {
+  var btn = e.target.closest('.time-quick-btn');
+  if (!btn) return;
+  suppTimeInput.value = btn.dataset.time;
+  markQuickTimeBtn(btn.dataset.time);
+});
+
+suppTimeInput.addEventListener('change', function() { markQuickTimeBtn(suppTimeInput.value); });
+
+function updateSuppReminder(timing, id, value) {
+  var plan = getSupplementPlan();
+  (plan[timing] || []).forEach(function(item) {
+    if (item.id !== id) return;
+    if (value) item.reminder = value;
+    else delete item.reminder;
+  });
+  saveSupplementPlan(plan);
+
+  var fired = getJSON(REMINDER_FIRED_KEY, {});
+  delete fired[id];
+  setJSON(REMINDER_FIRED_KEY, fired);
+
+  renderSupplementPlanView();
+}
+
+saveSuppTimeBtn.addEventListener('click', function() {
+  if (!activeReminderTarget) return;
+  var value = suppTimeInput.value;
+  if (!/^\d{2}:\d{2}$/.test(value)) {
+    suppTimeNoteEl.textContent = '⚠️ Geçerli bir saat seç (örn. 08:00).';
+    return;
+  }
+  var target = activeReminderTarget;
+  updateSuppReminder(target.timing, target.id, value);
+  closeSuppTimeModal();
+  requestNotifPermission();   // kullanıcı hareketi içinde — izin penceresi burada açılır
+});
+
+clearSuppTimeBtn.addEventListener('click', function() {
+  if (!activeReminderTarget) return;
+  updateSuppReminder(activeReminderTarget.timing, activeReminderTarget.id, null);
+  closeSuppTimeModal();
+});
+
+// ── ZAMANLAYICI ──────────────────────────────────
+function minutesOfDay(hhmm) {
+  var parts = hhmm.split(':');
+  return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+}
+
+function showSuppNotification(item, timing) {
+  var title = '💊 ' + item.name;
+  var bits = [timing];
+  if (item.dose && item.dose !== '—') bits.push(item.dose);
+  if (item.note) bits.push(item.note);
+
+  var options = {
+    body: bits.join(' · '),
+    icon: 'icons/icon-192.png',
+    badge: 'icons/icon-192.png',
+    tag: 'supp-' + item.id,
+    renotify: true,
+    vibrate: [120, 60, 120],
+    data: { page: 'supplement' }
+  };
+
+  if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+    navigator.serviceWorker.ready.then(function(reg) {
+      return reg.showNotification(title, options);
+    }).catch(function(err) {
+      console.warn('[Bildirim] SW üzerinden gönderilemedi:', err);
+    });
+  } else {
+    try { new Notification(title, options); }
+    catch (e) { console.warn('[Bildirim] Gösterilemedi:', e); }
+  }
+}
+
+function checkSupplementReminders() {
+  if (notifPermission() !== 'granted') return;
+  if (isPushActive()) return;   // sunucu gönderiyor, çift bildirim olmasın
+
+  var plan = getSupplementPlan();
+  var fired = getJSON(REMINDER_FIRED_KEY, {});
+  var today = getTodayKey();
+  var now = new Date();
+  var nowMin = now.getHours() * 60 + now.getMinutes();
+  var changed = false;
+  var liveIds = {};
+
+  Object.keys(plan).forEach(function(timing) {
+    (plan[timing] || []).forEach(function(item) {
+      if (!item.reminder) return;
+      liveIds[item.id] = true;
+
+      var stamp = today + ' ' + item.reminder;
+      if (fired[item.id] === stamp) return;
+
+      var diff = nowMin - minutesOfDay(item.reminder);
+      if (diff < 0 || diff > REMINDER_GRACE_MIN) return;
+
+      showSuppNotification(item, timing);
+      fired[item.id] = stamp;
+      changed = true;
+    });
+  });
+
+  // Silinmiş supplementlerin izlerini temizle
+  Object.keys(fired).forEach(function(id) {
+    if (!liveIds[id]) { delete fired[id]; changed = true; }
+  });
+
+  if (changed) setJSON(REMINDER_FIRED_KEY, fired);
+}
+
+setInterval(checkSupplementReminders, 30000);
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden) checkSupplementReminders();
+});
+
+/* ══════════════════════════════════════════
+   PUSH BİLDİRİM SUNUCUSU (Cloudflare Worker)
+   Bağlıyken hatırlatmaları sunucu gönderir —
+   uygulama tamamen kapalı olsa bile çalışır.
+   ══════════════════════════════════════════ */
+
+var PUSH_KEYS = {
+  url: 'ft_push_server_url',
+  device: 'ft_push_device_key',
+  active: 'ft_push_active'
+};
+
+var pushServerUrlInput = document.getElementById('push-server-url');
+var pushDeviceKeyInput = document.getElementById('push-device-key');
+var pushConnectBtn     = document.getElementById('pushConnectBtn');
+var pushTestBtn        = document.getElementById('pushTestBtn');
+var pushDisconnectBtn  = document.getElementById('pushDisconnectBtn');
+var pushStateEl        = document.getElementById('pushState');
+var pushStateTextEl    = document.getElementById('pushStateText');
+var togglePushBtn      = document.getElementById('togglePushBtn');
+var pushSection        = document.getElementById('pushSection');
+
+var pushSyncTimer = null;
+
+// Plan her değiştiğinde sunucudaki listeyi tazeler (arka arkaya değişikliklerde tek istek)
+function schedulePushSync() {
+  clearTimeout(pushSyncTimer);
+  pushSyncTimer = setTimeout(syncRemindersToServer, 800);
+}
+
+function getPushServerUrl() { return (localStorage.getItem(PUSH_KEYS.url) || '').replace(/\/+$/, ''); }
+function getPushDeviceKey() { return localStorage.getItem(PUSH_KEYS.device) || ''; }
+function isPushActive()     { return localStorage.getItem(PUSH_KEYS.active) === '1'; }
+
+function setPushState(text, kind) {
+  if (!pushStateEl) return;
+  pushStateEl.classList.remove('ok', 'warn', 'busy');
+  if (kind) pushStateEl.classList.add(kind);
+  pushStateTextEl.textContent = text;
+}
+
+function renderPushState() {
+  if (!pushStateEl) return;
+
+  if (!('PushManager' in window) || !navigator.serviceWorker) {
+    setPushState('⚠️ Bu tarayıcı push bildirimini desteklemiyor.', 'warn');
+    pushConnectBtn.disabled = true;
+    return;
+  }
+  if (isPushActive()) {
+    setPushState('✅ Bağlı — hatırlatmalar uygulama kapalıyken de gelir.', 'ok');
+    pushTestBtn.classList.remove('hidden');
+    pushDisconnectBtn.classList.remove('hidden');
+    pushConnectBtn.textContent = 'Yeniden Bağlan';
+  } else {
+    setPushState('Bağlı değil — hatırlatmalar yalnızca uygulama açıkken çalışır.');
+    pushTestBtn.classList.add('hidden');
+    pushDisconnectBtn.classList.add('hidden');
+    pushConnectBtn.textContent = 'Bağlan ve Bildirimleri Aç';
+  }
+}
+
+function pushFetch(path, options) {
+  var url = getPushServerUrl();
+  if (!url) return Promise.reject(new Error('Worker adresi girilmemiş.'));
+
+  var opts = options || {};
+  opts.headers = Object.assign({ 'Content-Type': 'application/json', 'X-Device-Key': getPushDeviceKey() }, opts.headers || {});
+
+  return fetch(url + path, opts).then(function(res) {
+    return res.json().catch(function() { return {}; }).then(function(data) {
+      if (!res.ok) throw new Error(data.error || ('Sunucu hatası (HTTP ' + res.status + ')'));
+      return data;
+    });
+  });
+}
+
+// Plandaki tüm hatırlatmaları düz bir listeye çevirir
+function collectReminders() {
+  var plan = getSupplementPlan();
+  var list = [];
+  Object.keys(plan).forEach(function(timing) {
+    (plan[timing] || []).forEach(function(item) {
+      if (!item.reminder) return;
+      list.push({
+        id: item.id, name: item.name, dose: item.dose,
+        note: item.note || '', timing: timing, time: item.reminder
+      });
+    });
+  });
+  return list;
+}
+
+function currentTimezone() {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; }
+  catch (e) { return 'UTC'; }
+}
+
+function getPushSubscription() {
+  if (!navigator.serviceWorker || !('PushManager' in window)) return Promise.resolve(null);
+  return navigator.serviceWorker.ready.then(function(reg) { return reg.pushManager.getSubscription(); });
+}
+
+// Hatırlatma listesini sunucuya gönderir (bağlı değilse sessizce çıkar)
+function syncRemindersToServer() {
+  if (!isPushActive() || !getPushServerUrl()) return Promise.resolve();
+
+  return getPushSubscription().then(function(sub) {
+    if (!sub) { localStorage.setItem(PUSH_KEYS.active, '0'); renderPushState(); return; }
+    return pushFetch('/sync', {
+      method: 'POST',
+      body: JSON.stringify({
+        subscription: sub.toJSON(),
+        reminders: collectReminders(),
+        timezone: currentTimezone()
+      })
+    });
+  }).catch(function(err) {
+    console.warn('[Push] Senkronizasyon başarısız:', err.message);
+    setPushState('⚠️ Sunucuya ulaşılamadı: ' + err.message, 'warn');
+  });
+}
+
+function connectPush() {
+  var url = (pushServerUrlInput.value || '').trim().replace(/\/+$/, '');
+  var deviceKey = (pushDeviceKeyInput.value || '').trim();
+
+  if (!/^https:\/\/.+/.test(url)) {
+    setPushState('⚠️ Worker adresi https:// ile başlamalı.', 'warn');
+    return;
+  }
+  if (!deviceKey) {
+    setPushState('⚠️ Cihaz anahtarını gir.', 'warn');
+    return;
+  }
+
+  localStorage.setItem(PUSH_KEYS.url, url);
+  localStorage.setItem(PUSH_KEYS.device, deviceKey);
+
+  setPushState('Sunucuya bağlanılıyor…', 'busy');
+  pushConnectBtn.disabled = true;
+
+  pushFetch('/health', { method: 'GET' })
+    .then(function(data) {
+      if (!data.vapidPublicKey) throw new Error("Worker'da VAPID_PUBLIC_KEY tanımlı değil.");
+
+      setPushState('Bildirim izni isteniyor…', 'busy');
+      return Notification.requestPermission().then(function(perm) {
+        if (perm !== 'granted') throw new Error('Bildirim izni verilmedi.');
+        return navigator.serviceWorker.ready;
+      }).then(function(reg) {
+        return reg.pushManager.getSubscription().then(function(existing) {
+          if (existing) return existing;
+          return reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: b64urlToUint8Array(data.vapidPublicKey)
+          });
+        });
+      });
+    })
+    .then(function(sub) {
+      return pushFetch('/sync', {
+        method: 'POST',
+        body: JSON.stringify({
+          subscription: sub.toJSON(),
+          reminders: collectReminders(),
+          timezone: currentTimezone()
+        })
+      });
+    })
+    .then(function(data) {
+      localStorage.setItem(PUSH_KEYS.active, '1');
+      renderPushState();
+      setPushState('✅ Bağlandı — ' + (data.count || 0) + ' hatırlatma sunucuya aktarıldı.', 'ok');
+    })
+    .catch(function(err) {
+      localStorage.setItem(PUSH_KEYS.active, '0');
+      renderPushState();
+      setPushState('⚠️ ' + err.message, 'warn');
+    })
+    .then(function() { pushConnectBtn.disabled = false; });
+}
+
+function b64urlToUint8Array(base64url) {
+  var padded = (base64url + '==='.slice((base64url.length + 3) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+  var raw = atob(padded);
+  var out = new Uint8Array(raw.length);
+  for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+if (pushConnectBtn) {
+  pushConnectBtn.addEventListener('click', connectPush);
+
+  pushTestBtn.addEventListener('click', function() {
+    setPushState('Test bildirimi gönderiliyor…', 'busy');
+    getPushSubscription().then(function(sub) {
+      if (!sub) throw new Error('Abonelik bulunamadı, yeniden bağlan.');
+      return pushFetch('/test', { method: 'POST', body: JSON.stringify({ endpoint: sub.endpoint }) });
+    }).then(function() {
+      setPushState('✅ Test bildirimi gönderildi — birkaç saniye içinde gelmeli.', 'ok');
+    }).catch(function(err) {
+      setPushState('⚠️ ' + err.message, 'warn');
+    });
+  });
+
+  pushDisconnectBtn.addEventListener('click', function() {
+    setPushState('Bağlantı kesiliyor…', 'busy');
+    getPushSubscription().then(function(sub) {
+      if (!sub) return;
+      return pushFetch('/unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint: sub.endpoint }) })
+        .catch(function() { /* sunucuya ulaşılamasa da yerel aboneliği kapat */ })
+        .then(function() { return sub.unsubscribe(); });
+    }).then(function() {
+      localStorage.setItem(PUSH_KEYS.active, '0');
+      renderPushState();
+    });
+  });
+
+  togglePushBtn.addEventListener('click', function() {
+    pushSection.classList.toggle('hidden');
+    togglePushBtn.classList.toggle('open', !pushSection.classList.contains('hidden'));
+  });
+
+  pushServerUrlInput.value = getPushServerUrl();
+  pushDeviceKeyInput.value = getPushDeviceKey();
+  renderPushState();
+}
+
+// Tarayıcı aboneliği yenilediğinde sunucuya tekrar kaydol
+if (navigator.serviceWorker) {
+  navigator.serviceWorker.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'push-subscription-changed') connectPush();
+  });
+}
+
 // ── INIT (Supplement) ────────────────────────────
 fillSuppSelect();
 renderSuppCartList();
 renderSupplementPlanView();
+checkSupplementReminders();
 
 /* ══════════════════════════════════════════
    PDF + AI: BESLENME / SUPPLEMENT PLANI AKTARIMI

@@ -28,11 +28,14 @@
 </head>
 <body>
 
-  <!-- ── HEADER ── -->
+  <!-- ── HEADER (banner + menü tek parça) ── -->
   <header class="app-header">
     <div class="header-brand">
-      <img src="icons/icon-192.png" alt="FitTakip" class="header-logo" />
-      <span class="brand-name">FitTakip</span>
+      <img src="icons/icon-512.png" alt="FitTakip" class="header-logo" />
+      <div class="header-brand-text">
+        <p class="brand-name">FitTakip</p>
+        <p class="brand-tagline">Hedeflerine giden yolda yanındayız 💪</p>
+      </div>
     </div>
     <div class="menu-wrapper">
       <button class="menu-toggle" id="menuToggle" aria-label="Menüyü aç" aria-expanded="false">
@@ -56,6 +59,10 @@
         <button class="nav-item" data-page="supplement">
           <span class="nav-icon">💊</span> Supplement Planı
         </button>
+        <div class="nav-divider"></div>
+        <button class="nav-item" data-page="settings">
+          <span class="nav-icon">⚙️</span> Ayarlar
+        </button>
       </nav>
     </div>
   </header>
@@ -68,14 +75,6 @@
 
     <!-- PAGE: HOME (DASHBOARD) -->
     <section class="page" id="page-home">
-
-      <div class="app-banner">
-        <img src="icons/icon-512.png" alt="FitTakip logosu" class="app-banner-logo" />
-        <div class="app-banner-text">
-          <p class="app-banner-title">FitTakip</p>
-          <p class="app-banner-subtitle">Hedeflerine giden yolda yanındayız 💪</p>
-        </div>
-      </div>
 
       <div class="page-header">
         <h1 class="page-title">Analiz Raporu</h1>
@@ -262,6 +261,15 @@
         </div>
       </div>
 
+    </section>
+
+    <!-- PAGE: SETTINGS -->
+    <section class="page hidden" id="page-settings">
+      <div class="page-header">
+        <h1 class="page-title">Ayarlar</h1>
+        <p class="page-subtitle">Yapay zeka, yedekleme ve bildirim ayarların</p>
+      </div>
+
       <!-- AI AYARLARI (açılır/kapanır) -->
       <button class="btn-toggle-builder" id="toggleAiSettingsBtn" type="button">
         <span>🤖 AI Ayarları</span>
@@ -292,6 +300,37 @@
         <input type="file" id="importDataInput" accept="application/json,.json" class="hidden" />
         <button class="btn-save" id="importDataBtn" type="button" style="background:var(--surface-3);color:var(--text);">📤 Yedekten Geri Yükle</button>
         <p class="save-feedback hidden" id="backup-feedback">✅ Tamamlandı!</p>
+      </div>
+
+      <!-- BİLDİRİM SUNUCUSU (açılır/kapanır) -->
+      <button class="btn-toggle-builder" id="togglePushBtn" type="button">
+        <span>🔔 Bildirim Sunucusu</span>
+        <span class="btn-toggle-builder-chevron">⌄</span>
+      </button>
+
+      <div class="form-card hidden" id="pushSection">
+        <p class="food-source-note">Supplement hatırlatmalarının <strong>uygulama kapalıyken de</strong> gelmesi için kendi Cloudflare Worker'ına bağlan. Bağlanmazsan hatırlatmalar yalnızca uygulama açıkken çalışır.</p>
+
+        <div class="push-state" id="pushState">
+          <span id="pushStateText">Bağlı değil</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="push-server-url">Worker Adresi</label>
+          <input class="form-input" type="url" id="push-server-url" placeholder="https://fittakip-push.xxx.workers.dev" autocomplete="off" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="push-device-key">Cihaz Anahtarı</label>
+          <input class="form-input" type="password" id="push-device-key" placeholder="Worker'a verdiğin DEVICE_KEY" autocomplete="off" />
+        </div>
+
+        <button class="btn-save" id="pushConnectBtn" type="button">Bağlan ve Bildirimleri Aç</button>
+        <button class="btn-save btn-secondary hidden" id="pushTestBtn" type="button">🔔 Test Bildirimi Gönder</button>
+        <button class="btn-save btn-secondary hidden" id="pushDisconnectBtn" type="button">Bağlantıyı Kes</button>
+        <p class="save-feedback hidden" id="push-feedback">✅ Tamamlandı!</p>
+
+        <p class="food-source-note" id="pushIosHint">Kurulum adımları depodaki <strong>worker/README.md</strong> dosyasında. iPhone kullanıyorsan uygulamayı Safari'den <strong>"Ana Ekrana Ekle"</strong> ile kurmadan bildirim alamazsın.</p>
       </div>
     </section>
 
@@ -587,7 +626,12 @@
 
           <!-- ADIM 2: İşleniyor -->
           <div id="pdfStepProcessing" class="hidden">
-            <p class="loading-hint" id="pdfProcessingText">PDF okunuyor…</p>
+            <div class="loading-block">
+              <div class="loading-spinner"></div>
+              <p class="loading-hint" id="pdfProcessingText">PDF okunuyor…</p>
+              <div class="loading-bar"></div>
+              <p class="loading-sub">Bu işlem birkaç saniye sürebilir, pencereyi kapatma.</p>
+            </div>
           </div>
 
           <!-- ADIM 3: Hata -->
@@ -624,7 +668,12 @@
           </div>
 
           <div id="dietPdfStepProcessing" class="hidden">
-            <p class="loading-hint" id="dietPdfProcessingText">PDF okunuyor…</p>
+            <div class="loading-block">
+              <div class="loading-spinner"></div>
+              <p class="loading-hint" id="dietPdfProcessingText">PDF okunuyor…</p>
+              <div class="loading-bar"></div>
+              <p class="loading-sub">Bu işlem birkaç saniye sürebilir, pencereyi kapatma.</p>
+            </div>
           </div>
 
           <div id="dietPdfStepError" class="hidden">
@@ -718,6 +767,11 @@
       <!-- SUPPLEMENT PLANIM -->
       <div class="form-card">
         <h2 class="card-heading">💊 Supplement Planım</h2>
+        <p class="food-source-note">Bir supplement'in ⏰ ikonuna dokunarak hatırlatma saati ekleyebilirsin.</p>
+        <div class="notif-status hidden" id="notifStatusBox">
+          <span id="notifStatusText">Bildirimler kapalı.</span>
+          <button class="notif-status-btn hidden" id="notifEnableBtn" type="button">İzin Ver</button>
+        </div>
         <div class="food-log-list" id="suppPlanList">
           <p class="empty-hint">Henüz bir supplement eklemedin.</p>
         </div>
@@ -732,6 +786,35 @@
         <p class="save-feedback hidden" id="supplement-feedback">✅ Kaydedildi!</p>
       </div>
     </section>
+
+    <!-- SUPPLEMENT HATIRLATMA SAATİ MODALI -->
+    <div class="modal-overlay-2 hidden" id="suppTimeModal">
+      <div class="modal-box-2">
+        <div class="modal-header">
+          <h2 class="modal-title">⏰ Hatırlatma Saati</h2>
+          <button class="modal-close" id="closeSuppTimeModal" aria-label="Kapat">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="food-source-note supp-time-modal-name" id="suppTimeModalName">—</p>
+          <div class="form-group">
+            <label class="form-label" for="supp-time-input">Saat</label>
+            <input class="form-input time-input" type="time" id="supp-time-input" value="08:00" />
+          </div>
+          <div class="time-quick-row" id="suppTimeQuickRow">
+            <button class="time-quick-btn" type="button" data-time="07:00">07:00</button>
+            <button class="time-quick-btn" type="button" data-time="08:00">08:00</button>
+            <button class="time-quick-btn" type="button" data-time="12:00">12:00</button>
+            <button class="time-quick-btn" type="button" data-time="17:00">17:00</button>
+            <button class="time-quick-btn" type="button" data-time="22:00">22:00</button>
+          </div>
+          <p class="food-source-note" id="suppTimeNote">Her gün bu saatte telefonuna bildirim gönderilecek.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" id="saveSuppTimeBtn" type="button">Saati Kaydet</button>
+          <button class="btn-save btn-secondary hidden" id="clearSuppTimeBtn" type="button">Hatırlatmayı Kaldır</button>
+        </div>
+      </div>
+    </div>
 
   </main>
 
