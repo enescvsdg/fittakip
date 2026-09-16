@@ -9,6 +9,10 @@
 import { sendPush } from './push.js';
 
 const GRACE_MINUTES = 60;   // kaçırılan hatırlatma bu süre içinde hâlâ gönderilir
+// Cron dakikada bir uyandığı için saatinde gönderilen bildirim hedef dakikayı
+// kaçırıyordu. Bir dakika önceden göndermeye başlayınca bildirim ekrana tam
+// saatinde düşüyor — hatırlatma için erken gelmek geç gelmekten iyidir.
+const LEAD_MINUTES = 1;
 
 // ── YARDIMCILAR ──────────────────────────────────
 
@@ -192,7 +196,7 @@ async function handleRequest(request, env) {
           const diff = now.minutes - due;
           let durum;
           if (fired[item.id] === now.date + ' ' + item.time) durum = 'bugün zaten gönderildi';
-          else if (diff < 0) durum = 'saati henüz gelmedi (' + (-diff) + ' dk var)';
+          else if (diff < -LEAD_MINUTES) durum = 'saati henüz gelmedi (' + (-diff) + ' dk var)';
           else if (diff > GRACE_MINUTES) durum = 'saati geçti, bugün atlandı (' + diff + ' dk önce)';
           else durum = '>>> ŞİMDİ GÖNDERİLMELİ <<<';
           return { ad: item.name, saat: item.time, farkDakika: diff, durum: durum };
@@ -238,7 +242,7 @@ async function runReminders(env) {
       if (due === null) continue;
 
       const diff = now.minutes - due;
-      if (diff < 0 || diff > GRACE_MINUTES) continue;
+      if (diff < -LEAD_MINUTES || diff > GRACE_MINUTES) continue;
 
       const result = await sendPush(record, notificationFor(item), vapid);
       if (result.gone) { gone = true; break; }
