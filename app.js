@@ -148,6 +148,37 @@ function loadFormData() {
 }
 
 // ── SAVE FEEDBACK ────────────────────────────
+/* Sayısal alanların HTML'deki min/max değerleri yalnızca tarayıcının kendi
+   uyarısını tetikliyordu; kaydetme kodu hiçbirini uygulamıyordu. Yapıştırarak
+   ya da tarayıcı uyarısını geçerek saçma değer kaydedilebiliyordu.
+   Aralıklar HTML'deki niteliklerle birebir aynı tutulmalı. */
+var SAYI_ARALIK = {
+  height:     { min: 100, max: 250, ad: 'Boy',         birim: 'cm' },
+  weight:     { min: 30,  max: 300, ad: 'Kilo',        birim: 'kg' },
+  age:        { min: 10,  max: 120, ad: 'Yaş',         birim: '' },
+  goalWeight: { min: 30,  max: 300, ad: 'Hedef kilo',  birim: 'kg' }
+};
+
+/* { bos: true } | { hata: '...' } | { deger: 75.4 } döndürür. */
+function sayiDogrula(tur, ham) {
+  var k = SAYI_ARALIK[tur];
+  var metin = String(ham === null || ham === undefined ? '' : ham).trim().replace(',', '.');
+  if (!metin) return { bos: true };
+  var n = parseFloat(metin);
+  if (isNaN(n)) return { hata: k.ad + ' sayı olmalı.' };
+  if (n < k.min || n > k.max) {
+    return { hata: k.ad + ' ' + k.min + '-' + k.max + (k.birim ? ' ' + k.birim : '') + ' arasında olmalı.' };
+  }
+  return { deger: n };
+}
+
+// Doğrulama hatasını ilgili geri bildirim satırında gösterir
+function dogrulamaHatasi(feedbackId, mesaj) {
+  var el = document.getElementById(feedbackId);
+  if (el) el.textContent = '⚠️ ' + mesaj;
+  showFeedback(feedbackId);
+}
+
 function showFeedback(id) {
   var el = document.getElementById(id);
   if (!el) return;
@@ -158,14 +189,25 @@ function showFeedback(id) {
 
 // ── SAVE HANDLERS (temel bilgiler) ──────────
 document.getElementById('save-profile').addEventListener('click', function() {
-  var h = document.getElementById('input-height').value.trim();
-  var w = document.getElementById('input-weight').value.trim();
-  var a = document.getElementById('input-age').value.trim();
+  var alanlar = [
+    { tur: 'height', anahtar: KEYS.height, el: 'input-height' },
+    { tur: 'weight', anahtar: KEYS.weight, el: 'input-weight' },
+    { tur: 'age',    anahtar: KEYS.age,    el: 'input-age' }
+  ];
+
+  // Önce hepsini doğrula: bir alan hatalıysa hiçbiri kaydedilmesin
+  var kaydedilecek = [];
+  for (var i = 0; i < alanlar.length; i++) {
+    var sonuc = sayiDogrula(alanlar[i].tur, document.getElementById(alanlar[i].el).value);
+    if (sonuc.hata) { dogrulamaHatasi('profile-feedback', sonuc.hata); return; }
+    if (!sonuc.bos) kaydedilecek.push({ anahtar: alanlar[i].anahtar, deger: String(sonuc.deger) });
+  }
+  kaydedilecek.forEach(function(x) { localStorage.setItem(x.anahtar, x.deger); });
+
   var g = document.getElementById('input-goal').value.trim();
-  if (h) localStorage.setItem(KEYS.height, h);
-  if (w) localStorage.setItem(KEYS.weight, w);
-  if (a) localStorage.setItem(KEYS.age, a);
   if (g) localStorage.setItem(KEYS.goal, g);
+
+  document.getElementById('profile-feedback').textContent = '✅ Kaydedildi!';
   showFeedback('profile-feedback');
   updateDashboard();
 });
@@ -194,10 +236,14 @@ document.getElementById('save-supplement').addEventListener('click', function() 
 document.getElementById('save-goal').addEventListener('click', function() {
   var type   = document.getElementById('goal-type').value;
   var date   = document.getElementById('goal-date').value;
-  var weight = document.getElementById('goal-weight').value;
+  var hedef = sayiDogrula('goalWeight', document.getElementById('goal-weight').value);
+  if (hedef.hata) { dogrulamaHatasi('goal-feedback', hedef.hata); return; }
+
   localStorage.setItem(KEYS.goalType, type);
-  if (date)   localStorage.setItem(KEYS.goalDate, date);
-  if (weight) localStorage.setItem(KEYS.goalWeight, weight);
+  if (date) localStorage.setItem(KEYS.goalDate, date);
+  if (!hedef.bos) localStorage.setItem(KEYS.goalWeight, String(hedef.deger));
+
+  document.getElementById('goal-feedback').textContent = '✅ Hedef kaydedildi!';
   showFeedback('goal-feedback');
   updateDashboard();
 });
@@ -205,18 +251,19 @@ document.getElementById('save-goal').addEventListener('click', function() {
 document.getElementById('add-weighin').addEventListener('click', function() {
   var dateInput   = document.getElementById('weighin-date');
   var weightInput = document.getElementById('weighin-weight');
-  var date   = dateInput.value;
-  var weight = parseFloat(weightInput.value);
+  var date = dateInput.value;
   var feedbackEl = document.getElementById('weighin-feedback');
+  var tartim = sayiDogrula('weight', weightInput.value);
 
-  if (!date || !weight || isNaN(weight)) {
+  if (!date || tartim.bos) {
     feedbackEl.textContent = '⚠️ Lütfen tarih ve kilo gir.';
     showFeedback('weighin-feedback');
     return;
   }
+  if (tartim.hata) { dogrulamaHatasi('weighin-feedback', tartim.hata); return; }
 
   var list = getWeighIns();
-  list.push({ date: date, weight: weight });
+  list.push({ date: date, weight: tartim.deger });
   saveWeighIns(list);
 
   feedbackEl.textContent = '✅ Tartım eklendi!';
@@ -238,7 +285,7 @@ function renderWeighinList() {
   }
   var html = '<p class="list-heading">Son Tartımlar</p>';
   list.slice(0, 6).forEach(function(item) {
-    html += '<div class="weighin-item"><span>' + formatDateTR(item.date) + '</span><span class="weighin-item-weight">' + item.weight + ' kg</span></div>';
+    html += '<div class="weighin-item"><span>' + formatDateTR(item.date) + '</span><span class="weighin-item-weight">' + escapeHtml(item.weight) + ' kg</span></div>';
   });
   container.innerHTML = html;
 }
@@ -404,10 +451,27 @@ var TODAY_ICONS = {
   supplement: '<rect x="3.5" y="8.5" width="17" height="7" rx="3.5"/><path d="M12 8.5v7"/>'
 };
 
+/* HTML'e basılan her dış kaynaklı metin buradan geçmeli: kullanıcı girdisi,
+   yedekten gelen veri, USDA yanıtı ve yapay zekânın PDF'ten çıkardığı metinler.
+   Tek tırnak da kaçırılıyor çünkü bazı nitelikler tek tırnakla yazılabiliyor. */
 function escapeHtml(str) {
-  return String(str).replace(/[&<>"]/g, function(c) {
-    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/[&<>"']/g, function(c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
   });
+}
+
+/* Serbest metni HTML'e basarken satır sonlarını korur — önce kaçış, sonra <br>.
+   Sıra önemli: tersi olursa eklediğimiz <br> de kaçırılır. */
+function escapeHtmlLines(str) {
+  return escapeHtml(str).replace(/\n/g, '<br>');
+}
+
+/* href'e konacak bağlantı. javascript: gibi şemalar engellenmeli, yoksa
+   bağlantıya dokunmak kod çalıştırır. */
+function safeUrl(url) {
+  var s = String(url || '').trim();
+  return /^https?:\/\//i.test(s) ? escapeHtml(s) : '';
 }
 
 function todayCardHtml(o) {
@@ -1022,12 +1086,12 @@ function buildAnatomyPanelHTML(muscle) {
   var defaultView = MUSCLE_VIEW[muscle] || 'front';
   var muscleLabel = MUSCLE_TR[muscle] || muscle;
   return (
-    '<div class="anatomy-panel" data-current-view="' + defaultView + '" data-muscle="' + muscle + '">' +
+    '<div class="anatomy-panel" data-current-view="' + defaultView + '" data-muscle="' + escapeHtml(muscle) + '">' +
       '<div class="anatomy-view-toggle">' +
         '<button type="button" class="anatomy-view-btn' + (defaultView === 'front' ? ' active' : '') + '" data-view-btn="front">Ön</button>' +
         '<button type="button" class="anatomy-view-btn' + (defaultView === 'back' ? ' active' : '') + '" data-view-btn="back">Arka</button>' +
       '</div>' +
-      '<p class="muscle-region-label">' + muscleLabel + '</p>' +
+      '<p class="muscle-region-label">' + escapeHtml(muscleLabel) + '</p>' +
       '<div class="anatomy-svg-wrap"><p class="anatomy-loading">Yükleniyor…</p></div>' +
       '<p class="anatomy-credit">Kas illüstrasyonu: wger.de (CC BY-SA 4.0)</p>' +
     '</div>'
@@ -1117,7 +1181,7 @@ function fillRegionSelect(location) {
     if (seen[ex.muscle]) return;
     seen[ex.muscle] = true;
     var label = MUSCLE_TR[ex.muscle] || ex.muscle;
-    html += '<option value="' + ex.muscle + '">' + label + '</option>';
+    html += '<option value="' + escapeHtml(ex.muscle) + '">' + escapeHtml(label) + '</option>';
   });
 
   builderRegionSelect.innerHTML = html;
@@ -1130,7 +1194,7 @@ function fillExerciseSelect(location, region) {
 
   list.forEach(function(ex) {
     if (ex.muscle !== region) return;
-    html += '<option value="' + ex.name + '">' + ex.name + '</option>';
+    html += '<option value="' + escapeHtml(ex.name) + '">' + escapeHtml(ex.name) + '</option>';
   });
 
   builderExerciseSelect.innerHTML = html;
@@ -1158,21 +1222,21 @@ function buildCartItemHTML(item, index) {
   metaParts.push(muscleLabel);
   var meta = metaParts.join(' · ');
   var postBadge = item.isPost ? '<span class="cart-item-post-badge">Antrenman Sonrası</span>' : '';
-  var noteHtml = item.note ? '<p class="cart-item-note">📝 ' + item.note + '</p>' : '';
+  var noteHtml = item.note ? '<p class="cart-item-note">📝 ' + escapeHtml(item.note) + '</p>' : '';
 
   return (
-    '<div class="cart-item" data-cart-id="' + item.cartId + '">' +
+    '<div class="cart-item" data-cart-id="' + escapeHtml(item.cartId) + '">' +
       '<div class="cart-item-header">' +
         '<span class="cart-item-number">' + (index + 1) + '</span>' +
         '<div class="cart-item-info">' +
-          '<p class="cart-item-name">' + item.name + postBadge + '</p>' +
-          '<p class="cart-item-meta">' + meta + '</p>' +
+          '<p class="cart-item-name">' + escapeHtml(item.name) + postBadge + '</p>' +
+          '<p class="cart-item-meta">' + escapeHtml(meta) + '</p>' +
         '</div>' +
         '<span class="cart-item-chevron">⌄</span>' +
-        '<button type="button" class="cart-item-remove" data-cart-id="' + item.cartId + '" title="Sil">✕</button>' +
+        '<button type="button" class="cart-item-remove" data-cart-id="' + escapeHtml(item.cartId) + '" title="Sil">✕</button>' +
       '</div>' +
       noteHtml +
-      '<div class="cart-item-anatomy-wrap hidden">' + buildAnatomyPanelHTML(item.muscle) + '</div>' +
+      '<div class="cart-item-anatomy-wrap hidden">' + buildAnatomyPanelHTML(escapeHtml(item.muscle)) + '</div>' +
     '</div>'
   );
 }
@@ -1345,9 +1409,9 @@ function renderDayTabs() {
     var badge = '<span class="day-tab-badge">' + totalCount + '</span>';
 
     html +=
-      '<button class="day-tab' + activeClass + '" data-weekday="' + weekday + '">' +
-        '<span class="day-tab-number">' + weekday + '</span>' +
-        '<span class="day-tab-title' + titleClass + '">' + titleHtml + '</span>' +
+      '<button class="day-tab' + activeClass + '" data-weekday="' + escapeHtml(weekday) + '">' +
+        '<span class="day-tab-number">' + escapeHtml(weekday) + '</span>' +
+        '<span class="day-tab-title' + titleClass + '">' + escapeHtml(titleHtml) + '</span>' +
         badge +
       '</button>';
   });
@@ -1434,7 +1498,7 @@ function buildExerciseCardHTML(weekday, ex, isPost) {
   var lastPerf = getLastPerformance(ex.name);
   var lastPerfHTML = '';
   if (lastPerf) {
-    lastPerfHTML = '<p class="exercise-card-last">Son: ' + lastPerf.summary + '</p>';
+    lastPerfHTML = '<p class="exercise-card-last">Son: ' + escapeHtml(lastPerf.summary) + '</p>';
   }
 
   for (var i = 0; i < ex.sets; i++) {
@@ -1443,12 +1507,12 @@ function buildExerciseCardHTML(weekday, ex, isPost) {
     setsHTML +=
       '<div class="set-row' + (isChecked ? ' done' : '') + '" data-index="' + i + '">' +
         '<span class="set-row-num">' + (i + 1) + '. set</span>' +
-        '<input type="number" class="set-weight-input" inputmode="decimal" placeholder="kg" value="' + w + '" ' +
-          'data-weekday="' + weekday + '" data-id="' + ex.id + '" data-index="' + i + '" data-post="' + (isPost ? '1' : '0') + '">' +
+        '<input type="number" class="set-weight-input" inputmode="decimal" placeholder="kg" value="' + escapeHtml(w) + '" ' +
+          'data-weekday="' + escapeHtml(weekday) + '" data-id="' + ex.id + '" data-index="' + i + '" data-post="' + (isPost ? '1' : '0') + '">' +
         '<span class="set-row-x">×</span>' +
-        '<span class="set-row-reps">' + ex.reps + '</span>' +
+        '<span class="set-row-reps">' + escapeHtml(ex.reps) + '</span>' +
         '<label class="set-check-label">' +
-          '<input type="checkbox" class="set-checkbox-input" data-weekday="' + weekday + '" data-id="' + ex.id + '" data-index="' + i + '" data-post="' + (isPost ? '1' : '0') + '" ' + (isChecked ? 'checked' : '') + '>' +
+          '<input type="checkbox" class="set-checkbox-input" data-weekday="' + escapeHtml(weekday) + '" data-id="' + escapeHtml(ex.id) + '" data-index="' + i + '" data-post="' + (isPost ? '1' : '0') + '" ' + (isChecked ? 'checked' : '') + '>' +
           '<span class="set-check-visual">' + (isChecked ? '✓' : '') + '</span>' +
         '</label>' +
       '</div>';
@@ -1457,22 +1521,23 @@ function buildExerciseCardHTML(weekday, ex, isPost) {
   var youtubeUrl = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(ex.name + ' nasıl yapılır');
   var levelLabel = ex.level ? (LEVEL_TR[ex.level] || ex.level) : '';
   var equipmentLabel = ex.equipment ? (EQUIPMENT_TR[ex.equipment] !== undefined ? EQUIPMENT_TR[ex.equipment] : ex.equipment) : '';
-  var extraMetaParts = [equipmentLabel, levelLabel].filter(Boolean);
+  // Etiketler sözlükte yoksa ham ex.equipment / ex.level değerine düşüyor
+  var extraMetaParts = [equipmentLabel, levelLabel].filter(Boolean).map(escapeHtml);
   var extraMeta = extraMetaParts.length ? ' · ' + extraMetaParts.join(' · ') : '';
-  var noteHtml = ex.note ? '<p class="exercise-card-note">📝 ' + ex.note + '</p>' : '';
+  var noteHtml = ex.note ? '<p class="exercise-card-note">📝 ' + escapeHtml(ex.note) + '</p>' : '';
 
   return (
-    '<div class="exercise-card' + (allChecked ? ' completed' : '') + (isPost ? ' post-workout' : '') + '" data-weekday="' + weekday + '" data-id="' + ex.id + '" data-post="' + (isPost ? '1' : '0') + '">' +
-      '<button class="exercise-card-remove" data-weekday="' + weekday + '" data-id="' + ex.id + '" data-post="' + (isPost ? '1' : '0') + '" title="Kaldır">✕</button>' +
+    '<div class="exercise-card' + (allChecked ? ' completed' : '') + (isPost ? ' post-workout' : '') + '" data-weekday="' + escapeHtml(weekday) + '" data-id="' + escapeHtml(ex.id) + '" data-post="' + (isPost ? '1' : '0') + '">' +
+      '<button class="exercise-card-remove" data-weekday="' + escapeHtml(weekday) + '" data-id="' + escapeHtml(ex.id) + '" data-post="' + (isPost ? '1' : '0') + '" title="Kaldır">✕</button>' +
       '<div class="exercise-card-title-row">' +
-        '<button class="exercise-card-name">' + ex.name + '</button>' +
-        '<a class="exercise-card-play" href="' + youtubeUrl + '" target="_blank" rel="noopener noreferrer" title="Video izle"><span>▶</span></a>' +
+        '<button class="exercise-card-name">' + escapeHtml(ex.name) + '</button>' +
+        '<a class="exercise-card-play" href="' + safeUrl(youtubeUrl) + '" target="_blank" rel="noopener noreferrer" title="Video izle"><span>▶</span></a>' +
       '</div>' +
-      '<p class="exercise-card-sets-reps">Hedef: ' + ex.sets + '×' + ex.reps + extraMeta + '</p>' +
+      '<p class="exercise-card-sets-reps">Hedef: ' + escapeHtml(ex.sets) + '×' + escapeHtml(ex.reps) + extraMeta + '</p>' +
       lastPerfHTML +
       '<div class="exercise-card-sets">' + setsHTML + '</div>' +
       noteHtml +
-      '<div class="exercise-anatomy-wrap hidden">' + buildAnatomyPanelHTML(ex.muscle) + '</div>' +
+      '<div class="exercise-anatomy-wrap hidden">' + buildAnatomyPanelHTML(escapeHtml(ex.muscle)) + '</div>' +
     '</div>'
   );
 }
@@ -1796,7 +1861,7 @@ function renderStrengthSection() {
 
   // Seçim listesini doldur (önceki seçimi koru)
   var prev = select.value;
-  select.innerHTML = names.map(function(n) { return '<option value="' + n + '">' + n + '</option>'; }).join('');
+  select.innerHTML = names.map(function(n) { return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + '</option>'; }).join('');
   if (names.indexOf(prev) !== -1) select.value = prev;
 
   drawStrengthChart(select.value);
@@ -1962,16 +2027,16 @@ document.getElementById('calendarGrid').addEventListener('click', function(e) {
 
   if (act.workouts && act.workouts.length) {
     act.workouts.forEach(function(session) {
-      html += '🏋️ <strong>' + (session.title || session.weekday || 'Antrenman') + '</strong><br>';
+      html += '🏋️ <strong>' + escapeHtml(session.title || session.weekday || 'Antrenman') + '</strong><br>';
       (session.exercises || []).forEach(function(ex) {
         var best = Math.max.apply(null, ex.sets.map(function(s) { return s.weight || 0; }));
         var setInfo = ex.sets.length + ' set' + (best > 0 ? ' · en yüksek ' + best + 'kg' : '');
-        html += '&nbsp;&nbsp;• ' + ex.name + ' (' + setInfo + ')<br>';
+        html += '&nbsp;&nbsp;• ' + escapeHtml(ex.name) + ' (' + setInfo + ')<br>';
       });
     });
   }
   if (act.weight != null) {
-    html += '⚖️ Tartım: <strong>' + act.weight + ' kg</strong><br>';
+    html += '⚖️ Tartım: <strong>' + escapeHtml(act.weight) + ' kg</strong><br>';
   }
 
   detail.innerHTML = html;
@@ -2118,9 +2183,9 @@ var currentFoodMeta = null; // { kcal100, protein100, carbs100, fat100, isEstima
 function fillFoodSelect() {
   var html = '';
   Object.keys(TURKISH_FOODS).forEach(function(category) {
-    html += '<optgroup label="' + category + '">';
+    html += '<optgroup label="' + escapeHtml(category) + '">';
     TURKISH_FOODS[category].forEach(function(f) {
-      html += '<option value="' + f.name + '">' + f.name + '</option>';
+      html += '<option value="' + escapeHtml(f.name) + '">' + escapeHtml(f.name) + '</option>';
     });
     html += '</optgroup>';
   });
@@ -2228,8 +2293,8 @@ function renderUSDAResults(foods) {
     var macros = extractUSDAMacros(food);
     html +=
       '<div class="usda-result-item" data-idx="' + idx + '">' +
-        '<p class="usda-result-name">' + food.description + '</p>' +
-        '<p class="usda-result-meta">' + Math.round(macros.kcal100) + ' kcal / 100g · ' + (food.dataType || '') + '</p>' +
+        '<p class="usda-result-name">' + escapeHtml(food.description) + '</p>' +
+        '<p class="usda-result-meta">' + Math.round(macros.kcal100) + ' kcal / 100g · ' + escapeHtml(food.dataType) + '</p>' +
       '</div>';
   });
   usdaResultsListEl.innerHTML = html;
@@ -2357,14 +2422,14 @@ aiEstimateBtn.addEventListener('click', function() {
 function buildMealCartItemHTML(item, index) {
   var badge = item.isEstimated ? '<span class="estimated-badge">~ Tahmini</span>' : '';
   return (
-    '<div class="cart-item" data-cart-id="' + item.cartId + '">' +
+    '<div class="cart-item" data-cart-id="' + escapeHtml(item.cartId) + '">' +
       '<div class="cart-item-header">' +
         '<span class="cart-item-number">' + (index + 1) + '</span>' +
         '<div class="cart-item-info">' +
-          '<p class="cart-item-name">' + item.name + badge + '</p>' +
-          '<p class="cart-item-meta">' + item.meal + ' · ' + item.grams + 'g · ' + item.kcal + ' kcal</p>' +
+          '<p class="cart-item-name">' + escapeHtml(item.name) + badge + '</p>' +
+          '<p class="cart-item-meta">' + escapeHtml(item.meal) + ' · ' + escapeHtml(item.grams) + 'g · ' + escapeHtml(item.kcal) + ' kcal</p>' +
         '</div>' +
-        '<button type="button" class="cart-item-remove" data-cart-id="' + item.cartId + '" title="Sil">✕</button>' +
+        '<button type="button" class="cart-item-remove" data-cart-id="' + escapeHtml(item.cartId) + '" title="Sil">✕</button>' +
       '</div>' +
     '</div>'
   );
@@ -2463,17 +2528,17 @@ function renderMealPlanView() {
   } else {
     var html = '';
     mealsWithFood.forEach(function(meal) {
-      html += '<p class="meal-plan-day-title">' + meal + '</p>';
+      html += '<p class="meal-plan-day-title">' + escapeHtml(meal) + '</p>';
       plan[meal].forEach(function(item) {
         var badge = item.isEstimated ? '<span class="estimated-badge">~ Tahmini</span>' : '';
         html +=
           '<div class="food-log-item">' +
             '<div>' +
-              '<p class="food-log-item-name">' + item.name + badge + '</p>' +
-              '<p class="food-log-item-meta">' + item.grams + 'g · P:' + item.protein + ' K:' + item.carbs + ' Y:' + item.fat + '</p>' +
+              '<p class="food-log-item-name">' + escapeHtml(item.name) + badge + '</p>' +
+              '<p class="food-log-item-meta">' + escapeHtml(item.grams) + 'g · P:' + escapeHtml(item.protein) + ' K:' + escapeHtml(item.carbs) + ' Y:' + escapeHtml(item.fat) + '</p>' +
             '</div>' +
-            '<span class="food-log-item-kcal">' + item.kcal + ' kcal</span>' +
-            '<button class="food-log-item-remove" data-meal="' + meal + '" data-id="' + item.id + '" title="Kaldır">✕</button>' +
+            '<span class="food-log-item-kcal">' + escapeHtml(item.kcal) + ' kcal</span>' +
+            '<button class="food-log-item-remove" data-meal="' + escapeHtml(meal) + '" data-id="' + escapeHtml(item.id) + '" title="Kaldır">✕</button>' +
           '</div>';
       });
     });
@@ -2559,12 +2624,25 @@ toggleAiSettingsBtn.addEventListener('click', function() {
    Veri modeli ileride değişse bile bu liste dinamik taranır.
    ══════════════════════════════════════════ */
 
-// Yedeğe dahil edilecek tüm anahtarlar (dinamik: ft_ ile başlayan her şey)
+/* Yedeğe girmeyen cihaz ayarları.
+
+   Gemini anahtarı ve Worker cihaz anahtarı birer kimlik bilgisi. Yedek dosyası
+   e-postaya, buluta veya paylaşımlı bir klasöre gidebiliyor; kimlik bilgisi
+   taşımamalı.
+
+   Worker adresi tek başına gizli değil ama içe aktarımda engelleniyor: kötü
+   niyetli bir yedek adresi kendi sunucusuna çevirebilir, uygulama da bir
+   sonraki senkronizasyonda cihaz anahtarını oraya gönderir. */
+var CIHAZ_AYARLARI = ['ft_gemini_api_key', 'ft_push_device_key', 'ft_push_server_url'];
+
+function cihazAyariMi(key) { return CIHAZ_AYARLARI.indexOf(key) !== -1; }
+
+// Yedeğe dahil edilecek anahtarlar: ft_ ile başlayan, cihaza özel olmayan her şey
 function collectAllFitKeys() {
   var keys = [];
   for (var i = 0; i < localStorage.length; i++) {
     var k = localStorage.key(i);
-    if (k && k.indexOf('ft_') === 0) keys.push(k);
+    if (k && k.indexOf('ft_') === 0 && !cihazAyariMi(k)) keys.push(k);
   }
   return keys;
 }
@@ -2643,7 +2721,9 @@ importDataInput.addEventListener('change', function() {
     // Önce mevcut ft_ anahtarlarını temizle, sonra yedekten yükle
     collectAllFitKeys().forEach(function(k) { localStorage.removeItem(k); });
     Object.keys(parsed.data).forEach(function(k) {
-      if (k.indexOf('ft_') === 0 && typeof parsed.data[k] === 'string') {
+      // Eski yedekler anahtarları içerebilir; cihaz ayarları hiçbir koşulda
+      // dosyadan geri yüklenmez
+      if (k.indexOf('ft_') === 0 && !cihazAyariMi(k) && typeof parsed.data[k] === 'string') {
         localStorage.setItem(k, parsed.data[k]);
       }
     });
@@ -2899,16 +2979,16 @@ function renderPdfPreview() {
     var mainList = dayData.hareketler || [];
     var postList = dayData.antrenmanSonrasi || [];
 
-    html += '<div class="pdf-preview-day"><p class="pdf-preview-day-title">' + day + '</p>';
+    html += '<div class="pdf-preview-day"><p class="pdf-preview-day-title">' + escapeHtml(day) + '</p>';
 
     mainList.forEach(function(item, idx) {
-      var noteHtml = item.not ? '<p class="pdf-preview-exercise-note">📝 ' + item.not + '</p>' : '';
+      var noteHtml = item.not ? '<p class="pdf-preview-exercise-note">📝 ' + escapeHtml(item.not) + '</p>' : '';
       html +=
         '<div class="pdf-preview-exercise-wrap">' +
           '<div class="pdf-preview-exercise">' +
-            '<span class="pdf-preview-exercise-name">' + item.hareket + '</span>' +
-            '<span class="pdf-preview-exercise-meta">' + (item.set || 3) + '×' + (item.tekrar || 10) + '</span>' +
-            '<button class="pdf-preview-remove" data-day="' + day + '" data-list="hareketler" data-idx="' + idx + '">✕</button>' +
+            '<span class="pdf-preview-exercise-name">' + escapeHtml(item.hareket) + '</span>' +
+            '<span class="pdf-preview-exercise-meta">' + escapeHtml(item.set || 3) + '×' + escapeHtml(item.tekrar || 10) + '</span>' +
+            '<button class="pdf-preview-remove" data-day="' + escapeHtml(day) + '" data-list="hareketler" data-idx="' + idx + '">✕</button>' +
           '</div>' +
           noteHtml +
         '</div>';
@@ -2917,13 +2997,13 @@ function renderPdfPreview() {
     if (postList.length > 0) {
       html += '<p class="pdf-preview-post-label">🧘 Antrenman Sonrası</p>';
       postList.forEach(function(item, idx) {
-        var noteHtml = item.not ? '<p class="pdf-preview-exercise-note">📝 ' + item.not + '</p>' : '';
+        var noteHtml = item.not ? '<p class="pdf-preview-exercise-note">📝 ' + escapeHtml(item.not) + '</p>' : '';
         html +=
           '<div class="pdf-preview-exercise-wrap">' +
             '<div class="pdf-preview-exercise">' +
-              '<span class="pdf-preview-exercise-name">' + item.hareket + '</span>' +
-              '<span class="pdf-preview-exercise-meta">' + (item.set || 3) + ' set</span>' +
-              '<button class="pdf-preview-remove" data-day="' + day + '" data-list="antrenmanSonrasi" data-idx="' + idx + '">✕</button>' +
+              '<span class="pdf-preview-exercise-name">' + escapeHtml(item.hareket) + '</span>' +
+              '<span class="pdf-preview-exercise-meta">' + escapeHtml(item.set || 3) + ' set</span>' +
+              '<button class="pdf-preview-remove" data-day="' + escapeHtml(day) + '" data-list="antrenmanSonrasi" data-idx="' + idx + '">✕</button>' +
             '</div>' +
             noteHtml +
           '</div>';
@@ -2935,12 +3015,12 @@ function renderPdfPreview() {
 
   if (pdfParsedProgram.kardiyoPlanlamasi) {
     html += '<div class="pdf-preview-day"><p class="pdf-preview-day-title">🏃 Kardiyo Planlaması</p>' +
-            '<p class="pdf-preview-freetext">' + pdfParsedProgram.kardiyoPlanlamasi.replace(/\n/g, '<br>') + '</p></div>';
+            '<p class="pdf-preview-freetext">' + escapeHtmlLines(pdfParsedProgram.kardiyoPlanlamasi) + '</p></div>';
   }
 
   if (pdfParsedProgram.antrenmanKurallari) {
     html += '<div class="pdf-preview-day"><p class="pdf-preview-day-title">📋 Antrenman Uygulama Kuralları</p>' +
-            '<p class="pdf-preview-freetext">' + pdfParsedProgram.antrenmanKurallari.replace(/\n/g, '<br>') + '</p></div>';
+            '<p class="pdf-preview-freetext">' + escapeHtmlLines(pdfParsedProgram.antrenmanKurallari) + '</p></div>';
   }
 
   pdfPreviewListEl.innerHTML = html;
@@ -3130,7 +3210,7 @@ var suppCartItems = [];
 function fillSuppSelect() {
   var html = '';
   SUPPLEMENT_DB.forEach(function(s) {
-    html += '<option value="' + s.name + '">' + s.name + '</option>';
+    html += '<option value="' + escapeHtml(s.name) + '">' + escapeHtml(s.name) + '</option>';
   });
   html += '<option value="__custom__">✏️ Listede Yok — Kendim Yazayım</option>';
   suppSelect.innerHTML = html;
@@ -3160,16 +3240,16 @@ suppSelect.addEventListener('change', function() {
 
 function buildSuppCartItemHTML(item, index) {
   return (
-    '<div class="cart-item" data-cart-id="' + item.cartId + '">' +
+    '<div class="cart-item" data-cart-id="' + escapeHtml(item.cartId) + '">' +
       '<div class="cart-item-header">' +
         '<span class="cart-item-number">' + (index + 1) + '</span>' +
         '<div class="cart-item-info">' +
-          '<p class="cart-item-name">' + item.name + '</p>' +
-          '<p class="cart-item-meta">' + item.dose + ' · ' + item.timing + '</p>' +
+          '<p class="cart-item-name">' + escapeHtml(item.name) + '</p>' +
+          '<p class="cart-item-meta">' + escapeHtml(item.dose) + ' · ' + escapeHtml(item.timing) + '</p>' +
         '</div>' +
-        '<button type="button" class="cart-item-remove" data-cart-id="' + item.cartId + '" title="Sil">✕</button>' +
+        '<button type="button" class="cart-item-remove" data-cart-id="' + escapeHtml(item.cartId) + '" title="Sil">✕</button>' +
       '</div>' +
-      (item.note ? '<p class="cart-item-note">📝 ' + item.note + '</p>' : '') +
+      (item.note ? '<p class="cart-item-note">📝 ' + escapeHtml(item.note) + '</p>' : '') +
     '</div>'
   );
 }
@@ -3251,7 +3331,7 @@ function renderSupplementPlanView() {
 
   var html = '';
   timingsWithItems.forEach(function(timing) {
-    html += '<p class="meal-plan-day-title">' + timing + '</p>';
+    html += '<p class="meal-plan-day-title">' + escapeHtml(timing) + '</p>';
     plan[timing].forEach(function(item) {
       var hasTime = !!item.reminder;
       var alindi = isSuppTaken(item.id);
@@ -3266,16 +3346,16 @@ function renderSupplementPlanView() {
             '</svg>' +
           '</button>' +
           '<div class="supp-row-text">' +
-            '<p class="food-log-item-name">' + item.name + '</p>' +
-            '<p class="food-log-item-meta">' + item.dose + (item.note ? ' · ' + item.note : '') + '</p>' +
+            '<p class="food-log-item-name">' + escapeHtml(item.name) + '</p>' +
+            '<p class="food-log-item-meta">' + escapeHtml(item.dose) + (item.note ? ' · ' + escapeHtml(item.note) : '') + '</p>' +
           '</div>' +
           '<div class="supp-item-actions">' +
             '<button class="supp-time-btn' + (hasTime ? ' has-time' : '') + '" ' +
-              'data-timing="' + timing + '" data-id="' + item.id + '" ' +
+              'data-timing="' + escapeHtml(timing) + '" data-id="' + item.id + '" ' +
               'title="' + (hasTime ? 'Hatırlatma saatini değiştir' : 'Hatırlatma saati ekle') + '">' +
               '⏰' + (hasTime ? ' ' + item.reminder : '') +
             '</button>' +
-            '<button class="food-log-item-remove" data-timing="' + timing + '" data-id="' + item.id + '" title="Kaldır">✕</button>' +
+            '<button class="food-log-item-remove" data-timing="' + escapeHtml(timing) + '" data-id="' + escapeHtml(item.id) + '" title="Kaldır">✕</button>' +
           '</div>' +
         '</div>';
     });
@@ -4056,14 +4136,14 @@ function renderDietPdfPreview() {
   if (mealsWithFood.length > 0) {
     var html = '<p class="pdf-preview-day-title">🍽️ Beslenme Planı</p>';
     mealsWithFood.forEach(function(meal) {
-      html += '<p class="pdf-preview-post-label">' + meal + '</p>';
+      html += '<p class="pdf-preview-post-label">' + escapeHtml(meal) + '</p>';
       beslenme[meal].forEach(function(item) {
         var matched = findLocalFoodFuzzy(item.gida);
         var badge = matched ? '' : ' <span class="estimated-badge">~ Tahmini</span>';
         html +=
           '<div class="pdf-preview-exercise-wrap"><div class="pdf-preview-exercise">' +
-            '<span class="pdf-preview-exercise-name">' + item.gida + badge + '</span>' +
-            '<span class="pdf-preview-exercise-meta">' + (item.gram || 100) + 'g</span>' +
+            '<span class="pdf-preview-exercise-name">' + escapeHtml(item.gida) + badge + '</span>' +
+            '<span class="pdf-preview-exercise-meta">' + escapeHtml(item.gram || 100) + 'g</span>' +
           '</div></div>';
       });
     });
@@ -4078,8 +4158,8 @@ function renderDietPdfPreview() {
     supplement.forEach(function(item) {
       html2 +=
         '<div class="pdf-preview-exercise-wrap"><div class="pdf-preview-exercise">' +
-          '<span class="pdf-preview-exercise-name">' + item.isim + '</span>' +
-          '<span class="pdf-preview-exercise-meta">' + (item.doz || '') + ' · ' + (item.zaman || '') + '</span>' +
+          '<span class="pdf-preview-exercise-name">' + escapeHtml(item.isim) + '</span>' +
+          '<span class="pdf-preview-exercise-meta">' + escapeHtml(item.doz || '') + ' · ' + escapeHtml(item.zaman || '') + '</span>' +
         '</div></div>';
     });
     supplementBlock.innerHTML = html2;
