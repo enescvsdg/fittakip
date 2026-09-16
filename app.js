@@ -264,16 +264,16 @@ function updateChart() {
   var goalWeight = parseFloat(localStorage.getItem(KEYS.goalWeight));
 
   var datasets = [{
-    label: 'Kilo (kg)', data: weights, borderColor: '#ff5c2b',
-    backgroundColor: 'rgba(255, 92, 43, 0.15)', borderWidth: 2.5,
-    pointBackgroundColor: '#ff5c2b', pointBorderColor: '#1e1e1e',
+    label: 'Kilo (kg)', data: weights, borderColor: temaRengi('accent'),
+    backgroundColor: temaRengi('chart-fill'), borderWidth: 2.5,
+    pointBackgroundColor: temaRengi('accent'), pointBorderColor: temaRengi('surface'),
     pointRadius: 4, pointHoverRadius: 6, tension: 0.3, fill: true
   }];
 
   if (goalWeight && !isNaN(goalWeight)) {
     datasets.push({
       label: 'Hedef Kilo (kg)', data: labels.map(function() { return goalWeight; }),
-      borderColor: '#4caf50', borderDash: [6, 6], borderWidth: 2, pointRadius: 0, pointHoverRadius: 0, fill: false
+      borderColor: temaRengi('success'), borderDash: [6, 6], borderWidth: 2, pointRadius: 0, pointHoverRadius: 0, fill: false
     });
   }
 
@@ -286,10 +286,10 @@ function updateChart() {
     options: {
       responsive: true, maintainAspectRatio: false,
       interaction: { intersect: false, mode: 'index' },
-      plugins: { legend: { labels: { color: '#f0f0f0', font: { size: 11 }, boxWidth: 12 } } },
+      plugins: { legend: { labels: { color: temaRengi('text'), font: { size: 11 }, boxWidth: 12 } } },
       scales: {
-        x: { ticks: { color: '#888', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
-        y: { ticks: { color: '#888', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        x: { ticks: { color: temaRengi('text-muted'), font: { size: 10 } }, grid: { color: temaRengi('grid') } },
+        y: { ticks: { color: temaRengi('text-muted'), font: { size: 10 } }, grid: { color: temaRengi('grid') } }
       }
     }
   });
@@ -323,12 +323,18 @@ function updateGoalStatus() {
   }
 }
 
+/* Grafikler ve VKİ göstergesi renklerini CSS'ten okur. Sabit yazılsalardı
+   tema değiştiğinde yanlış renkte kalırlardı. */
+function temaRengi(ad) {
+  return getComputedStyle(document.documentElement).getPropertyValue('--' + ad).trim();
+}
+
 function calcBMI(heightCm, weightKg) { var hM = heightCm / 100; return weightKg / (hM * hM); }
 function bmiCategory(bmi) {
-  if (bmi < 18.5) return { key: 'underweight', label: 'Zayıf', color: '#5bc0eb' };
-  if (bmi < 25)   return { key: 'normal', label: 'Normal', color: '#4caf50' };
-  if (bmi < 30)   return { key: 'overweight', label: 'Fazla Kilolu', color: '#ffc107' };
-  return             { key: 'obese', label: 'Obez', color: '#f44336' };
+  if (bmi < 18.5) return { key: 'underweight', label: 'Zayıf', color: temaRengi('info') };
+  if (bmi < 25)   return { key: 'normal', label: 'Normal', color: temaRengi('success') };
+  if (bmi < 30)   return { key: 'overweight', label: 'Fazla Kilolu', color: temaRengi('caution') };
+  return             { key: 'obese', label: 'Obez', color: temaRengi('danger') };
 }
 
 function updateDashboard() {
@@ -417,7 +423,7 @@ function todayCardHtml(o) {
           (o.meta ? '<span class="today-meta">' + escapeHtml(o.meta) + '</span>' : '') +
         '</span>' +
         (o.aside ? '<span class="today-aside' + (o.asideAccent ? ' accent' : '') + '">' + escapeHtml(o.aside) + '</span>' : '') +
-        '<svg class="today-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#6b6b6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>' +
+        '<svg class="today-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>' +
       '</span>' +
       (typeof o.progress === 'number'
         ? '<span class="today-track"><span class="today-fill" style="width: ' + Math.max(0, Math.min(100, o.progress)) + '%;"></span></span>'
@@ -1806,6 +1812,8 @@ function drawStrengthChart(exerciseName) {
 
   var ctx = document.getElementById('strengthChart').getContext('2d');
   if (strengthChartInstance) strengthChartInstance.destroy();
+  // updateChart aynı korumayı taşıyor: Chart.js gelmediyse sayfa çökmesin
+  if (typeof Chart === 'undefined') { console.warn('[Chart.js] yüklenemedi.'); return; }
 
   strengthChartInstance = new Chart(ctx, {
     type: 'line',
@@ -1814,11 +1822,11 @@ function drawStrengthChart(exerciseName) {
       datasets: [{
         label: exerciseName + ' (en yüksek kg)',
         data: data,
-        borderColor: '#ff5c2b',
-        backgroundColor: 'rgba(255,92,43,0.1)',
+        borderColor: temaRengi('accent'),
+        backgroundColor: temaRengi('chart-fill'),
         borderWidth: 2,
         pointRadius: 4,
-        pointBackgroundColor: '#ff5c2b',
+        pointBackgroundColor: temaRengi('accent'),
         tension: 0.25,
         fill: true
       }]
@@ -1826,10 +1834,10 @@ function drawStrengthChart(exerciseName) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: '#aaa' } } },
+      plugins: { legend: { labels: { color: temaRengi('text-muted') } } },
       scales: {
-        x: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-        y: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        x: { ticks: { color: temaRengi('text-muted') }, grid: { color: temaRengi('grid') } },
+        y: { ticks: { color: temaRengi('text-muted') }, grid: { color: temaRengi('grid') } }
       }
     }
   });
@@ -3847,6 +3855,21 @@ function openSupplementFromNotification(suppId) {
     if (/[?&]supp=/.test(location.search)) history.replaceState(null, '', location.pathname);
   }, 5000);
 })();
+
+/* Sistem teması gece/gündüz değiştiğinde: CSS kendiliğinden döner ama
+   Chart.js renkleri çizim anında okunduğu için grafikleri yeniden çizmek
+   gerekiyor. VKİ göstergesi de renklerini JS'ten alıyor. */
+if (window.matchMedia) {
+  var temaSorgu = window.matchMedia('(prefers-color-scheme: light)');
+  var temaDegisti = function() {
+    updateDashboard();
+    var guc = document.getElementById('strength-exercise-select');
+    if (guc && guc.value) drawStrengthChart(guc.value);
+  };
+  // Safari 14 öncesi addEventListener'ı desteklemiyor
+  if (temaSorgu.addEventListener) temaSorgu.addEventListener('change', temaDegisti);
+  else if (temaSorgu.addListener) temaSorgu.addListener(temaDegisti);
+}
 
 // Tarayıcı aboneliği yenilediğinde sunucuya tekrar kaydol
 if (navigator.serviceWorker) {
