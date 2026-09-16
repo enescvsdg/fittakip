@@ -74,14 +74,17 @@ function reminderMinutes(hhmm) {
   return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
 }
 
+// Başlığa uygulama adı YAZILMAZ — iOS zaten altına "from FitTakip" ekliyor
 function notificationFor(item) {
   const bits = [];
-  if (item.timing) bits.push(item.timing);
   if (item.dose && item.dose !== '—') bits.push(item.dose);
+  if (item.timing) bits.push(item.timing);
   if (item.note) bits.push(item.note);
+  bits.push('Unutma 💪');
+
   return JSON.stringify({
-    title: '💊 ' + (item.name || 'Supplement'),
-    body: bits.join(' · ') || 'Alma zamanı geldi',
+    title: '⏰ ' + (item.name || 'Supplement') + ' zamanı!',
+    body: bits.join(' · '),
     tag: 'supp-' + item.id,
     itemId: item.id
   });
@@ -155,12 +158,53 @@ async function handleRequest(request, env) {
     if (!record) return json({ error: 'Bu cihaz kayıtlı değil, önce senkronize et.' }, env, 404);
 
     const result = await sendPush(record, JSON.stringify({
-      title: '💊 FitTakip',
-      body: 'Test bildirimi — hatırlatmaların çalışıyor!',
+      title: '⏰ Test bildirimi',
+      body: 'Hatırlatmaların çalışıyor — hazırsın 💪',
       tag: 'supp-test'
     }), vapidConfig(env));
 
     return json({ ok: result.ok, status: result.status }, env, result.ok ? 200 : 502);
+  }
+
+  // Sunucunun kayıtlı hatırlatmalar hakkında ne gördüğünü gösterir (teşhis)
+  if (url.pathname === '/debug' && request.method === 'GET') {
+    const list = await env.REMINDERS.list({ prefix: 'sub:' });
+    const subs = [];
+
+    for (const entry of list.keys) {
+      const record = await env.REMINDERS.get(entry.name, 'json');
+      if (!record) continue;
+
+      const now = localNow(record.timezone);
+      const fired = record.fired || {};
+
+      subs.push({
+        anahtar: entry.name,
+        saatDilimi: record.timezone || '(yok)',
+        yerelTarih: now.date,
+        yerelSaat: String(Math.floor(now.minutes / 60)).padStart(2, '0') + ':' +
+                   String(now.minutes % 60).padStart(2, '0'),
+        sonGuncelleme: record.updatedAt,
+        hatirlatmaSayisi: (record.reminders || []).length,
+        hatirlatmalar: (record.reminders || []).map(item => {
+          const due = reminderMinutes(item.time);
+          if (due === null) return { ad: item.name, saat: item.time, durum: 'GEÇERSİZ SAAT' };
+          const diff = now.minutes - due;
+          let durum;
+          if (fired[item.id] === now.date + ' ' + item.time) durum = 'bugün zaten gönderildi';
+          else if (diff < 0) durum = 'saati henüz gelmedi (' + (-diff) + ' dk var)';
+          else if (diff > GRACE_MINUTES) durum = 'saati geçti, bugün atlandı (' + diff + ' dk önce)';
+          else durum = '>>> ŞİMDİ GÖNDERİLMELİ <<<';
+          return { ad: item.name, saat: item.time, farkDakika: diff, durum: durum };
+        })
+      });
+    }
+
+    return json({
+      sunucuSaatiUTC: new Date().toISOString(),
+      abonelikSayisi: subs.length,
+      abonelikler: subs
+    }, env);
   }
 
   return json({ error: 'Bilinmeyen adres.' }, env, 404);
@@ -235,6 +279,12 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runReminders(env));
+    // Hataları yutma — "wrangler tail" ile görülebilsin
+    ctx.waitUntil(
+      runReminders(env).then(
+        function(sent) { console.log('[cron] tarama bitti, gönderilen bildirim:', sent); },
+        function(err) { console.error('[cron] HATA:', (err && err.stack) || err); }
+      )
+    );
   }
 };
