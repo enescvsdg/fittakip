@@ -4,7 +4,7 @@
    fit-takip-v1 → v2 → v3 → v4 → ...
    ══════════════════════════════════════════ */
 
-var CACHE_NAME = 'fit-takip-v29';
+var CACHE_NAME = 'fit-takip-v30';
 
 var STATIC_ASSETS = [
   './',
@@ -68,9 +68,9 @@ self.addEventListener('push', function(event) {
   var data = {};
   try { data = event.data ? event.data.json() : {}; } catch (e) { data = {}; }
 
-  var title = data.title || '💊 FitTakip';
+  var title = data.title || '⏰ Hatırlatma';
   var options = {
-    body: data.body || 'Supplement alma zamanı geldi.',
+    body: data.body || 'Supplement alma zamanın geldi 💪',
     icon: 'icons/icon-192.png',
     badge: 'icons/icon-192.png',
     tag: data.tag || 'supp-push',

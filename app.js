@@ -3250,11 +3250,14 @@ function minutesOfDay(hhmm) {
   return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
 }
 
+// Başlığa uygulama adı YAZILMAZ — iOS zaten altına "from FitTakip" ekliyor
 function showSuppNotification(item, timing) {
-  var title = '💊 ' + item.name;
-  var bits = [timing];
+  var title = '⏰ ' + item.name + ' zamanı!';
+  var bits = [];
   if (item.dose && item.dose !== '—') bits.push(item.dose);
+  if (timing) bits.push(timing);
   if (item.note) bits.push(item.note);
+  bits.push('Unutma 💪');
 
   var options = {
     body: bits.join(' · '),
