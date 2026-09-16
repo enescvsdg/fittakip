@@ -13,6 +13,10 @@ const GRACE_MINUTES = 60;   // kaçırılan hatırlatma bu süre içinde hâlâ 
 // kaçırıyordu. Bir dakika önceden göndermeye başlayınca bildirim ekrana tam
 // saatinde düşüyor — hatırlatma için erken gelmek geç gelmekten iyidir.
 const LEAD_MINUTES = 1;
+// İşaretlenmeyen hatırlatma bu aralıkla tekrarlanır. GRACE_MINUTES penceresi
+// dolunca kendiliğinden susar — 08:00'lik bir hatırlatma en fazla 08:00, 08:15,
+// 08:30, 08:45 ve 09:00'da çalar.
+const REPEAT_MINUTES = 15;
 
 // ── YARDIMCILAR ──────────────────────────────────
 
@@ -79,15 +83,30 @@ function reminderMinutes(hhmm) {
 }
 
 // Başlığa uygulama adı YAZILMAZ — iOS zaten altına "from FitTakip" ekliyor
-function notificationFor(item) {
+// "Gönderildi" kaydı eskiden düz metin damgaydı; tekrar mantığı için gönderim
+// dakikasını da tutmamız gerekiyor. Eski kayıtlar sorunsuz okunsun diye normalize
+// ediyoruz — dakikası bilinmeyen eski kayıt tekrarlanmaz, ertesi gün düzelir.
+function normalizeFired(value) {
+  if (!value) return null;
+  if (typeof value === 'string') return { stamp: value, minute: null, count: 1, at: null };
+  return {
+    stamp: value.stamp,
+    minute: typeof value.minute === 'number' ? value.minute : null,
+    count: value.count || 1,
+    at: value.at || null
+  };
+}
+
+function notificationFor(item, tekrar) {
   const bits = [];
   if (item.dose && item.dose !== '—') bits.push(item.dose);
   if (item.timing) bits.push(item.timing);
   if (item.note) bits.push(item.note);
-  bits.push('Unutma 💪');
+  bits.push(tekrar ? 'Aldıysan uygulamadan işaretle' : 'Unutma 💪');
 
   return JSON.stringify({
-    title: '⏰ ' + (item.name || 'Supplement') + ' zamanı!',
+    title: (tekrar ? '🔔 Hâlâ bekliyor: ' : '⏰ ') + (item.name || 'Supplement') +
+           (tekrar ? '' : ' zamanı!'),
     body: bits.join(' · '),
     tag: 'supp-' + item.id,
     itemId: item.id
@@ -139,6 +158,9 @@ async function handleRequest(request, env) {
       auth: sub.keys.auth,
       timezone: body.timezone || 'UTC',
       reminders: Array.isArray(body.reminders) ? body.reminders : [],
+      // Hangi takviyenin hangi gün alındığı — { id: 'YYYY-MM-DD' }.
+      // İşaretlenen takviye için o gün tekrar bildirim gönderilmez.
+      taken: (body.taken && typeof body.taken === 'object') ? body.taken : {},
       fired: (existing && existing.fired) || {},
       updatedAt: new Date().toISOString()
     }));
@@ -181,6 +203,7 @@ async function handleRequest(request, env) {
 
       const now = localNow(record.timezone);
       const fired = record.fired || {};
+      const taken = record.taken || {};
 
       subs.push({
         anahtar: entry.name,
@@ -193,13 +216,39 @@ async function handleRequest(request, env) {
         hatirlatmalar: (record.reminders || []).map(item => {
           const due = reminderMinutes(item.time);
           if (due === null) return { ad: item.name, saat: item.time, durum: 'GEÇERSİZ SAAT' };
+
           const diff = now.minutes - due;
+          const prev = normalizeFired(fired[item.id]);
+          const bugunGonderildi = prev && prev.stamp === now.date + ' ' + item.time;
+          const alindi = taken[item.id] === now.date;
+
           let durum;
-          if (fired[item.id] === now.date + ' ' + item.time) durum = 'bugün zaten gönderildi';
+          if (alindi) durum = 'kullanıcı aldım dedi, susuldu';
           else if (diff < -LEAD_MINUTES) durum = 'saati henüz gelmedi (' + (-diff) + ' dk var)';
           else if (diff > GRACE_MINUTES) durum = 'saati geçti, bugün atlandı (' + diff + ' dk önce)';
-          else durum = '>>> ŞİMDİ GÖNDERİLMELİ <<<';
-          return { ad: item.name, saat: item.time, farkDakika: diff, durum: durum };
+          else if (!bugunGonderildi) durum = '>>> ŞİMDİ GÖNDERİLMELİ <<<';
+          else if (prev.minute === null) durum = 'bugün gönderildi (eski kayıt, saati bilinmiyor)';
+          else {
+            const gecen = now.minutes - prev.minute;
+            durum = gecen >= REPEAT_MINUTES
+              ? '>>> TEKRAR GÖNDERİLMELİ <<< (' + gecen + ' dk önce gönderilmişti)'
+              : 'gönderildi, tekrara ' + (REPEAT_MINUTES - gecen) + ' dk var';
+          }
+
+          const satir = { ad: item.name, saat: item.time, farkDakika: diff, durum: durum };
+          if (bugunGonderildi) {
+            satir.gonderimSayisi = prev.count;
+            // Asıl merak edilen: saniyesiyle birlikte ne zaman gönderildi
+            if (prev.at) {
+              satir.gonderimZamaniUTC = prev.at;
+              satir.gonderimSaatiYerel = new Intl.DateTimeFormat('tr-TR', {
+                timeZone: record.timezone || 'UTC',
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+              }).format(new Date(prev.at));
+            }
+          }
+          if (alindi) satir.alindiTarih = taken[item.id];
+          return satir;
         })
       });
     }
@@ -227,6 +276,7 @@ async function runReminders(env) {
 
     const now = localNow(record.timezone);
     const fired = record.fired || {};
+    const taken = record.taken || {};
     const liveIds = {};
     let changed = false;
     let gone = false;
@@ -235,8 +285,8 @@ async function runReminders(env) {
       if (!item || !item.id || !item.time) continue;
       liveIds[item.id] = true;
 
-      const stamp = now.date + ' ' + item.time;
-      if (fired[item.id] === stamp) continue;
+      // Kullanıcı bugün "aldım" demişse susuyoruz
+      if (taken[item.id] === now.date) continue;
 
       const due = reminderMinutes(item.time);
       if (due === null) continue;
@@ -244,10 +294,26 @@ async function runReminders(env) {
       const diff = now.minutes - due;
       if (diff < -LEAD_MINUTES || diff > GRACE_MINUTES) continue;
 
-      const result = await sendPush(record, notificationFor(item), vapid);
+      const stamp = now.date + ' ' + item.time;
+      const prev = normalizeFired(fired[item.id]);
+      let tekrar = 0;
+
+      if (prev && prev.stamp === stamp) {
+        // Dakikası bilinmeyen eski kayıt: bugünlük gönderilmiş say, tekrarlama
+        if (prev.minute === null) continue;
+        if (now.minutes - prev.minute < REPEAT_MINUTES) continue;
+        tekrar = prev.count;
+      }
+
+      const result = await sendPush(record, notificationFor(item, tekrar), vapid);
       if (result.gone) { gone = true; break; }
       if (result.ok) {
-        fired[item.id] = stamp;
+        fired[item.id] = {
+          stamp: stamp,
+          minute: now.minutes,
+          count: tekrar + 1,
+          at: new Date().toISOString()
+        };
         changed = true;
         sent++;
       }

@@ -3010,7 +3010,43 @@ pdfConfirmBtn.addEventListener('click', function() {
 
 
 function getSupplementPlan() { return getJSON(SUPP_KEYS.plan, {}); }
-function saveSupplementPlan(plan) { setJSON(SUPP_KEYS.plan, plan); schedulePushSync(); }
+function saveSupplementPlan(plan) {
+  setJSON(SUPP_KEYS.plan, plan);
+  pruneSuppTaken(plan);
+  schedulePushSync();
+}
+
+/* ── "ALDIM" İŞARETİ ──
+   { supplementId: 'YYYY-MM-DD' } — takviyenin son alındığı gün. Bugünün
+   tarihiyse alınmış sayılır, ertesi gün kendiliğinden sıfırlanır.
+   Sunucu bu haritaya bakarak işaretlenmiş takviye için tekrar bildirim
+   göndermeyi kesiyor. */
+var SUPP_TAKEN_KEY = 'ft_supp_taken';
+
+function getSuppTaken() { return getJSON(SUPP_TAKEN_KEY, {}); }
+function isSuppTaken(id) { return getSuppTaken()[id] === getTodayKey(); }
+
+function setSuppTaken(id, alindi) {
+  var taken = getSuppTaken();
+  if (alindi) taken[id] = getTodayKey();
+  else delete taken[id];
+  setJSON(SUPP_TAKEN_KEY, taken);
+  schedulePushSync();
+}
+
+// Plandan çıkarılan takviyelerin izini bırakma
+function pruneSuppTaken(plan) {
+  var taken = getSuppTaken();
+  var live = {};
+  Object.keys(plan).forEach(function(timing) {
+    (plan[timing] || []).forEach(function(item) { live[item.id] = true; });
+  });
+  var changed = false;
+  Object.keys(taken).forEach(function(id) {
+    if (!live[id]) { delete taken[id]; changed = true; }
+  });
+  if (changed) setJSON(SUPP_TAKEN_KEY, taken);
+}
 
 // Liventis ürün sayfalarından doğrulanmış + yaygın supplementlerin genel bilgileri
 var SUPPLEMENT_DB = [
@@ -3199,9 +3235,18 @@ function renderSupplementPlanView() {
     html += '<p class="meal-plan-day-title">' + timing + '</p>';
     plan[timing].forEach(function(item) {
       var hasTime = !!item.reminder;
+      var alindi = isSuppTaken(item.id);
       html +=
-        '<div class="food-log-item">' +
-          '<div>' +
+        '<div class="food-log-item supp-row' + (alindi ? ' taken' : '') + '" data-supp-id="' + escapeHtml(item.id) + '">' +
+          '<button class="supp-take-btn" type="button" data-id="' + escapeHtml(item.id) + '" ' +
+            'aria-pressed="' + (alindi ? 'true' : 'false') + '" ' +
+            'title="' + (alindi ? 'Alındı olarak işaretlendi — geri almak için dokun' : 'Aldıysan işaretle') + '">' +
+            '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" ' +
+              'stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+              '<path d="m5 12.5 4.5 4.5L19 7.5"/>' +
+            '</svg>' +
+          '</button>' +
+          '<div class="supp-row-text">' +
             '<p class="food-log-item-name">' + item.name + '</p>' +
             '<p class="food-log-item-meta">' + item.dose + (item.note ? ' · ' + item.note : '') + '</p>' +
           '</div>' +
@@ -3221,6 +3266,15 @@ function renderSupplementPlanView() {
 }
 
 suppPlanListEl.addEventListener('click', function(e) {
+  var takeBtn = e.target.closest('.supp-take-btn');
+  if (takeBtn) {
+    var id = takeBtn.dataset.id;
+    setSuppTaken(id, !isSuppTaken(id));
+    renderSupplementPlanView();
+    renderTodayCards();
+    return;
+  }
+
   var timeBtn = e.target.closest('.supp-time-btn');
   if (timeBtn) {
     openSuppTimeModal(timeBtn.dataset.timing, timeBtn.dataset.id);
@@ -3472,6 +3526,7 @@ function checkSupplementReminders() {
     (plan[timing] || []).forEach(function(item) {
       if (!item.reminder) return;
       liveIds[item.id] = true;
+      if (isSuppTaken(item.id)) return;   // "aldım" denmiş, hatırlatma gereksiz
 
       var stamp = today + ' ' + item.reminder;
       if (fired[item.id] === stamp) return;
@@ -3629,6 +3684,7 @@ function syncRemindersToServer() {
       body: JSON.stringify({
         subscription: sub.toJSON(),
         reminders: collectReminders(),
+        taken: getSuppTaken(),
         timezone: currentTimezone()
       })
     }).then(function(data) {
@@ -3685,6 +3741,7 @@ function connectPush() {
         body: JSON.stringify({
           subscription: sub.toJSON(),
           reminders: collectReminders(),
+          taken: getSuppTaken(),
           timezone: currentTimezone()
         })
       });
@@ -3751,9 +3808,53 @@ if (pushConnectBtn) {
   if (isPushActive()) syncRemindersToServer();
 }
 
+/* Bildirime dokunulunca supplement sayfasını açar ve bildirimi gönderen
+   satırı bulup kısa süre vurgular — kullanıcı hangi takviyeyi işaretleyeceğini
+   aramak zorunda kalmasın. */
+function openSupplementFromNotification(suppId) {
+  showPage('supplement');
+  renderSupplementPlanView();
+  if (!suppId) return;
+
+  requestAnimationFrame(function() {
+    var rows = suppPlanListEl.querySelectorAll('.supp-row');
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].dataset.suppId !== suppId) continue;
+      rows[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      rows[i].classList.add('flash');
+      setTimeout(function(row) {
+        return function() { row.classList.remove('flash'); };
+      }(rows[i]), 2400);
+      return;
+    }
+  });
+}
+
+/* Uygulama kapalıyken bildirime dokunulduysa adresle geliyor: ./?supp=<id>
+
+   Adresi hemen temizlemiyoruz: service worker güncellendiğinde uygulama
+   controllerchange'de kendini yeniden yüklüyor. Parametre o yeniden yüklemeden
+   önce silinirse bildirim hedefi kayboluyor ve kullanıcı ana sayfada kalıyor.
+   Bu yüzden önce yönlendirmeyi yapıyor, adresi sonra temizliyoruz. */
+(function() {
+  var eslesme = /[?&]supp=([^&]+)/.exec(location.search);
+  if (!eslesme) return;
+  var suppId = decodeURIComponent(eslesme[1]);
+
+  setTimeout(function() { openSupplementFromNotification(suppId); }, 80);
+
+  setTimeout(function() {
+    if (/[?&]supp=/.test(location.search)) history.replaceState(null, '', location.pathname);
+  }, 5000);
+})();
+
 // Tarayıcı aboneliği yenilediğinde sunucuya tekrar kaydol
 if (navigator.serviceWorker) {
   navigator.serviceWorker.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'supplement-notification') {
+      openSupplementFromNotification(e.data.suppId);
+      return;
+    }
     if (e.data && e.data.type === 'push-subscription-changed') connectPush();
   });
 }
