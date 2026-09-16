@@ -19,6 +19,48 @@
   <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png" />
 
+  <!-- Açılış perdesinin stili burada, style.css inmeden önce boyanabilsin diye -->
+  <style>
+    #appSplash {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px;
+      /* Sistemin açılış ekranıyla birebir aynı renk — devralma görünmesin */
+      background: #0c121b;
+      transition: background .55s ease, opacity .35s ease;
+    }
+    #appSplash.tema { background: var(--bg, #0c121b); }
+    #appSplash.bitti { opacity: 0; pointer-events: none; }
+    #appSplash.kapali { display: none; }
+
+    #appSplash .splash-logo {
+      width: 84px; height: 84px; border-radius: 21px; display: block;
+      animation: splashLogo .55s cubic-bezier(.2,.8,.2,1) both;
+    }
+    #appSplash .splash-name {
+      font: 700 19px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      letter-spacing: .3px; color: #f0f0f0; transition: color .55s ease;
+      animation: splashIn .45s .12s ease both;
+    }
+    #appSplash.tema .splash-name { color: var(--text, #f0f0f0); }
+    #appSplash .splash-bar {
+      width: 96px; height: 3px; border-radius: 2px; overflow: hidden;
+      background: rgba(255,255,255,.14); transition: opacity .3s ease;
+    }
+    #appSplash.tema .splash-bar { opacity: 0; }
+    #appSplash .splash-bar span {
+      display: block; width: 38%; height: 100%; border-radius: 2px; background: #ff5c2b;
+      animation: splashBar 1s ease-in-out infinite;
+    }
+    @keyframes splashLogo { from { opacity: 0; transform: scale(.84); } to { opacity: 1; transform: none; } }
+    @keyframes splashIn   { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    @keyframes splashBar  { from { transform: translateX(-130%); } to { transform: translateX(300%); } }
+
+    @media (prefers-reduced-motion: reduce) {
+      #appSplash .splash-logo, #appSplash .splash-name { animation: none; }
+      #appSplash .splash-bar span { animation: none; width: 100%; }
+    }
+  </style>
+
   <!-- Manifest -->
   <link rel="manifest" href="manifest.json" />
 
@@ -29,6 +71,43 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
+  <!-- ── AÇILIŞ PERDESİ ──
+       Sistemin açılış ekranı manifest.json'dan tek bir renk okuyabiliyor, tema
+       başına ayrı renk veremiyor. Perde o renkten (lacivert) başlayıp geçerli
+       temanın zeminine geçerek devralmayı görünmez kılıyor. -->
+  <div id="appSplash" aria-hidden="true">
+    <img class="splash-logo" src="icons/icon-512.png" alt="" />
+    <p class="splash-name">FitTakip</p>
+    <div class="splash-bar"><span></span></div>
+  </div>
+  <script>
+    (function () {
+      var perde = document.getElementById('appSplash');
+      var atla = false;
+
+      // Bildirime dokunarak gelindiyse kullanıcıyı bekletme
+      if (/[?&]supp=/.test(location.search)) atla = true;
+
+      // Perde bir kez tamamlandıysa bu oturumda bir daha çıkmasın
+      try { if (sessionStorage.getItem('ft_splash')) atla = true; } catch (e) {}
+
+      if (atla) { perde.className = 'kapali'; return; }
+
+      // Bayrak perde kapanırken konuyor, açılırken değil: service worker
+      // güncellenip sayfayı yeniden yüklerse perde baştan oynayıp o sıçramayı
+      // da örtsün. Zaten tamamlanmış bir perde ise tekrar çıkmaz.
+      var kapat = function () {
+        try { sessionStorage.setItem('ft_splash', '1'); } catch (e) {}
+        perde.classList.add('bitti');
+        setTimeout(function () { perde.classList.add('kapali'); }, 360);
+      };
+
+      setTimeout(function () { perde.classList.add('tema'); }, 700);
+      var zaman = setTimeout(kapat, 1250);
+      perde.addEventListener('click', function () { clearTimeout(zaman); kapat(); });
+    })();
+  </script>
 
   <!-- ── HEADER (banner + menü tek parça) ── -->
   <header class="app-header">
