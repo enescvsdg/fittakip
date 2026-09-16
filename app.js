@@ -3350,8 +3350,25 @@ var pushSyncTimer = null;
 // Plan her değiştiğinde sunucudaki listeyi tazeler (arka arkaya değişikliklerde tek istek)
 function schedulePushSync() {
   clearTimeout(pushSyncTimer);
-  pushSyncTimer = setTimeout(syncRemindersToServer, 800);
+  pushSyncTimer = setTimeout(function() {
+    pushSyncTimer = null;
+    syncRemindersToServer();
+  }, 250);
 }
+
+// Bekleyen gönderimi hemen yola çıkar. Kullanıcı saati kaydedip uygulamayı
+// saniyesinde kapatabiliyor; gecikmeli istek o anda yarıda kalırdı.
+function flushPushSync() {
+  if (!pushSyncTimer) return;
+  clearTimeout(pushSyncTimer);
+  pushSyncTimer = null;
+  syncRemindersToServer();
+}
+
+document.addEventListener('visibilitychange', function() {
+  if (document.hidden) flushPushSync();
+});
+window.addEventListener('pagehide', flushPushSync);
 
 function getPushServerUrl() { return (localStorage.getItem(PUSH_KEYS.url) || '').replace(/\/+$/, ''); }
 function getPushDeviceKey() { return localStorage.getItem(PUSH_KEYS.device) || ''; }
@@ -3439,6 +3456,10 @@ function syncRemindersToServer() {
         reminders: collectReminders(),
         timezone: currentTimezone()
       })
+    }).then(function(data) {
+      var now = new Date();
+      setPushState('✅ Bağlı — ' + (data.count || 0) + ' hatırlatma sunucuda. Son gönderim: ' +
+        String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'), 'ok');
     });
   }).catch(function(err) {
     console.warn('[Push] Senkronizasyon başarısız:', err.message);
@@ -3550,6 +3571,9 @@ if (pushConnectBtn) {
   pushServerUrlInput.value = getPushServerUrl();
   pushDeviceKeyInput.value = getPushDeviceKey();
   renderPushState();
+
+  // Kaçan bir gönderim olduysa telafi et
+  if (isPushActive()) syncRemindersToServer();
 }
 
 // Tarayıcı aboneliği yenilediğinde sunucuya tekrar kaydol
