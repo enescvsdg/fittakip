@@ -68,6 +68,13 @@ bottomItems.forEach(function(btn) {
 });
 
 // ── LOCAL STORAGE KEYS ──────────────────────
+// Plan anahtarları — ana sayfa kartları bunları açılışta okuduğu için
+// tanımları en üstte durmalı
+var MEAL_KEYS = { plan: 'ft_meal_plan' };
+var MEAL_ORDER = ['Öğün 1', 'Öğün 2', 'Öğün 3', 'Öğün 4', 'Ara Öğün'];
+var SUPP_KEYS = { plan: 'ft_supplement_plan' };
+var SUPP_TIMING_ORDER = ['Sabah', 'Aç Karnına', 'Öğün İle Birlikte', 'Antrenman Öncesi', 'Antrenman Esnasında', 'Antrenman Sonrası', 'Akşam / Yatmadan Önce'];
+
 var KEYS = {
   height:      'ft_height',
   weight:      'ft_weight',
@@ -318,40 +325,46 @@ function updateGoalStatus() {
 
 function calcBMI(heightCm, weightKg) { var hM = heightCm / 100; return weightKg / (hM * hM); }
 function bmiCategory(bmi) {
-  if (bmi < 18.5) return { label: 'Zayıf', color: '#5bc0eb' };
-  if (bmi < 25)   return { label: 'Normal', color: '#4caf50' };
-  if (bmi < 30)   return { label: 'Fazla Kilolu', color: '#ffc107' };
-  return             { label: 'Obez', color: '#f44336' };
+  if (bmi < 18.5) return { key: 'underweight', label: 'Zayıf', color: '#5bc0eb' };
+  if (bmi < 25)   return { key: 'normal', label: 'Normal', color: '#4caf50' };
+  if (bmi < 30)   return { key: 'overweight', label: 'Fazla Kilolu', color: '#ffc107' };
+  return             { key: 'obese', label: 'Obez', color: '#f44336' };
 }
 
 function updateDashboard() {
   var h = parseFloat(localStorage.getItem(KEYS.height));
   var w = parseFloat(localStorage.getItem(KEYS.weight));
 
-  var dashWeight = document.getElementById('dash-weight');
-  var dashHeight = document.getElementById('dash-height');
-  var dashBMI    = document.getElementById('dash-bmi');
-  var dashStatus = document.getElementById('dash-bmi-status');
   var emptyState = document.getElementById('home-empty');
-  var cardsGrid  = document.querySelector('.cards-grid');
   var infoBox    = document.getElementById('bmi-info-box');
+  var bmiLine    = document.getElementById('dash-bmi-line');
+  var bodyLine   = document.getElementById('dash-body-line');
+  var marker     = document.getElementById('bmi-marker');
 
   if (!h || !w || h <= 0 || w <= 0) {
-    cardsGrid.style.display = 'none';
-    infoBox.style.display   = 'none';
+    infoBox.style.display = 'none';
     emptyState.classList.add('visible');
   } else {
-    cardsGrid.style.display = 'grid';
-    infoBox.style.display   = 'block';
+    infoBox.style.display = 'block';
     emptyState.classList.remove('visible');
 
     var bmi = calcBMI(h, w);
     var cat = bmiCategory(bmi);
-    dashWeight.textContent = (w % 1 === 0) ? w.toFixed(0) : w.toFixed(1);
-    dashHeight.textContent = h.toFixed(0);
-    dashBMI.textContent    = bmi.toFixed(1);
-    dashStatus.textContent = cat.label;
-    dashStatus.style.color = cat.color;
+
+    bmiLine.textContent = bmi.toFixed(1) + ' · ' + cat.label;
+    bmiLine.style.color = cat.color;
+    bodyLine.textContent = h.toFixed(0) + ' cm · ' + fmtKg(w) + ' kg';
+
+    // Ölçek 15–35 BMI aralığını kaplıyor; işaretçi o aralıktaki yerine oturuyor
+    var pct = Math.max(0, Math.min(100, ((bmi - 15) / 20) * 100));
+    marker.style.left = pct + '%';
+    marker.classList.remove('hidden');
+
+    ['underweight', 'normal', 'overweight', 'obese'].forEach(function(key) {
+      var seg = document.getElementById('bmi-seg-' + key);
+      seg.classList.toggle('active', key === cat.key);
+      if (key === cat.key) seg.style.setProperty('--bmi-color', cat.color);
+    });
   }
 
   var homePage = document.getElementById('page-home');
@@ -359,66 +372,222 @@ function updateDashboard() {
     updateChart();
     updateGoalStatus();
   }
-  renderNextAction();
+  renderTodayCards();
 }
 
+function fmtKg(v) { return (v % 1 === 0) ? v.toFixed(0) : v.toFixed(1); }
+
 /* ══════════════════════════════════════════
-   "BUGÜN NE YAPMALIYIM?" — akıllı öneri
-   Günün planı + tamamlanma + saat bilgisine göre sıradaki adım.
+   "BUGÜN" KARTLARI — ana sayfanın üst yarısı
+   Her alan kendi rengini taşır: antrenman, kilo,
+   beslenme, supplement. Veriler olduğu gibi okunur,
+   olmayan bir şey uydurulmaz.
    ══════════════════════════════════════════ */
 
-function renderNextAction() {
-  var card = document.getElementById('nextActionCard');
-  var iconEl = document.getElementById('nextActionIcon');
-  var titleEl = document.getElementById('nextActionTitle');
-  var goBtn = document.getElementById('nextActionGo');
-  if (!card) return;
+var TR_DAYS = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+var TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 
-  var TR_DAYS = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+var TODAY_ICONS = {
+  antrenman:  '<path d="M6.5 8.5v7M17.5 8.5v7M3.5 10.5v3M20.5 10.5v3M6.5 12h11"/>',
+  dinlenme:   '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.6 6.6 0 0 0 10.5 10.5Z"/>',
+  analiz:     '<path d="M3.5 20.5h17"/><path d="M7 20.5v-6.5M12 20.5V7.5M17 20.5v-10"/>',
+  beslenme:   '<path d="M3.5 11.5h17a8.5 8.5 0 0 1-17 0Z"/><path d="M9 8.2c0-1.4 1.3-2.5 3-2.5s3 1.1 3 2.5"/>',
+  supplement: '<rect x="3.5" y="8.5" width="17" height="7" rx="3.5"/><path d="M12 8.5v7"/>'
+};
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"]/g, function(c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+  });
+}
+
+function todayCardHtml(o) {
+  return '' +
+    '<button class="today-card cat-' + o.cat + '" type="button" data-page="' + o.page + '"' +
+      (o.weekday ? ' data-weekday="' + escapeHtml(o.weekday) + '"' : '') + '>' +
+      '<span class="today-row">' +
+        '<span class="today-chip">' +
+          '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            TODAY_ICONS[o.icon] +
+          '</svg>' +
+        '</span>' +
+        '<span class="today-body">' +
+          '<span class="today-kind">' + o.kind + '</span>' +
+          '<span class="today-value">' + o.value + '</span>' +
+          (o.meta ? '<span class="today-meta">' + escapeHtml(o.meta) + '</span>' : '') +
+        '</span>' +
+        (o.aside ? '<span class="today-aside' + (o.asideAccent ? ' accent' : '') + '">' + escapeHtml(o.aside) + '</span>' : '') +
+        '<svg class="today-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#6b6b6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>' +
+      '</span>' +
+      (typeof o.progress === 'number'
+        ? '<span class="today-track"><span class="today-fill" style="width: ' + Math.max(0, Math.min(100, o.progress)) + '%;"></span></span>'
+        : '') +
+    '</button>';
+}
+
+// ── ANTRENMAN: "sıradaki adım" mesajının yeni evi ──
+function buildWorkoutCard() {
   var todayName = TR_DAYS[new Date().getDay()];
-
   var daysMap = getWorkoutDaysMap();
   var todayPlan = daysMap[todayName];
   var hasWorkoutToday = todayPlan && ((todayPlan.exercises && todayPlan.exercises.length > 0) || (todayPlan.postWorkout && todayPlan.postWorkout.length > 0));
-
-  // Bugün antrenman geçmişe kaydedilmiş mi?
   var doneToday = getWorkoutHistory().some(function(s) { return s.date === getTodayKey(); });
 
-  var action = null;
-
   if (hasWorkoutToday && !doneToday) {
-    var title = todayPlan.title ? todayPlan.title : (todayName + ' Antrenmanı');
-    action = { icon: '🏋️', text: title + ' seni bekliyor', page: 'workout', weekday: todayName };
-  } else if (hasWorkoutToday && doneToday) {
-    action = { icon: '✅', text: 'Bugünkü antrenmanı tamamladın, harika!', page: 'workout' };
-  } else {
-    // Bugün plan yok — hiç program var mı?
-    var anyPlan = Object.keys(daysMap).some(function(k) {
-      var d = daysMap[k];
-      return d && ((d.exercises && d.exercises.length) || (d.postWorkout && d.postWorkout.length));
+    var count = (todayPlan.exercises || []).length + (todayPlan.postWorkout || []).length;
+    return todayCardHtml({
+      cat: 'antrenman', icon: 'antrenman', page: 'workout', weekday: todayName,
+      kind: 'ANTRENMAN',
+      value: escapeHtml(todayPlan.title || (todayName + ' Antrenmanı')),
+      meta: 'Seni bekliyor',
+      aside: count + ' hareket'
     });
-    if (!anyPlan) {
-      action = { icon: '📋', text: 'Henüz antrenman planın yok — hadi bir tane oluştur', page: 'workout' };
-    } else {
-      action = { icon: '😌', text: 'Bugün dinlenme günü — planında antrenman yok', page: 'workout' };
-    }
+  }
+  if (hasWorkoutToday && doneToday) {
+    return todayCardHtml({
+      cat: 'antrenman', icon: 'antrenman', page: 'workout',
+      kind: 'ANTRENMAN', value: 'Tamamlandı', meta: 'Bugünkü antrenmanı bitirdin, harika!',
+      progress: 100
+    });
   }
 
-  if (!action) { card.classList.add('hidden'); return; }
-
-  iconEl.textContent = action.icon;
-  titleEl.textContent = action.text;
-  card.classList.remove('hidden');
-
-  goBtn.onclick = function() {
-    if (action.weekday) {
-      activeWeekday = action.weekday;
-      localStorage.setItem(KEYS.activeDay, activeWeekday);
-    }
-    showPage(action.page);
-    if (action.page === 'workout') renderWorkoutTracking();
-  };
+  var anyPlan = Object.keys(daysMap).some(function(k) {
+    var d = daysMap[k];
+    return d && ((d.exercises && d.exercises.length) || (d.postWorkout && d.postWorkout.length));
+  });
+  if (!anyPlan) {
+    return todayCardHtml({
+      cat: 'antrenman', icon: 'antrenman', page: 'workout',
+      kind: 'ANTRENMAN', value: 'Planın yok', meta: 'Hadi bir tane oluştur'
+    });
+  }
+  return todayCardHtml({
+    cat: 'antrenman', icon: 'dinlenme', page: 'workout',
+    kind: 'ANTRENMAN', value: 'Dinlenme günü', meta: 'Planında bugün antrenman yok'
+  });
 }
+
+// ── KİLO: güncel ağırlık + hedefe ilerleme ──
+function buildWeightCard() {
+  var w = parseFloat(localStorage.getItem(KEYS.weight));
+  if (!w || w <= 0) {
+    return todayCardHtml({
+      cat: 'analiz', icon: 'analiz', page: 'profile',
+      kind: 'KİLO', value: 'Kilonu gir', meta: 'Kişisel Bilgiler sayfasından ekle'
+    });
+  }
+
+  var goal = parseFloat(localStorage.getItem(KEYS.goalWeight));
+  var card = {
+    cat: 'analiz', icon: 'analiz', page: 'profile',
+    kind: 'KİLO', value: fmtKg(w) + ' <small>kg</small>'
+  };
+
+  if (goal && goal > 0) {
+    var diff = Math.abs(w - goal);
+    card.aside = diff < 0.05 ? 'hedefte' : 'hedefe ' + fmtKg(diff) + ' kg';
+
+    // İlerleme, ilk tartımdan hedefe kadar olan yolun ne kadarı
+    var weighins = getWeighIns();
+    if (weighins.length) {
+      var start = parseFloat(weighins[0].weight);
+      var total = Math.abs(start - goal);
+      if (total > 0.05) card.progress = Math.round((Math.abs(start - w) / total) * 100);
+    }
+  }
+  return todayCardHtml(card);
+}
+
+// ── BESLENME: plandaki toplam (günlük alım takibi henüz yok) ──
+function buildNutritionCard() {
+  var plan = getMealPlan();
+  var totals = { kcal: 0, protein: 0, carbs: 0, fat: 0 };
+  var items = 0;
+
+  MEAL_ORDER.forEach(function(meal) {
+    (plan[meal] || []).forEach(function(item) {
+      totals.kcal += item.kcal; totals.protein += item.protein;
+      totals.carbs += item.carbs; totals.fat += item.fat;
+      items++;
+    });
+  });
+
+  if (!items) {
+    return todayCardHtml({
+      cat: 'beslenme', icon: 'beslenme', page: 'nutrition',
+      kind: 'BESLENME', value: 'Planın yok', meta: 'Öğünlerini eklemeye başla'
+    });
+  }
+
+  return todayCardHtml({
+    cat: 'beslenme', icon: 'beslenme', page: 'nutrition',
+    kind: 'BESLENME',
+    value: Math.round(totals.kcal) + ' <small>kcal</small>',
+    meta: 'Planında P ' + Math.round(totals.protein) + ' · K ' + Math.round(totals.carbs) + ' · Y ' + Math.round(totals.fat),
+    aside: items + ' gıda'
+  });
+}
+
+// ── SUPPLEMENT: planlı ürün sayısı + gün içindeki sıradaki hatırlatma ──
+function buildSupplementCard() {
+  var plan = getSupplementPlan();
+  var all = [];
+  Object.keys(plan).forEach(function(timing) {
+    (plan[timing] || []).forEach(function(item) { all.push(item); });
+  });
+
+  if (!all.length) {
+    return todayCardHtml({
+      cat: 'supplement', icon: 'supplement', page: 'supplement',
+      kind: 'SUPPLEMENT', value: 'Planın yok', meta: 'Kullandığın takviyeleri ekle'
+    });
+  }
+
+  var now = new Date();
+  var nowMin = now.getHours() * 60 + now.getMinutes();
+  var next = null;
+  all.forEach(function(item) {
+    if (!item.reminder) return;
+    var parts = item.reminder.split(':');
+    var mins = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+    if (mins >= nowMin && (!next || mins < next.mins)) next = { mins: mins, item: item };
+  });
+
+  var withTime = all.filter(function(i) { return i.reminder; }).length;
+  return todayCardHtml({
+    cat: 'supplement', icon: 'supplement', page: 'supplement',
+    kind: 'SUPPLEMENT',
+    value: all.length + ' <small>supplement</small>',
+    meta: next ? 'Sıradaki: ' + next.item.name
+                : (withTime ? 'Bugünün hatırlatmaları tamamlandı' : 'Henüz hatırlatma saati kurmadın'),
+    aside: next ? next.item.reminder : '',
+    asideAccent: true
+  });
+}
+
+function renderTodayCards() {
+  var wrap = document.getElementById('todayCards');
+  if (!wrap) return;
+
+  var now = new Date();
+  document.getElementById('today-date').textContent =
+    TR_DAYS[now.getDay()] + ', ' + now.getDate() + ' ' + TR_MONTHS[now.getMonth()];
+
+  wrap.innerHTML = buildWorkoutCard() + buildWeightCard() + buildNutritionCard() + buildSupplementCard();
+}
+
+// Kartlar ilgili sayfaya götürür
+document.getElementById('todayCards').addEventListener('click', function(e) {
+  var card = e.target.closest('.today-card');
+  if (!card) return;
+
+  if (card.dataset.weekday) {
+    activeWeekday = card.dataset.weekday;
+    localStorage.setItem(KEYS.activeDay, activeWeekday);
+  }
+  showPage(card.dataset.page);
+  if (card.dataset.page === 'workout') renderWorkoutTracking();
+});
 
 /* ══════════════════════════════════════════
    ANTRENMAN VERİTABANI
@@ -1525,6 +1694,7 @@ function renderConsistency() {
     document.getElementById('stat-week-workouts').textContent = '0';
     document.getElementById('stat-month-workouts').textContent = '0';
     document.getElementById('stat-streak').textContent = '0';
+    setStreakPill(0);
     emptyEl.classList.remove('hidden');
     return;
   }
@@ -1565,6 +1735,15 @@ function renderConsistency() {
   document.getElementById('stat-week-workouts').textContent = weekCount;
   document.getElementById('stat-month-workouts').textContent = monthCount;
   document.getElementById('stat-streak').textContent = streak;
+  setStreakPill(streak);
+}
+
+// Başlıktaki seri rozeti — seri yoksa hiç görünmez
+function setStreakPill(streak) {
+  var pill = document.getElementById('streakPill');
+  if (!pill) return;
+  pill.classList.toggle('hidden', !streak);
+  if (streak) document.getElementById('streakPillText').textContent = streak + ' günlük seri';
 }
 
 var strengthChartInstance = null;
@@ -1827,8 +2006,6 @@ renderWorkoutTracking();
    Tüm değerler 100 gram baz alınır, girilen grama göre ölçeklenir.
    ══════════════════════════════════════════ */
 
-var MEAL_KEYS = { plan: 'ft_meal_plan' };
-var MEAL_ORDER = ['Öğün 1', 'Öğün 2', 'Öğün 3', 'Öğün 4', 'Ara Öğün'];
 
 function getMealPlan() { return getJSON(MEAL_KEYS.plan, {}); }
 function saveMealPlan(plan) { setJSON(MEAL_KEYS.plan, plan); }
@@ -2831,8 +3008,6 @@ pdfConfirmBtn.addEventListener('click', function() {
    ürün bilgileri + yaygın supplementlerin genel doz aralıkları.
    ══════════════════════════════════════════ */
 
-var SUPP_KEYS = { plan: 'ft_supplement_plan' };
-var SUPP_TIMING_ORDER = ['Sabah', 'Aç Karnına', 'Öğün İle Birlikte', 'Antrenman Öncesi', 'Antrenman Esnasında', 'Antrenman Sonrası', 'Akşam / Yatmadan Önce'];
 
 function getSupplementPlan() { return getJSON(SUPP_KEYS.plan, {}); }
 function saveSupplementPlan(plan) { setJSON(SUPP_KEYS.plan, plan); schedulePushSync(); }

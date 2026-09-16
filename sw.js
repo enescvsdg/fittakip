@@ -4,7 +4,7 @@
    fit-takip-v1 → v2 → v3 → v4 → ...
    ══════════════════════════════════════════ */
 
-var CACHE_NAME = 'fit-takip-v31';
+var CACHE_NAME = 'fit-takip-v32';
 
 var STATIC_ASSETS = [
   './',
@@ -14,11 +14,6 @@ var STATIC_ASSETS = [
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './icons/nav/nav-analiz.png',
-  './icons/nav/nav-profil.png',
-  './icons/nav/nav-antrenman.png',
-  './icons/nav/nav-beslenme.png',
-  './icons/nav/nav-supplement.png',
   './anatomy/front.svg',
   './anatomy/back.svg',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',

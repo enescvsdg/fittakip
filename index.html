@@ -32,10 +32,7 @@
   <header class="app-header">
     <div class="header-brand">
       <img src="icons/icon-512.png" alt="FitTakip" class="header-logo" />
-      <div class="header-brand-text">
-        <p class="brand-name">FitTakip</p>
-        <p class="brand-tagline">Hedeflerine giden yolda yanındayız 💪</p>
-      </div>
+      <p class="brand-name">FitTakip</p>
     </div>
     <div class="menu-wrapper">
       <button class="menu-toggle" id="menuToggle" aria-label="Menüyü aç" aria-expanded="false">
@@ -76,56 +73,48 @@
     <!-- PAGE: HOME (DASHBOARD) -->
     <section class="page" id="page-home">
 
-      <div class="page-header">
-        <h1 class="page-title">Analiz Raporu</h1>
-        <p class="page-subtitle">Güncel sağlık verilerin</p>
-      </div>
-
-      <!-- BUGÜN NE YAPMALIYIM? -->
-      <div class="next-action-card hidden" id="nextActionCard">
-        <div class="next-action-icon" id="nextActionIcon">💡</div>
-        <div class="next-action-text">
-          <p class="next-action-label">Sıradaki adımın</p>
-          <p class="next-action-title" id="nextActionTitle">–</p>
+      <div class="today-header">
+        <div>
+          <h1 class="page-title">Bugün</h1>
+          <p class="page-subtitle" id="today-date">–</p>
         </div>
-        <button class="next-action-go" id="nextActionGo" type="button">Git →</button>
-      </div>
-
-      <div class="cards-grid">
-        <div class="stat-card accent-card">
-          <p class="card-label">Güncel Kilo</p>
-          <p class="card-value" id="dash-weight">–</p>
-          <p class="card-unit">kg</p>
-        </div>
-        <div class="stat-card">
-          <p class="card-label">Boy</p>
-          <p class="card-value" id="dash-height">–</p>
-          <p class="card-unit">cm</p>
-        </div>
-        <div class="stat-card bmi-card">
-          <p class="card-label">Vücut Kitle İndeksi</p>
-          <p class="card-value bmi-value" id="dash-bmi">–</p>
-          <p class="card-unit bmi-status" id="dash-bmi-status">Veri yok</p>
+        <div class="streak-pill hidden" id="streakPill">
+          <span class="streak-dot"></span>
+          <span id="streakPillText">0 günlük seri</span>
         </div>
       </div>
 
-      <div class="info-box" id="bmi-info-box">
-        <p class="info-title">BMI Skalası</p>
-        <div class="bmi-scale">
-          <div class="scale-item"><span class="scale-dot underweight"></span><span>&lt; 18.5 — Zayıf</span></div>
-          <div class="scale-item"><span class="scale-dot normal"></span><span>18.5 – 24.9 — Normal</span></div>
-          <div class="scale-item"><span class="scale-dot overweight"></span><span>25 – 29.9 — Fazla Kilolu</span></div>
-          <div class="scale-item"><span class="scale-dot obese"></span><span>≥ 30 — Obez</span></div>
-        </div>
-      </div>
+      <div class="today-cards" id="todayCards"></div>
 
       <div class="empty-state" id="home-empty">
         <p class="empty-icon">📋</p>
         <p class="empty-text">Analiz için önce <strong>Kişisel Bilgiler</strong> sayfasından boy ve kilonu gir.</p>
       </div>
 
+      <p class="section-label">GEÇMİŞ VE ANALİZ</p>
+
+      <div class="info-box" id="bmi-info-box">
+        <div class="bmi-head">
+          <span class="bmi-head-title">Vücut kitle indeksi</span>
+          <span class="bmi-head-value" id="dash-bmi-line">Veri yok</span>
+        </div>
+        <div class="bmi-meter">
+          <div class="bmi-meter-bar">
+            <span id="bmi-seg-underweight" style="flex: 35;"></span>
+            <span id="bmi-seg-normal" style="flex: 64;"></span>
+            <span id="bmi-seg-overweight" style="flex: 50;"></span>
+            <span id="bmi-seg-obese" style="flex: 50;"></span>
+          </div>
+          <div class="bmi-marker hidden" id="bmi-marker"></div>
+        </div>
+        <div class="bmi-meter-labels">
+          <span>Zayıf</span><span>Normal</span><span>Fazla</span><span>Obez</span>
+        </div>
+        <p class="bmi-sub" id="dash-body-line">Boy ve kilonu girince burada görünür.</p>
+      </div>
+
       <div class="chart-card">
-        <p class="info-title">📈 Kilo Takip Grafiği</p>
+        <p class="info-title" style="color: var(--cat-analiz);">Kilo Takip Grafiği</p>
         <div class="chart-container">
           <canvas id="weightChart"></canvas>
         </div>
@@ -139,7 +128,7 @@
 
       <!-- SÜREKLİLİK / TUTARLILIK -->
       <div class="chart-card" id="consistency-card">
-        <p class="info-title">🔥 Süreklilik</p>
+        <p class="info-title" style="color: var(--cat-antrenman);">Süreklilik</p>
         <div class="cards-grid" style="margin-top:12px;">
           <div class="stat-card">
             <p class="card-label">Bu Hafta</p>
@@ -162,7 +151,7 @@
 
       <!-- GÜÇ İLERLEMESİ -->
       <div class="chart-card" id="strength-card">
-        <p class="info-title">💪 Güç İlerlemesi</p>
+        <p class="info-title" style="color: var(--cat-antrenman);">Güç İlerlemesi</p>
         <p class="food-source-note">Tamamladığın antrenmanlardaki hareketlerin ağırlık değişimi</p>
         <div class="form-group" id="strength-select-group" style="margin-top:10px;">
           <select class="form-input" id="strength-exercise-select"></select>
@@ -820,24 +809,24 @@
 
   <!-- ── BOTTOM NAV ── -->
   <nav class="bottom-nav">
-    <button class="bottom-nav-item active" data-page="home">
-      <img src="icons/nav/nav-analiz.png" alt="Analiz" class="bnav-icon-img" />
+    <button class="bottom-nav-item active cat-analiz" data-page="home">
+      <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 20.5h17"/><path d="M7 20.5v-6.5M12 20.5V7.5M17 20.5v-10"/></svg>
       <span class="bnav-label">Analiz</span>
     </button>
-    <button class="bottom-nav-item" data-page="profile">
-      <img src="icons/nav/nav-profil.png" alt="Profil" class="bnav-icon-img" />
+    <button class="bottom-nav-item cat-profil" data-page="profile">
+      <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5.5 20.5a6.5 6.5 0 0 1 13 0"/></svg>
       <span class="bnav-label">Profil</span>
     </button>
-    <button class="bottom-nav-item" data-page="workout">
-      <img src="icons/nav/nav-antrenman.png" alt="Antrenman" class="bnav-icon-img" />
+    <button class="bottom-nav-item cat-antrenman" data-page="workout">
+      <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 8.5v7M17.5 8.5v7M3.5 10.5v3M20.5 10.5v3M6.5 12h11"/></svg>
       <span class="bnav-label">Antrenman</span>
     </button>
-    <button class="bottom-nav-item" data-page="nutrition">
-      <img src="icons/nav/nav-beslenme.png" alt="Beslenme" class="bnav-icon-img" />
+    <button class="bottom-nav-item cat-beslenme" data-page="nutrition">
+      <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11.5h17a8.5 8.5 0 0 1-17 0Z"/><path d="M9 8.2c0-1.4 1.3-2.5 3-2.5s3 1.1 3 2.5"/></svg>
       <span class="bnav-label">Beslenme</span>
     </button>
-    <button class="bottom-nav-item" data-page="supplement">
-      <img src="icons/nav/nav-supplement.png" alt="Supplement" class="bnav-icon-img" />
+    <button class="bottom-nav-item cat-supplement" data-page="supplement">
+      <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="8.5" width="17" height="7" rx="3.5"/><path d="M12 8.5v7"/></svg>
       <span class="bnav-label">Supplement</span>
     </button>
   </nav>
