@@ -73,6 +73,9 @@ bottomItems.forEach(function(btn) {
 var MEAL_KEYS = { plan: 'ft_meal_plan' };
 var MEAL_ORDER = ['Öğün 1', 'Öğün 2', 'Öğün 3', 'Öğün 4', 'Ara Öğün'];
 var SUPP_KEYS = { plan: 'ft_supplement_plan' };
+// Ana sayfa kartları açılışta okuduğu için bu da en üstte durmalı —
+// aşağıda tanımlanırsa ilk çizimde undefined olup "0 alındı" gösteriyor
+var SUPP_TAKEN_KEY = 'ft_supp_taken';
 var SUPP_TIMING_ORDER = ['Sabah', 'Aç Karnına', 'Öğün İle Birlikte', 'Antrenman Öncesi', 'Antrenman Esnasında', 'Antrenman Sonrası', 'Akşam / Yatmadan Önce'];
 
 var KEYS = {
@@ -549,25 +552,35 @@ function buildSupplementCard() {
     });
   }
 
+  var alinan = all.filter(function(item) { return isSuppTaken(item.id); }).length;
+  var kalan = all.length - alinan;
+
+  // Sıradaki hatırlatma — işaretlenmiş takviyeler sayılmaz, onların işi bitti
   var now = new Date();
   var nowMin = now.getHours() * 60 + now.getMinutes();
   var next = null;
   all.forEach(function(item) {
-    if (!item.reminder) return;
+    if (!item.reminder || isSuppTaken(item.id)) return;
     var parts = item.reminder.split(':');
     var mins = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
     if (mins >= nowMin && (!next || mins < next.mins)) next = { mins: mins, item: item };
   });
 
   var withTime = all.filter(function(i) { return i.reminder; }).length;
+  var meta;
+  if (!kalan)        meta = 'Bugünkü takviyelerin tamam 💪';
+  else if (next)     meta = 'Sıradaki: ' + next.item.name;
+  else if (withTime) meta = kalan + ' takviye kaldı';
+  else               meta = 'Henüz hatırlatma saati kurmadın';
+
   return todayCardHtml({
     cat: 'supplement', icon: 'supplement', page: 'supplement',
     kind: 'SUPPLEMENT',
-    value: all.length + ' <small>supplement</small>',
-    meta: next ? 'Sıradaki: ' + next.item.name
-                : (withTime ? 'Bugünün hatırlatmaları tamamlandı' : 'Henüz hatırlatma saati kurmadın'),
+    value: alinan + ' / ' + all.length + ' <small>alındı</small>',
+    meta: meta,
     aside: next ? next.item.reminder : '',
-    asideAccent: true
+    asideAccent: true,
+    progress: Math.round((alinan / all.length) * 100)
   });
 }
 
@@ -3029,8 +3042,6 @@ function saveSupplementPlan(plan) {
    tarihiyse alınmış sayılır, ertesi gün kendiliğinden sıfırlanır.
    Sunucu bu haritaya bakarak işaretlenmiş takviye için tekrar bildirim
    göndermeyi kesiyor. */
-var SUPP_TAKEN_KEY = 'ft_supp_taken';
-
 function getSuppTaken() { return getJSON(SUPP_TAKEN_KEY, {}); }
 function isSuppTaken(id) { return getSuppTaken()[id] === getTodayKey(); }
 
