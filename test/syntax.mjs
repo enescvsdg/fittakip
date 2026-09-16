@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const KOK = fileURLToPath(new URL('..', import.meta.url));
-const JS = ['app.js', 'sw.js', 'worker/src/worker.js', 'worker/src/push.js', 'worker/generate-vapid-keys.mjs'];
+const JS = ['storage.js', 'utils.js', 'app.js', 'sw.js', 'worker/src/worker.js', 'worker/src/push.js', 'worker/generate-vapid-keys.mjs'];
 const JSON_DOSYA = ['manifest.json', 'package.json'];
 
 let hata = 0;

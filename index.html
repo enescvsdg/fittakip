@@ -915,6 +915,10 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- Yükleme sırası önemli: storage ve utils hiçbir şeye bağımlı değil,
+       app.js ikisini de kullanıyor. -->
+  <script src="storage.js"></script>
+  <script src="utils.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

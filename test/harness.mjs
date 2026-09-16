@@ -57,12 +57,15 @@ export async function sayfaAc(browser, { adres, tema = 'dark', veri = {}, perde 
 }
 
 /* Uygulamanın kaynağından bir fonksiyonu söküp Node içinde çalıştırır.
-   Saf yardımcıları (escapeHtml gibi) tarayıcı açmadan denemek için. */
+   Saf yardımcıları (escapeHtml gibi) tarayıcı açmadan denemek için.
+   Kaynak dosyalar bölündükçe burası da taransın diye liste hâlinde. */
+const KAYNAKLAR = ['storage.js', 'utils.js', 'app.js'];
+
 export async function appFonksiyonlari(...adlar) {
-  const src = await readFile(KOK + 'app.js', 'utf8');
+  const kaynak = (await Promise.all(KAYNAKLAR.map(d => readFile(KOK + d, 'utf8')))).join('\n');
   const govde = adlar.map(ad => {
-    const m = src.match(new RegExp('^function ' + ad + '[\\s\\S]*?\\n}', 'm'));
-    if (!m) throw new Error('app.js içinde bulunamadı: ' + ad);
+    const m = kaynak.match(new RegExp('^function ' + ad + '[\\s\\S]*?\\n}', 'm'));
+    if (!m) throw new Error('Kaynaklarda bulunamadı: ' + ad + ' (' + KAYNAKLAR.join(', ') + ')');
     return m[0];
   }).join('\n');
   return new Function(govde + '\nreturn { ' + adlar.join(', ') + ' };')();

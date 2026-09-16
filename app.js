@@ -67,66 +67,6 @@ bottomItems.forEach(function(btn) {
   btn.addEventListener('click', function() { showPage(btn.dataset.page); });
 });
 
-// ── LOCAL STORAGE KEYS ──────────────────────
-// Plan anahtarları — ana sayfa kartları bunları açılışta okuduğu için
-// tanımları en üstte durmalı
-var MEAL_KEYS = { plan: 'ft_meal_plan' };
-var MEAL_ORDER = ['Öğün 1', 'Öğün 2', 'Öğün 3', 'Öğün 4', 'Ara Öğün'];
-var SUPP_KEYS = { plan: 'ft_supplement_plan' };
-// Ana sayfa kartları açılışta okuduğu için bu da en üstte durmalı —
-// aşağıda tanımlanırsa ilk çizimde undefined olup "0 alındı" gösteriyor
-var SUPP_TAKEN_KEY = 'ft_supp_taken';
-var SUPP_TIMING_ORDER = ['Sabah', 'Aç Karnına', 'Öğün İle Birlikte', 'Antrenman Öncesi', 'Antrenman Esnasında', 'Antrenman Sonrası', 'Akşam / Yatmadan Önce'];
-
-var KEYS = {
-  height:      'ft_height',
-  weight:      'ft_weight',
-  age:         'ft_age',
-  goal:        'ft_goal',
-  workout:     'ft_workout',
-  nutrition:   'ft_nutrition',
-  supplement:  'ft_supplement',
-  goalType:    'ft_goal_type',
-  goalDate:    'ft_goal_date',
-  goalWeight:  'ft_goal_weight',
-  weighins:    'ft_weighins',
-  workoutDays: 'ft_workout_days_v2',
-  activeDay:   'ft_active_weekday',
-  cardio:      'ft_cardio_plan'
-};
-
-// ── JSON STORAGE HELPERS ─────────────────────
-function getJSON(key, fallback) {
-  try {
-    var raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    var parsed = JSON.parse(raw);
-    return (parsed === null || parsed === undefined) ? fallback : parsed;
-  } catch (e) {
-    console.warn('[Storage] JSON okunamadı:', key, e);
-    return fallback;
-  }
-}
-function setJSON(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); }
-  catch (e) { console.warn('[Storage] JSON yazılamadı:', key, e); }
-}
-
-function getWeighIns() { return getJSON(KEYS.weighins, []); }
-function saveWeighIns(list) { setJSON(KEYS.weighins, list); }
-
-// Bugünün tarihini YYYY-MM-DD formatında döndürür (yerel saat)
-function getTodayKey() {
-  var d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-}
-
-// ── TARİH FORMATLAMA ─────────────────────────
-function formatDateTR(dateStr) {
-  var parts = (dateStr || '').split('-');
-  if (parts.length !== 3) return dateStr || '';
-  return parts[2] + '.' + parts[1] + '.' + parts[0];
-}
 
 // ── LOAD SAVED DATA ──────────────────────────
 function loadFormData() {
@@ -148,44 +88,9 @@ function loadFormData() {
 }
 
 // ── SAVE FEEDBACK ────────────────────────────
-/* Sayısal alanların HTML'deki min/max değerleri yalnızca tarayıcının kendi
-   uyarısını tetikliyordu; kaydetme kodu hiçbirini uygulamıyordu. Yapıştırarak
-   ya da tarayıcı uyarısını geçerek saçma değer kaydedilebiliyordu.
-   Aralıklar HTML'deki niteliklerle birebir aynı tutulmalı. */
-var SAYI_ARALIK = {
-  height:     { min: 100, max: 250, ad: 'Boy',         birim: 'cm' },
-  weight:     { min: 30,  max: 300, ad: 'Kilo',        birim: 'kg' },
-  age:        { min: 10,  max: 120, ad: 'Yaş',         birim: '' },
-  goalWeight: { min: 30,  max: 300, ad: 'Hedef kilo',  birim: 'kg' }
-};
 
-/* { bos: true } | { hata: '...' } | { deger: 75.4 } döndürür. */
-function sayiDogrula(tur, ham) {
-  var k = SAYI_ARALIK[tur];
-  var metin = String(ham === null || ham === undefined ? '' : ham).trim().replace(',', '.');
-  if (!metin) return { bos: true };
-  var n = parseFloat(metin);
-  if (isNaN(n)) return { hata: k.ad + ' sayı olmalı.' };
-  if (n < k.min || n > k.max) {
-    return { hata: k.ad + ' ' + k.min + '-' + k.max + (k.birim ? ' ' + k.birim : '') + ' arasında olmalı.' };
-  }
-  return { deger: n };
-}
 
-// Doğrulama hatasını ilgili geri bildirim satırında gösterir
-function dogrulamaHatasi(feedbackId, mesaj) {
-  var el = document.getElementById(feedbackId);
-  if (el) el.textContent = '⚠️ ' + mesaj;
-  showFeedback(feedbackId);
-}
 
-function showFeedback(id) {
-  var el = document.getElementById(id);
-  if (!el) return;
-  el.classList.remove('hidden');
-  clearTimeout(el._timer);
-  el._timer = setTimeout(function() { el.classList.add('hidden'); }, 2200);
-}
 
 // ── SAVE HANDLERS (temel bilgiler) ──────────
 document.getElementById('save-profile').addEventListener('click', function() {
@@ -373,11 +278,6 @@ function updateGoalStatus() {
   }
 }
 
-/* Grafikler ve VKİ göstergesi renklerini CSS'ten okur. Sabit yazılsalardı
-   tema değiştiğinde yanlış renkte kalırlardı. */
-function temaRengi(ad) {
-  return getComputedStyle(document.documentElement).getPropertyValue('--' + ad).trim();
-}
 
 function calcBMI(heightCm, weightKg) { var hM = heightCm / 100; return weightKg / (hM * hM); }
 function bmiCategory(bmi) {
@@ -431,7 +331,6 @@ function updateDashboard() {
   renderTodayCards();
 }
 
-function fmtKg(v) { return (v % 1 === 0) ? v.toFixed(0) : v.toFixed(1); }
 
 /* ══════════════════════════════════════════
    "BUGÜN" KARTLARI — ana sayfanın üst yarısı
@@ -451,28 +350,8 @@ var TODAY_ICONS = {
   supplement: '<rect x="3.5" y="8.5" width="17" height="7" rx="3.5"/><path d="M12 8.5v7"/>'
 };
 
-/* HTML'e basılan her dış kaynaklı metin buradan geçmeli: kullanıcı girdisi,
-   yedekten gelen veri, USDA yanıtı ve yapay zekânın PDF'ten çıkardığı metinler.
-   Tek tırnak da kaçırılıyor çünkü bazı nitelikler tek tırnakla yazılabiliyor. */
-function escapeHtml(str) {
-  if (str === null || str === undefined) return '';
-  return String(str).replace(/[&<>"']/g, function(c) {
-    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-  });
-}
 
-/* Serbest metni HTML'e basarken satır sonlarını korur — önce kaçış, sonra <br>.
-   Sıra önemli: tersi olursa eklediğimiz <br> de kaçırılır. */
-function escapeHtmlLines(str) {
-  return escapeHtml(str).replace(/\n/g, '<br>');
-}
 
-/* href'e konacak bağlantı. javascript: gibi şemalar engellenmeli, yoksa
-   bağlantıya dokunmak kod çalıştırır. */
-function safeUrl(url) {
-  var s = String(url || '').trim();
-  return /^https?:\/\//i.test(s) ? escapeHtml(s) : '';
-}
 
 function todayCardHtml(o) {
   return '' +
@@ -1764,11 +1643,6 @@ function saveSessionToHistory(weekday) {
    ANALİZ: SÜREKLİLİK + GÜÇ İLERLEMESİ GRAFİĞİ
    ══════════════════════════════════════════ */
 
-function parseDateKey(key) {
-  var parts = (key || '').split('-');
-  if (parts.length !== 3) return null;
-  return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-}
 
 function renderConsistency() {
   var history = getWorkoutHistory();
@@ -3573,10 +3447,6 @@ clearSuppTimeBtn.addEventListener('click', function() {
 });
 
 // ── ZAMANLAYICI ──────────────────────────────────
-function minutesOfDay(hhmm) {
-  var parts = hhmm.split(':');
-  return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
-}
 
 // Başlığa uygulama adı YAZILMAZ — iOS zaten altına "from FitTakip" ekliyor
 function showSuppNotification(item, timing) {
