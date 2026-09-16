@@ -125,8 +125,12 @@ export async function sendPush(subscription, payloadText, vapid) {
       'Authorization': authHeader,
       'Content-Encoding': 'aes128gcm',
       'Content-Type': 'application/octet-stream',
-      'TTL': '86400',
-      'Urgency': 'normal'
+      // high: push servisi pil tasarrufu için bekletmeden hemen iletsin.
+      // normal'da telefon kilitliyken teslimat dakikalarca gecikebiliyor.
+      'Urgency': 'high',
+      // Saatine bağlı bir hatırlatma bir saat sonra işe yaramaz; geç kalan
+      // bildirim ertesi güne sarkacağına düşsün.
+      'TTL': '3600'
     },
     body
   });
