@@ -438,6 +438,10 @@
       </div>
 
       <!-- PDF'DEN PROGRAM YÜKLE -->
+      <button class="btn-pdf-upload btn-program-uret" id="openProgramBtnWork" type="button">
+        <span>✨</span> Yapay Zekâ ile Program Oluştur
+      </button>
+
       <button class="btn-pdf-upload" id="openPdfUploadBtn" type="button">
         <span>📄</span> PDF'den Program Yükle
       </button>
@@ -597,6 +601,10 @@
         <h1 class="page-title">Beslenme Planı</h1>
         <p class="page-subtitle">Öğün öğün besin değeriyle takip</p>
       </div>
+
+      <button class="btn-pdf-upload btn-program-uret" id="openProgramBtnNut" type="button">
+        <span>✨</span> Yapay Zekâ ile Program Oluştur
+      </button>
 
       <!-- PDF'DEN BESLENME PLANI YÜKLE -->
       <button class="btn-pdf-upload" id="openDietPdfBtn" type="button">
@@ -798,6 +806,10 @@
       </div>
 
       <!-- PDF'DEN SUPPLEMENT PLANI YÜKLE -->
+      <button class="btn-pdf-upload btn-program-uret" id="openProgramBtnSupp" type="button">
+        <span>✨</span> Yapay Zekâ ile Program Oluştur
+      </button>
+
       <button class="btn-pdf-upload" id="openDietPdfBtnSupp" type="button">
         <span>📄</span> PDF'den Supplement Planı Yükle
       </button>
@@ -887,6 +899,32 @@
     <!-- ── SAYI SEÇİCİ ──
          Elle yazmak yerine kaydırarak değer seçme. Sütunlar ve aralıklar
          JS'te SAYI_ARALIK'tan üretiliyor; sınırların tek kaynağı orası. -->
+    <!-- Yapay zekâ ile program üretme sihirbazı -->
+    <div class="modal-overlay-2 hidden" id="programModal">
+      <div class="modal-box-2">
+        <div class="modal-header">
+          <h2 class="modal-title" id="programBaslik">Program Oluştur</h2>
+          <button class="modal-close" id="programKapat" aria-label="Kapat">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="sihirbaz-ilerleme"><span id="programIlerleme"></span></div>
+
+          <div id="programAdim"></div>
+
+          <div class="hidden" id="programOzet"></div>
+
+          <p class="loading-hint hidden" id="programDurum"></p>
+          <div class="hidden" id="programOnizleme"></div>
+        </div>
+        <div class="modal-footer sihirbaz-alt">
+          <button class="btn-save btn-ikincil hidden" id="programGeri" type="button">Geri</button>
+          <button class="btn-save" id="programIleri" type="button">İleri</button>
+          <button class="btn-save hidden" id="programUret" type="button">Programı Oluştur</button>
+          <button class="btn-save hidden" id="programOnayla" type="button">Plana İşle</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Yumurta boyu: listeyi boy başına ayrı satırla şişirmemek için ayrı pencere -->
     <div class="modal-overlay-2 hidden" id="boySecici">
       <div class="modal-box-2 boy-kutu">

@@ -4470,6 +4470,484 @@ girdiyiSeciciyeBagla('weighin-weight',  'weight',     true);
 girdiyiSeciciyeBagla('food-amount',     gidaMiktarTuru, false);
 
 /* ══════════════════════════════════════════
+   YAPAY ZEKÂ İLE PROGRAM ÜRETME — ANKET
+   Sorular veri olarak duruyor, form onlardan üretiliyor: soru eklemek ya da
+   değiştirmek için arayüze dokunmak gerekmiyor, sıra da tek yerden görünüyor.
+   ══════════════════════════════════════════ */
+
+var ANKET_KEY = 'ft_program_anketi';
+
+var ANKET_ADIMLARI = [
+  {
+    baslik: 'Deneyim',
+    aciklama: 'Programın ağırlığı buna göre ayarlanacak.',
+    sorular: [
+      { id: 'deneyimSure', etiket: 'Kaç yıldır düzenli antrenman yapıyorsun?', tip: 'secim',
+        secenekler: ['Hiç yapmadım', '6 aydan az', '6 ay – 2 yıl', '2 – 5 yıl', '5 yıldan fazla'] },
+      { id: 'ara', etiket: 'Son 3 ayda ara verdin mi?', tip: 'secim',
+        secenekler: ['Hayır, düzenli devam ediyorum', 'Evet, birkaç hafta', 'Evet, aylardır ara verdim'] },
+      { id: 'teknik', etiket: 'Temel hareketlerin (squat, bench, deadlift) formunu biliyor musun?', tip: 'secim',
+        secenekler: ['Hiç denemedim', 'Denedim ama emin değilim', 'Biliyorum', 'Rahatça uyguluyorum'] },
+      { id: 'agirliklar', etiket: 'Şu an çalıştığın ağırlıklar (biliyorsan)', tip: 'metin',
+        ipucu: 'örn. Bench 60kg x8, Squat 80kg x5', zorunlu: false }
+    ]
+  },
+  {
+    baslik: 'Hedef ve Program',
+    aciklama: 'Kalori hedefin profilindeki hedef tipinden hesaplanıyor.',
+    sorular: [
+      { id: 'oncelik', etiket: 'Öncelikli hedefin ne?', tip: 'secim',
+        secenekler: ['Kilo vermek / yağ yakmak', 'Kas kazanmak', 'Güçlenmek',
+                     'Dayanıklılık', 'Formu korumak'] },
+      { id: 'gunSayisi', etiket: 'Haftada kaç gün antrenman yapabilirsin?', tip: 'secim',
+        secenekler: ['2', '3', '4', '5', '6'] },
+      { id: 'seansSuresi', etiket: 'Bir seansa ne kadar vaktin var?', tip: 'secim',
+        secenekler: ['30 dakika', '45 dakika', '60 dakika', '90 dakika'] },
+      { id: 'kardiyo', etiket: 'Kardiyo ister misin?', tip: 'secim',
+        secenekler: ['İstemem', 'Az olsun', 'Programın parçası olsun'] }
+    ]
+  },
+  {
+    baslik: 'Ekipman ve Kısıtlar',
+    sorular: [
+      { id: 'ekipman', etiket: 'Neye erişimin var?', tip: 'coklu',
+        secenekler: ['Spor salonu', 'Evde dambıl', 'Barfiks / paralel', 'Direnç bandı',
+                     'Sadece vücut ağırlığı'] },
+      { id: 'sakatlik', etiket: 'Sakatlığın ya da ağrıyan bir bölgen var mı?', tip: 'metin',
+        ipucu: 'örn. sol diz ağrısı, bel fıtığı — yoksa boş bırak', zorunlu: false },
+      { id: 'yapamadigi', etiket: 'Yapamadığın ya da yapmak istemediğin hareketler', tip: 'metin',
+        ipucu: 'örn. deadlift yapamıyorum', zorunlu: false }
+    ]
+  },
+  {
+    baslik: 'Beslenme',
+    sorular: [
+      { id: 'ogunSayisi', etiket: 'Günde kaç öğün yemek istersin?', tip: 'secim',
+        secenekler: ['3', '4', '5'] },
+      { id: 'beslenmeTarzi', etiket: 'Beslenme tarzın', tip: 'secim',
+        secenekler: ['Her şeyi yerim', 'Kırmızı et yemem', 'Vejetaryen', 'Vegan'] },
+      { id: 'alerji', etiket: 'Alerjin ya da intoleransın var mı?', tip: 'metin',
+        ipucu: 'örn. laktoz intoleransı, fındık alerjisi — yoksa boş bırak', zorunlu: false },
+      { id: 'sevmedigi', etiket: 'Yemediğin gıdalar', tip: 'metin',
+        ipucu: 'örn. balık, brokoli', zorunlu: false },
+      { id: 'mutfak', etiket: 'Yemek hazırlamaya ne kadar vaktin var?', tip: 'secim',
+        secenekler: ['Neredeyse hiç', 'Günde 15-20 dakika', 'Vaktim var, yemek yaparım'] },
+      { id: 'butce', etiket: 'Beslenme bütçen', tip: 'secim',
+        secenekler: ['Kısıtlı', 'Orta', 'Sınır yok'] }
+    ]
+  },
+  {
+    baslik: 'Yaşam ve Takviye',
+    sorular: [
+      { id: 'gunlukHareket', etiket: 'Gün içinde ne kadar hareketlisin?', tip: 'secim',
+        secenekler: ['Masa başı, az hareket', 'Ayakta / orta hareketli', 'Fiziksel iş yapıyorum'] },
+      { id: 'uyku', etiket: 'Ortalama uyku süren', tip: 'secim',
+        secenekler: ['6 saatten az', '6-7 saat', '7-8 saat', '8 saatten fazla'] },
+      { id: 'stres', etiket: 'Stres seviyen', tip: 'secim', secenekler: ['Düşük', 'Orta', 'Yüksek'] },
+      { id: 'mevcutTakviye', etiket: 'Şu an kullandığın takviyeler', tip: 'metin',
+        ipucu: 'örn. D vitamini, kreatin — yoksa boş bırak', zorunlu: false },
+      { id: 'takviyeButce', etiket: 'Takviye bütçen', tip: 'secim',
+        secenekler: ['Takviye istemiyorum', 'Sadece temel olanlar', 'Orta', 'Sınır yok'] },
+      { id: 'istemedigiTakviye', etiket: 'Kullanmak istemediklerin', tip: 'metin',
+        ipucu: 'örn. kafein içerenler', zorunlu: false }
+    ]
+  }
+];
+
+/* Ankette gün içi hareket cevabı, kalori hesabındaki katsayı adına çevriliyor */
+var HAREKET_ESLESME = {
+  'Masa başı, az hareket': 'masa',
+  'Ayakta / orta hareketli': 'ayakta',
+  'Fiziksel iş yapıyorum': 'fiziksel'
+};
+
+function getAnket() { return getJSON(ANKET_KEY, {}); }
+function saveAnket(a) { setJSON(ANKET_KEY, a); }
+
+/* Ankete ve profile bakarak günlük kalori/makro hedefini hesaplar. */
+function anketHedefi(anket) {
+  return gunlukHedef({
+    kilo: localStorage.getItem(KEYS.weight),
+    boy: localStorage.getItem(KEYS.height),
+    yas: localStorage.getItem(KEYS.age),
+    cinsiyet: localStorage.getItem(KEYS.gender) || '',
+    gunlukHareket: HAREKET_ESLESME[anket.gunlukHareket] || 'masa',
+    haftalikAntrenman: parseInt(anket.gunSayisi, 10) || 0,
+    hedefTipi: localStorage.getItem(KEYS.goalType) || 'Sabit Kalmak'
+  });
+}
+
+/* Eksik olan zorunlu soruların etiketlerini döndürür. */
+function anketEksikleri(anket) {
+  var eksik = [];
+  ANKET_ADIMLARI.forEach(function(adim) {
+    adim.sorular.forEach(function(soru) {
+      if (soru.zorunlu === false) return;
+      var d = anket[soru.id];
+      var bos = soru.tip === 'coklu' ? !(d && d.length) : !d;
+      if (bos) eksik.push(soru.etiket);
+    });
+  });
+  return eksik;
+}
+
+/* ── SİHİRBAZ ARAYÜZÜ ────────────────────────────── */
+var programModal    = document.getElementById('programModal');
+var programAdimEl   = document.getElementById('programAdim');
+var programOzetEl   = document.getElementById('programOzet');
+var programDurumEl  = document.getElementById('programDurum');
+var programOnizEl   = document.getElementById('programOnizleme');
+var programGeriBtn  = document.getElementById('programGeri');
+var programIleriBtn = document.getElementById('programIleri');
+var programUretBtn  = document.getElementById('programUret');
+var programOnayBtn  = document.getElementById('programOnayla');
+
+var anketDurum = { adim: 0, cevaplar: {} };
+var uretilenProgram = null;
+
+function soruHTML(soru, cevap) {
+  var html = '<div class="anket-soru" data-soru="' + escapeHtml(soru.id) + '">' +
+             '<span class="anket-etiket">' + escapeHtml(soru.etiket) + '</span>';
+
+  if (soru.tip === 'metin') {
+    html += '<input class="form-input" type="text" data-girdi="' + escapeHtml(soru.id) + '" ' +
+            'value="' + escapeHtml(cevap || '') + '" placeholder="' + escapeHtml(soru.ipucu || '') + '" />';
+  } else {
+    var secili = soru.tip === 'coklu' ? (cevap || []) : [cevap];
+    html += '<div class="anket-secenekler">';
+    soru.secenekler.forEach(function(s) {
+      var aktif = secili.indexOf(s) !== -1;
+      html += '<button type="button" class="anket-secenek' + (aktif ? ' secili' : '') + '" ' +
+              'data-deger="' + escapeHtml(s) + '">' + escapeHtml(s) + '</button>';
+    });
+    html += '</div>';
+  }
+  return html + '</div>';
+}
+
+function adimCiz() {
+  var adim = ANKET_ADIMLARI[anketDurum.adim];
+  document.getElementById('programIlerleme').textContent =
+    'Adım ' + (anketDurum.adim + 1) + ' / ' + ANKET_ADIMLARI.length;
+
+  var html = '<p class="sihirbaz-adim-baslik">' + escapeHtml(adim.baslik) + '</p>';
+  if (adim.aciklama) html += '<p class="sihirbaz-adim-aciklama">' + escapeHtml(adim.aciklama) + '</p>';
+  adim.sorular.forEach(function(soru) { html += soruHTML(soru, anketDurum.cevaplar[soru.id]); });
+  programAdimEl.innerHTML = html;
+
+  programGeriBtn.classList.toggle('hidden', anketDurum.adim === 0);
+  programIleriBtn.textContent = anketDurum.adim === ANKET_ADIMLARI.length - 1 ? 'Özete Geç' : 'İleri';
+}
+
+/* Seçenek düğmeleri: tekli seçimde diğerlerini bırakır, çoklu seçimde ekler/çıkarır */
+programAdimEl.addEventListener('click', function(e) {
+  var d = e.target.closest('.anket-secenek');
+  if (!d) return;
+  var kutu = d.closest('.anket-soru');
+  var id = kutu.dataset.soru;
+  var soru = null;
+  ANKET_ADIMLARI.forEach(function(a) {
+    a.sorular.forEach(function(s) { if (s.id === id) soru = s; });
+  });
+  if (!soru) return;
+
+  if (soru.tip === 'coklu') {
+    var liste = anketDurum.cevaplar[id] || [];
+    var yer = liste.indexOf(d.dataset.deger);
+    if (yer === -1) liste = liste.concat([d.dataset.deger]);
+    else liste = liste.filter(function(x) { return x !== d.dataset.deger; });
+    anketDurum.cevaplar[id] = liste;
+    d.classList.toggle('secili');
+  } else {
+    anketDurum.cevaplar[id] = d.dataset.deger;
+    [].forEach.call(kutu.querySelectorAll('.anket-secenek'), function(b) {
+      b.classList.toggle('secili', b === d);
+    });
+  }
+});
+
+programAdimEl.addEventListener('input', function(e) {
+  if (e.target.dataset.girdi) anketDurum.cevaplar[e.target.dataset.girdi] = e.target.value.trim();
+});
+
+/* Özet: hesaplanan kalori hedefi burada gösteriliyor — yapay zekâdan gelmiyor,
+   bu yüzden kullanıcıya nereden geldiğini de yazıyoruz. */
+function ozetCiz() {
+  var hedef = anketHedefi(anketDurum.cevaplar);
+  var eksik = anketEksikleri(anketDurum.cevaplar);
+  var html = '';
+
+  if (!hedef) {
+    html += '<p class="anket-eksik">Kalori hedefi için profilinde boy, kilo ve yaş bilgisi olmalı. ' +
+            'Kişisel Bilgiler sayfasından girebilirsin.</p>';
+  } else {
+    html +=
+      '<div class="hedef-kutu">' +
+        '<div class="hedef-satir"><span>Günlük kalori</span><strong>' + hedef.kalori + ' kcal</strong></div>' +
+        '<div class="hedef-satir"><span>Protein</span><strong>' + hedef.protein + ' g</strong></div>' +
+        '<div class="hedef-satir"><span>Karbonhidrat</span><strong>' + hedef.karbonhidrat + ' g</strong></div>' +
+        '<div class="hedef-satir"><span>Yağ</span><strong>' + hedef.yag + ' g</strong></div>' +
+        '<p class="hedef-not">Bazal metabolizma ' + hedef.bmr + ' kcal, günlük harcama ' + hedef.tdee +
+        ' kcal olarak hesaplandı (Mifflin-St Jeor). Bu sayılar uygulamada hesaplanıyor, ' +
+        'yapay zekâdan gelmiyor.' + (hedef.uyari ? ' ' + escapeHtml(hedef.uyari) : '') + '</p>' +
+      '</div>';
+  }
+
+  if (eksik.length) {
+    html += '<p class="anket-eksik">Cevaplanmamış sorular: ' + escapeHtml(eksik.join(', ')) + '</p>';
+  }
+  html += '<p class="hedef-not">Oluşturulan program bir yapay zekâ önerisidir; ' +
+          'kişiye özel bir antrenör ya da diyetisyen programı değildir.</p>';
+
+  programOzetEl.innerHTML = html;
+  programUretBtn.disabled = !hedef || eksik.length > 0;
+}
+
+function sihirbazGoster(bolum) {
+  programAdimEl.classList.toggle('hidden', bolum !== 'anket');
+  programOzetEl.classList.toggle('hidden', bolum !== 'ozet');
+  programOnizEl.classList.toggle('hidden', bolum !== 'onizleme');
+  programIleriBtn.classList.toggle('hidden', bolum !== 'anket');
+  programUretBtn.classList.toggle('hidden', bolum !== 'ozet');
+  programOnayBtn.classList.toggle('hidden', bolum !== 'onizleme');
+  programGeriBtn.classList.toggle('hidden', bolum === 'onizleme' || anketDurum.adim === 0);
+  document.getElementById('programIlerleme').classList.toggle('hidden', bolum !== 'anket');
+}
+
+function programSihirbaziniAc() {
+  anketDurum = { adim: 0, cevaplar: getAnket() };
+  uretilenProgram = null;
+  programDurumEl.classList.add('hidden');
+  adimCiz();
+  sihirbazGoster('anket');
+  programModal.classList.remove('hidden');
+}
+
+function programSihirbaziniKapat() {
+  saveAnket(anketDurum.cevaplar);      // yarıda bırakılsa da cevaplar kaybolmasın
+  programModal.classList.add('hidden');
+}
+
+['openProgramBtnWork', 'openProgramBtnNut', 'openProgramBtnSupp'].forEach(function(id) {
+  var b = document.getElementById(id);
+  if (b) b.addEventListener('click', programSihirbaziniAc);
+});
+document.getElementById('programKapat').addEventListener('click', programSihirbaziniKapat);
+programModal.addEventListener('click', function(e) {
+  if (e.target === programModal) programSihirbaziniKapat();
+});
+
+programIleriBtn.addEventListener('click', function() {
+  if (anketDurum.adim < ANKET_ADIMLARI.length - 1) {
+    anketDurum.adim++;
+    adimCiz();
+  } else {
+    saveAnket(anketDurum.cevaplar);
+    ozetCiz();
+    sihirbazGoster('ozet');
+  }
+});
+
+programGeriBtn.addEventListener('click', function() {
+  if (!programOzetEl.classList.contains('hidden')) { sihirbazGoster('anket'); adimCiz(); return; }
+  if (anketDurum.adim > 0) { anketDurum.adim--; adimCiz(); }
+});
+
+/* ── PROGRAM ÜRETİMİ ─────────────────────────────
+   Çıktı şemaları PDF'den yükleme ile birebir aynı: böylece plana işleyen
+   fonksiyonlar (mergePdfProgramIntoStorage, mergeDietPlanIntoStorage,
+   mergeSupplementPlanIntoStorage) olduğu gibi çalışıyor. */
+
+/* Anketi ve profili yapay zekâya verilecek okunur bir tanıma çevirir. */
+function anketOzeti(anket, hedef) {
+  var satir = [];
+  var ek = function(etiket, deger) {
+    if (deger && String(deger).trim()) satir.push('- ' + etiket + ': ' + String(deger).trim());
+  };
+
+  ek('Yaş', localStorage.getItem(KEYS.age));
+  ek('Cinsiyet', localStorage.getItem(KEYS.gender) === 'kadin' ? 'Kadın'
+     : localStorage.getItem(KEYS.gender) === 'erkek' ? 'Erkek' : '');
+  ek('Boy', (localStorage.getItem(KEYS.height) || '') && localStorage.getItem(KEYS.height) + ' cm');
+  ek('Kilo', (localStorage.getItem(KEYS.weight) || '') && localStorage.getItem(KEYS.weight) + ' kg');
+  ek('Hedef kilo', (localStorage.getItem(KEYS.goalWeight) || '') && localStorage.getItem(KEYS.goalWeight) + ' kg');
+  ek('Hedef tipi', localStorage.getItem(KEYS.goalType));
+
+  ANKET_ADIMLARI.forEach(function(adim) {
+    adim.sorular.forEach(function(soru) {
+      var d = anket[soru.id];
+      ek(soru.etiket, Array.isArray(d) ? d.join(', ') : d);
+    });
+  });
+
+  if (hedef) {
+    satir.push('- Günlük kalori hedefi: ' + hedef.kalori + ' kcal');
+    satir.push('- Makro hedefi: ' + hedef.protein + ' g protein, ' +
+               hedef.karbonhidrat + ' g karbonhidrat, ' + hedef.yag + ' g yağ');
+  }
+  return satir.join('\n');
+}
+
+function buildAntrenmanUretimPrompt(anket, hedef) {
+  return (
+    'Aşağıdaki kişi için bir haftalık antrenman programı hazırla. ' +
+    'SADECE geçerli JSON formatında yanıt ver — başka hiçbir açıklama, yorum veya markdown code-block ekleme.\n\n' +
+    'Format tam olarak şu şekilde olmalı:\n' +
+    '{"Pazartesi": {"hareketler": [{"hareket": "Bench Press", "set": 3, "tekrar": 10, "not": "Dirsek sabit tut"}], ' +
+    '"antrenmanSonrasi": [{"hareket": "Doorway Chest Stretch", "set": 3, "tekrar": 1, "not": "30-40 saniye tut."}]}, ' +
+    '"Salı": {...}, "kardiyoPlanlamasi": "...", "antrenmanKurallari": "..."}\n\n' +
+    'Kurallar:\n' +
+    '- Gün isimleri SADECE şunlardan biri olmalı: Pazartesi, Salı, Çarşamba, Perşembe, Cuma, Cumartesi, Pazar\n' +
+    '- Kişinin belirttiği HAFTALIK GÜN SAYISI kadar antrenman günü koy, fazlasını koyma. ' +
+    'Günleri dinlenme olacak şekilde dağıt (örn. 3 gün için Pazartesi, Çarşamba, Cuma).\n' +
+    '- Antrenman yapılmayan günleri JSON\'a hiç ekleme.\n' +
+    '- Hareketleri kişinin ERİŞEBİLDİĞİ ekipmana göre seç. Salonu yoksa salon makinesi verme.\n' +
+    '- Deneyimi düşükse temel, öğrenmesi kolay hareketler ver ve "not" alanında forma dair kısa uyarı yaz. ' +
+    'Deneyimliyse hacmi ve hareket çeşitliliğini artır.\n' +
+    '- Sakatlık ya da yapamadığı hareket belirtmişse o bölgeyi zorlayan hareketleri KOYMA, yerine alternatif ver.\n' +
+    '- Seans süresine sığdır: 30 dakika için 4-5, 60 dakika için 6-7, 90 dakika için 8-9 hareket uygundur.\n' +
+    '- Her gün için "antrenmanSonrasi" alanına o günün çalıştığı bölgeye uygun 2-3 esneme hareketi koy.\n' +
+    '- "kardiyoPlanlamasi": kişinin kardiyo tercihine göre kısa bir planlama yaz. İstemiyorsa bu alanı hiç ekleme.\n' +
+    '- "antrenmanKurallari": dinlenme süreleri, ısınma, ilerleme (progressive overload) gibi genel kuralları ' +
+    'madde madde (her biri yeni satırda "- " ile başlayarak) yaz.\n\n' +
+    'Kişi:\n' + anketOzeti(anket, hedef)
+  );
+}
+
+function buildBeslenmeUretimPrompt(anket, hedef) {
+  var ogun = parseInt(anket.ogunSayisi, 10) || 3;
+  var ogunAdlari = ['Öğün 1', 'Öğün 2', 'Öğün 3', 'Öğün 4', 'Ara Öğün'].slice(0, ogun);
+
+  return (
+    'Aşağıdaki kişi için bir günlük beslenme planı ve takviye planı hazırla. ' +
+    'SADECE geçerli JSON formatında yanıt ver — başka hiçbir açıklama, yorum veya markdown code-block ekleme.\n\n' +
+    'Format tam olarak şu şekilde olmalı:\n' +
+    '{"beslenmePlani": {"Öğün 1": [{"gida": "Yumurta", "gram": 200, "kcal100": 155, "protein100": 13, ' +
+    '"carbs100": 1.1, "fat100": 11}], "Öğün 2": [...]}, ' +
+    '"supplementPlani": [{"isim": "Kreatin", "doz": "5g", "zaman": "Antrenman Öncesi"}]}\n\n' +
+    'Beslenme kuralları:\n' +
+    '- SADECE şu öğünleri kullan: ' + ogunAdlari.join(', ') + '\n' +
+    '- Günün TOPLAMI verilen kalori ve makro hedefine yakın olmalı (±%5). Bu hedef uygulamada ' +
+    'hesaplandı, sen yeniden hesaplama — verilen sayıyı tuttur.\n' +
+    '- Türk mutfağından, markete kolay bulunan gıdalar seç.\n' +
+    '- Alerji, intolerans ve yemediği gıdalar belirtilmişse ONLARI HİÇ KULLANMA.\n' +
+    '- Beslenme tarzına uy: vejetaryen ise et/balık, vegan ise hayvansal ürün hiç koyma.\n' +
+    '- Yemek hazırlamaya vakti azsa basit, hazırlığı kısa gıdalar seç.\n' +
+    '- Bütçesi kısıtlıysa pahalı gıdalardan (somon, badem unu gibi) kaçın.\n' +
+    '- Her gıda için "gida" (sade Türkçe isim, parantezsiz), "gram" (sayı) ve 100 gram başına ' +
+    '"kcal100", "protein100", "carbs100", "fat100" değerlerini doldur. Bu değerler yerel veritabanıyla ' +
+    'eşleşirse gerçek değerle değiştirilecek, o yüzden gerçekçi ver.\n\n' +
+    'Takviye kuralları:\n' +
+    '- Kişi takviye istemiyorsa "supplementPlani" alanını boş dizi [] yap.\n' +
+    '- SADECE yaygın ve üzerinde geniş uzlaşı olan takviyeleri öner (kreatin, whey protein, D vitamini, ' +
+    'omega 3, magnezyum, çinko, multivitamin gibi). Reçeteli ilaç, hormon, yağ yakıcı veya tartışmalı ' +
+    'madde ÖNERME.\n' +
+    '- Dozları o takviyenin bilinen günlük standart aralığında tut, aşma.\n' +
+    '- Kullanmak istemediği maddeleri ÖNERME. Zaten kullandıklarını da listeye ekle ki planı bütün olsun.\n' +
+    '- Bütçesi kısıtlıysa en fazla 2-3 temel takviye öner.\n' +
+    '- "zaman" alanı SADECE şunlardan biri olmalı: "Sabah", "Aç Karnına", "Öğün İle Birlikte", ' +
+    '"Antrenman Öncesi", "Antrenman Esnasında", "Antrenman Sonrası", "Akşam / Yatmadan Önce"\n\n' +
+    'Kişi:\n' + anketOzeti(anket, hedef)
+  );
+}
+
+/* Üretilen programın önizlemesi — plana işlemeden önce ne geleceği görünsün */
+function programOnizlemesiCiz(p) {
+  var html = '';
+
+  var gunler = Object.keys(p.antrenman || {}).filter(function(g) { return DAYS_ORDER.indexOf(g) !== -1; });
+  html += '<p class="sihirbaz-adim-baslik">Antrenman</p>';
+  if (!gunler.length) html += '<p class="empty-hint">Antrenman programı üretilemedi.</p>';
+  gunler.forEach(function(g) {
+    var hareket = (p.antrenman[g].hareketler || []).length;
+    var esneme = (p.antrenman[g].antrenmanSonrasi || []).length;
+    html += '<div class="food-log-item"><div><p class="food-log-item-name">' + escapeHtml(g) + '</p>' +
+            '<p class="food-log-item-meta">' + hareket + ' hareket' +
+            (esneme ? ' · ' + esneme + ' esneme' : '') + '</p></div></div>';
+  });
+
+  var plan = (p.beslenme && p.beslenme.beslenmePlani) || {};
+  var ogunler = MEAL_ORDER.filter(function(o) { return plan[o] && plan[o].length; });
+  html += '<p class="sihirbaz-adim-baslik" style="margin-top:16px">Beslenme</p>';
+  if (!ogunler.length) html += '<p class="empty-hint">Beslenme planı üretilemedi.</p>';
+  ogunler.forEach(function(o) {
+    var adlar = plan[o].map(function(x) { return x.gida; }).join(', ');
+    html += '<div class="food-log-item"><div><p class="food-log-item-name">' + escapeHtml(o) + '</p>' +
+            '<p class="food-log-item-meta">' + escapeHtml(adlar) + '</p></div></div>';
+  });
+
+  var takviye = (p.beslenme && p.beslenme.supplementPlani) || [];
+  html += '<p class="sihirbaz-adim-baslik" style="margin-top:16px">Takviye</p>';
+  if (!takviye.length) html += '<p class="empty-hint">Takviye önerilmedi.</p>';
+  takviye.forEach(function(t) {
+    html += '<div class="food-log-item"><div><p class="food-log-item-name">' + escapeHtml(t.isim) + '</p>' +
+            '<p class="food-log-item-meta">' + escapeHtml(t.doz || '') + ' · ' + escapeHtml(t.zaman || '') +
+            '</p></div></div>';
+  });
+
+  html += '<p class="hedef-not">Bu bir yapay zekâ önerisidir. "Plana İşle" dersen mevcut planına eklenir, ' +
+          'sonrasında her şeyi elle düzenleyebilirsin.</p>';
+  programOnizEl.innerHTML = html;
+}
+
+programUretBtn.addEventListener('click', function() {
+  var anahtar = getGeminiKey();
+  if (!anahtar) {
+    programDurumEl.textContent = '⚠️ Önce Ayarlar sayfasından Gemini API anahtarını girmelisin.';
+    programDurumEl.classList.remove('hidden');
+    return;
+  }
+
+  var hedef = anketHedefi(anketDurum.cevaplar);
+  saveAnket(anketDurum.cevaplar);
+
+  programUretBtn.disabled = true;
+  programDurumEl.textContent = 'Program hazırlanıyor… bu 20-30 saniye sürebilir.';
+  programDurumEl.classList.remove('hidden');
+
+  // İkisi paralel: tek büyük istek yerine iki küçük istek daha güvenilir çözülüyor
+  Promise.all([
+    callGeminiAPI(buildAntrenmanUretimPrompt(anketDurum.cevaplar, hedef), anahtar).then(parseAIJson),
+    callGeminiAPI(buildBeslenmeUretimPrompt(anketDurum.cevaplar, hedef), anahtar).then(parseAIJson)
+  ]).then(function(sonuc) {
+    uretilenProgram = { antrenman: sonuc[0] || {}, beslenme: sonuc[1] || {}, hedef: hedef };
+    programDurumEl.classList.add('hidden');
+    programOnizlemesiCiz(uretilenProgram);
+    sihirbazGoster('onizleme');
+  }).catch(function(err) {
+    console.warn('[Program üretme] Hata:', err);
+    programDurumEl.textContent = '⚠️ ' + ((err && err.message) || 'Program oluşturulamadı.');
+    programDurumEl.classList.remove('hidden');
+  }).finally(function() {
+    programUretBtn.disabled = false;
+  });
+});
+
+programOnayBtn.addEventListener('click', function() {
+  if (!uretilenProgram) return;
+  var p = uretilenProgram;
+
+  if (Object.keys(p.antrenman || {}).length) {
+    mergePdfProgramIntoStorage(p.antrenman);
+    appendToNotesField(KEYS.cardio, 'input-cardio', p.antrenman.kardiyoPlanlamasi);
+    appendToNotesField(KEYS.workout, 'input-workout', p.antrenman.antrenmanKurallari);
+    renderWorkoutTracking();
+  }
+  if (p.beslenme && p.beslenme.beslenmePlani) {
+    mergeDietPlanIntoStorage(p.beslenme.beslenmePlani);
+    renderMealPlanView();
+  }
+  if (p.beslenme && Array.isArray(p.beslenme.supplementPlani) && p.beslenme.supplementPlani.length) {
+    mergeSupplementPlanIntoStorage(p.beslenme.supplementPlani);
+    renderSupplementPlanView();
+  }
+
+  uretilenProgram = null;
+  programModal.classList.add('hidden');
+  updateDashboard();
+});
+
+/* ══════════════════════════════════════════
    DOKUNMA JESTLERİ — sayfa kaydırma ve yakınlaştırma
    Tek parmak yatay: sayfalar arası geçiş.
    İki parmak: yakınlaştırma; parmak kalkınca eski haline döner.
