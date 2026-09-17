@@ -859,6 +859,26 @@
     </section>
 
     <!-- SUPPLEMENT HATIRLATMA SAATİ MODALI -->
+    <!-- ── SAYI SEÇİCİ ──
+         Elle yazmak yerine kaydırarak değer seçme. Sütunlar ve aralıklar
+         JS'te SAYI_ARALIK'tan üretiliyor; sınırların tek kaynağı orası. -->
+    <div class="modal-overlay-2 hidden" id="sayiSecici">
+      <div class="modal-box-2">
+        <div class="modal-header">
+          <h2 class="modal-title" id="seciciBaslik">Değer seç</h2>
+          <button class="modal-close" id="seciciKapat" aria-label="Kapat">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="secici-tekerlek" id="seciciTekerlek">
+            <div class="secici-band" aria-hidden="true"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" id="seciciOnayla" type="button">Seç</button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal-overlay-2 hidden" id="suppTimeModal">
       <div class="modal-box-2">
         <div class="modal-header">
