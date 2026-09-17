@@ -24,7 +24,10 @@
   --glass-edge:   rgba(255, 255, 255, 0.16);   /* üst kenardaki parlama */
   --glass-ring:   rgba(255, 255, 255, 0.07);   /* dış çeper */
   --glass-shadow: 0 8px 28px rgba(0, 0, 0, 0.42);
-  --glass-aktif:  rgba(255, 255, 255, 0.10);   /* seçili sekmenin arkası */
+  /* Seçili sekmenin arkası. Aydınlatmak yerine KOYULTUYOR: kapsül saydam
+     olduğu için arkadan parlak bir içerik (turuncu Kaydet düğmesi gibi)
+     geçtiğinde seçili etiket okunmaz hale geliyordu. Ölçüm: 4.15 → 4.91. */
+  --glass-aktif:  rgba(12, 18, 27, 0.40);
   --bnav-ink:     #aab4c0;   /* alt menü etiketleri — camda okunacak kadar güçlü */
   /* Seçili sekmenin rengi cam zemine karşı ayrıca hesaplandı: alan renkleri
      sayfa zeminine göre seçilmişti, cam ondan açık ve arkadan içerik sızınca
@@ -122,7 +125,7 @@
     --glass-edge:   rgba(255, 255, 255, 0.90);
     --glass-ring:   rgba(0, 0, 0, 0.08);
     --glass-shadow: 0 8px 26px rgba(0, 0, 0, 0.14);
-    --glass-aktif:  rgba(0, 0, 0, 0.06);
+    --glass-aktif:  rgba(255, 255, 255, 0.55);   /* açık temada tersi: aydınlatıyor */
     --bnav-ink:     #5a6069;
     --bnav-analiz:     #0063a6;
     --bnav-antrenman:  #b53000;
@@ -811,6 +814,37 @@ body.perde-cikiyor .bottom-nav {
    kabı oluşturup window scroll'u, dolayısıyla menü toplanmasını bozuyor.
    Gövdeye değil html'e yazılmalı; gövdede kesme viewport'a yansımıyor. */
 html, body { touch-action: pan-x pan-y; overflow-x: clip; }
+
+.form-hint { margin-top: 6px; font-size: 12px; color: var(--text-dim); }
+
+/* ── Program sihirbazı ── */
+.btn-program-uret { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.sihirbaz-ilerleme { font-size: 12px; color: var(--text-dim); margin-bottom: 14px; font-weight: 600; }
+.sihirbaz-adim-baslik { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+.sihirbaz-adim-aciklama { font-size: 13px; color: var(--text-dim); margin-bottom: 16px; }
+.sihirbaz-alt { display: flex; gap: 10px; }
+.sihirbaz-alt .btn-save { flex: 1; }
+.btn-ikincil { background: var(--surface-2); color: var(--text); }
+.anket-soru { margin-bottom: 16px; }
+.anket-etiket { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.anket-secenekler { display: flex; flex-wrap: wrap; gap: 8px; }
+.anket-secenek {
+  padding: 9px 14px; border-radius: 12px; cursor: pointer;
+  background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--surface-3);
+  font-family: var(--font); font-size: 14px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.anket-secenek:hover { background: var(--surface-3); }
+.anket-secenek.secili { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.anket-eksik { color: var(--accent); font-size: 13px; margin-top: 10px; }
+.hedef-kutu {
+  background: var(--surface-2); border: 1px solid var(--surface-3);
+  border-radius: 14px; padding: 14px; margin-bottom: 14px;
+}
+.hedef-satir { display: flex; justify-content: space-between; font-size: 14px; padding: 3px 0; }
+.hedef-satir strong { font-weight: 700; }
+.hedef-not { font-size: 12px; color: var(--text-dim); margin-top: 8px; line-height: 1.5; }
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }

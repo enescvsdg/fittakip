@@ -81,9 +81,13 @@ const KAYNAKLAR = ['storage.js', 'utils.js', 'app.js'];
 export async function appFonksiyonlari(...adlar) {
   const kaynak = (await Promise.all(KAYNAKLAR.map(d => readFile(KOK + d, 'utf8')))).join('\n');
   const govde = adlar.map(ad => {
-    const m = kaynak.match(new RegExp('^function ' + ad + '[\\s\\S]*?\\n}', 'm'));
-    if (!m) throw new Error('Kaynaklarda bulunamadı: ' + ad + ' (' + KAYNAKLAR.join(', ') + ')');
-    return m[0];
+    // Önce fonksiyon; bulunamazsa modül seviyesindeki sabit tablo aranıyor.
+    // Fonksiyonlar bu tablolara dışarıdan eriştiği için ikisi de gerekiyor.
+    const f = kaynak.match(new RegExp('^function ' + ad + '[\\s\\S]*?\\n}', 'm'));
+    if (f) return f[0];
+    const v = kaynak.match(new RegExp('^var ' + ad + ' = [\\s\\S]*?;\\s*$', 'm'));
+    if (v) return v[0];
+    throw new Error('Kaynaklarda bulunamadı: ' + ad + ' (' + KAYNAKLAR.join(', ') + ')');
   }).join('\n');
   return new Function(govde + '\nreturn { ' + adlar.join(', ') + ' };')();
 }

@@ -32,6 +32,12 @@ gramajı üzerinden hesaplanıyor.
 **Supplement** — Zamanlamaya göre (Sabah, Aç Karnına, Antrenman Öncesi…) plan,
 her takviyeye hatırlatma saati, günlük "aldım" işareti.
 
+**Yapay zekâ ile program oluşturma** — Deneyim, hedef, ekipman, sakatlık,
+beslenme tarzı, alerji ve takviye tercihlerini soran bir anket; sonunda
+antrenman, beslenme ve takviye planı üretip önizlemeden sonra plana işliyor.
+Günlük kalori ve makro hedefi uygulamada hesaplanıyor (Mifflin-St Jeor),
+yapay zekâya bırakılmıyor. Gemini API anahtarı gerektirir.
+
 **PDF'den program yükleme** — Diyetisyeninden gelen PDF'i yükle; yapay zekâ
 antrenman, beslenme ve supplement planını çıkarıp önizleme olarak sunar,
 onayladıklarını plana ekler. Gemini API anahtarı gerektirir.
