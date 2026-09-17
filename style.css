@@ -15,7 +15,25 @@
   --surface:     #151d29;
   --surface-2:   #1f2937;
   --surface-3:   #2a3646;
-  --bar-bg:      rgba(12, 18, 27, 0.94);   /* üst başlık + alt menü */
+  --bar-bg:      rgba(12, 18, 27, 0.94);   /* üst başlık */
+
+  /* Havada duran cam kapsül. Saydamlık arkadan kayan içeriğe bağlı olduğu için
+     opaklık kontrastı koruyacak kadar yüksek tutuluyor — gerçek cam hissi ile
+     okunabilirlik arasındaki denge burada. */
+  --glass-bg:     rgba(28, 38, 54, 0.88);
+  --glass-edge:   rgba(255, 255, 255, 0.16);   /* üst kenardaki parlama */
+  --glass-ring:   rgba(255, 255, 255, 0.07);   /* dış çeper */
+  --glass-shadow: 0 8px 28px rgba(0, 0, 0, 0.42);
+  --glass-aktif:  rgba(255, 255, 255, 0.10);   /* seçili sekmenin arkası */
+  --bnav-ink:     #aab4c0;   /* alt menü etiketleri — camda okunacak kadar güçlü */
+  /* Seçili sekmenin rengi cam zemine karşı ayrıca hesaplandı: alan renkleri
+     sayfa zeminine göre seçilmişti, cam ondan açık ve arkadan içerik sızınca
+     daha da açılıyor. */
+  --bnav-analiz:     #6bb8ff;
+  --bnav-antrenman:  #fe967a;
+  --bnav-beslenme:   #29cd44;
+  --bnav-supplement: #c3a2ff;
+  --bnav-profil:     #fe967a;
 
   --accent:      #ff5c2b;
   --accent-2:    #ff8c42;
@@ -92,6 +110,20 @@
     --surface-2:   #f5f3f0;
     --surface-3:   #e8e4df;
     --bar-bg:      rgba(241, 239, 236, 0.94);
+
+    /* Açık temada cam daha zor: beyaz üstünde saydamlık kontrast payını
+       düşürüyor, o yüzden opaklık biraz daha yüksek. */
+    --glass-bg:     rgba(255, 255, 255, 0.90);
+    --glass-edge:   rgba(255, 255, 255, 0.90);
+    --glass-ring:   rgba(0, 0, 0, 0.08);
+    --glass-shadow: 0 8px 26px rgba(0, 0, 0, 0.14);
+    --glass-aktif:  rgba(0, 0, 0, 0.06);
+    --bnav-ink:     #5a6069;
+    --bnav-analiz:     #0063a6;
+    --bnav-antrenman:  #b53000;
+    --bnav-beslenme:   #00711b;
+    --bnav-supplement: #6200ad;
+    --bnav-profil:     #b53000;
 
     --accent:      #b23b0a;
     --accent-2:    #98330a;
@@ -222,7 +254,7 @@ body {
 
 .app-main {
   padding-top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 16px);
-  padding-bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + 16px);
+  padding-bottom: calc(74px + var(--safe-bottom) + 24px);   /* havada duran kapsülün altına girmesin */
   padding-left: 16px; padding-right: 16px;
   max-width: 720px; margin: 0 auto;
 }
@@ -659,41 +691,70 @@ select.form-input {
 .modal-overlay { display: none; }
 
 /* ── BOTTOM NAV ── */
+/* ── ALT MENÜ: havada duran cam kapsül ──
+   Kenardan kenara şerit yerine ekrandan kopmuş bir kapsül. Gerçek Liquid
+   Glass arkasındakini büker; CSS bunu yapamıyor, o yüzden bulanıklık,
+   doygunluk ve kenar parlamasıyla yaklaşılıyor. */
 .bottom-nav {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
-  height: calc(var(--bottom-nav-h) + var(--safe-bottom));
-  background: var(--bar-bg);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border-top: 1px solid var(--border);
-  display: flex; align-items: flex-start; padding-top: 8px; padding-bottom: var(--safe-bottom);
-  padding-left: env(safe-area-inset-left, 0); padding-right: env(safe-area-inset-right, 0);
+  position: fixed; z-index: 100;
+  left: 12px; right: 12px;
+  bottom: calc(var(--safe-bottom) + 10px);
+  max-width: 540px; margin: 0 auto;
+  height: 64px;
+  border-radius: 32px;
+  background: var(--glass-bg);
+  backdrop-filter: saturate(180%) blur(22px);
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  box-shadow:
+    inset 0 1px 0 var(--glass-edge),      /* üstte ışık çizgisi */
+    inset 0 0 0 1px var(--glass-ring),    /* ince çeper */
+    var(--glass-shadow);
+  display: flex; align-items: center;
+  padding: 0 6px;
+  /* Genişlik yerine max-width canlandırılıyor: sabit konumlu bu tek öğeyi
+     etkiliyor, sayfa yerleşimini yeniden hesaplatmıyor. */
+  transition: max-width 0.34s cubic-bezier(0.32, 0.72, 0, 1),
+              height    0.34s cubic-bezier(0.32, 0.72, 0, 1);
 }
+
+/* Aşağı kaydırılırken toplanır: etiketler silinir, kapsül daralır.
+   5 × 50px dokunma hedefi bırakıyor, 44px sınırının üstünde. */
+.bottom-nav.toplandi { max-width: 262px; height: 56px; }
+.bottom-nav.toplandi .bnav-label { opacity: 0; max-height: 0; }
+.bottom-nav.toplandi .bottom-nav-item { gap: 0; }
+
 .bottom-nav-item {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
-  background: none; border: none; cursor: pointer; padding: 4px 2px; border-radius: var(--radius-sm);
-  transition: opacity 0.15s;
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; min-height: 52px;
+  background: none; border: none; cursor: pointer; padding: 6px 2px;
+  border-radius: 22px;
+  position: relative;
+  transition: opacity 0.15s, background 0.2s ease;
 }
+/* Seçili sekmenin arkasında hafif bir aydınlık */
+.bottom-nav-item.active { background: var(--glass-aktif); }
 .bottom-nav-item:active { opacity: 0.6; }
 .bnav-icon {
   width: 23px;
   height: 23px;
-  stroke: var(--icon-muted);
+  stroke: var(--bnav-ink);
   transition: stroke 0.15s;
 }
 .bnav-label {
   font-size: 10px;
-  color: var(--icon-muted);
+  color: var(--bnav-ink);
   font-weight: 500;
   font-family: var(--font);
-  transition: color 0.15s;
+  max-height: 14px;
+  overflow: hidden;
+  transition: color 0.15s, opacity 0.18s ease, max-height 0.3s ease;
 }
 /* Aktif sekme kendi alan rengini alır */
-.bottom-nav-item.cat-analiz.active     { --bnav-active: var(--cat-analiz); }
-.bottom-nav-item.cat-profil.active     { --bnav-active: var(--accent); }
-.bottom-nav-item.cat-antrenman.active  { --bnav-active: var(--cat-antrenman); }
-.bottom-nav-item.cat-beslenme.active   { --bnav-active: var(--cat-beslenme); }
-.bottom-nav-item.cat-supplement.active { --bnav-active: var(--cat-supplement); }
+.bottom-nav-item.cat-analiz.active     { --bnav-active: var(--bnav-analiz); }
+.bottom-nav-item.cat-profil.active     { --bnav-active: var(--bnav-profil); }
+.bottom-nav-item.cat-antrenman.active  { --bnav-active: var(--bnav-antrenman); }
+.bottom-nav-item.cat-beslenme.active   { --bnav-active: var(--bnav-beslenme); }
+.bottom-nav-item.cat-supplement.active { --bnav-active: var(--bnav-supplement); }
 
 .bottom-nav-item.active .bnav-icon  { stroke: var(--bnav-active); }
 .bottom-nav-item.active .bnav-label { color: var(--bnav-active); font-weight: 700; }

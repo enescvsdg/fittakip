@@ -4,7 +4,7 @@
    fit-takip-v1 → v2 → v3 → v4 → ...
    ══════════════════════════════════════════ */
 
-var CACHE_NAME = 'fit-takip-v38';
+var CACHE_NAME = 'fit-takip-v39';
 
 var STATIC_ASSETS = [
   './',

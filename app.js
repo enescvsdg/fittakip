@@ -29,6 +29,8 @@ function showPage(pageId) {
     btn.classList.toggle('active', btn.dataset.page === pageId);
   });
 
+  altMenuyuAc();   // yeni sayfada kapsül toplanmış başlamasın
+
   if (pageId === 'home') {
     updateDashboard();
     renderConsistency();
@@ -36,6 +38,46 @@ function showPage(pageId) {
     renderCalendar();
   }
 }
+
+/* ── ALT MENÜNÜN KAYDIRMAYLA TOPLANMASI ──
+   Aşağı kaydırılırken kapsül daralır, yukarı kaydırılınca açılır.
+
+   Üç ayrıntı bunu kullanılabilir yapıyor:
+   - Eşik: parmağın birkaç piksel oynaması açıp kapatmasın
+   - requestAnimationFrame: kaydırma olayı saniyede onlarca kez tetikleniyor,
+     her seferinde sınıf değiştirmek cam bulanıklığıyla birlikte kare atlatır
+   - Kıstırma: iOS'ta sayfanın tepesinde aşağı çekince scrollY negatife düşüyor */
+var ALT_MENU_ESIK = 10;
+var altMenuSonY = 0;
+var altMenuBekleyen = false;
+
+function altMenuyuAc() {
+  var nav = document.querySelector('.bottom-nav');
+  if (nav) nav.classList.remove('toplandi');
+  altMenuSonY = Math.max(0, window.scrollY);
+}
+
+function altMenuDegerlendir() {
+  altMenuBekleyen = false;
+  var nav = document.querySelector('.bottom-nav');
+  if (!nav) return;
+
+  var y = Math.max(0, window.scrollY);
+  // Sayfa kaymıyorsa veya tepedeysek kapsül hep açık kalsın
+  var kaydirilabilir = document.documentElement.scrollHeight - window.innerHeight > 80;
+  if (!kaydirilabilir || y < 40) { nav.classList.remove('toplandi'); altMenuSonY = y; return; }
+
+  var fark = y - altMenuSonY;
+  if (Math.abs(fark) < ALT_MENU_ESIK) return;
+  nav.classList.toggle('toplandi', fark > 0);
+  altMenuSonY = y;
+}
+
+window.addEventListener('scroll', function() {
+  if (altMenuBekleyen) return;
+  altMenuBekleyen = true;
+  requestAnimationFrame(altMenuDegerlendir);
+}, { passive: true });
 
 // ── MENU TOGGLE ─────────────────────────────
 function openMenu() {
