@@ -20,6 +20,7 @@ var SUPP_KEYS = { plan: 'ft_supplement_plan' };
 // Ana sayfa kartları açılışta okuduğu için bu da en üstte durmalı —
 // aşağıda tanımlanırsa ilk çizimde undefined olup "0 alındı" gösteriyor
 var SUPP_TAKEN_KEY = 'ft_supp_taken';
+var YUMURTA_BOY_KEY = 'ft_yumurta_boy';   // son seçilen yumurta boyu (S/M/L)
 var SUPP_TIMING_ORDER = ['Sabah', 'Aç Karnına', 'Öğün İle Birlikte', 'Antrenman Öncesi', 'Antrenman Esnasında', 'Antrenman Sonrası', 'Akşam / Yatmadan Önce'];
 
 var KEYS = {

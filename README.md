@@ -26,7 +26,8 @@ kardiyo planı ve antrenman kuralları notu.
 
 **Beslenme** — Öğün bazlı plan, USDA gıda veritabanından arama, makro
 hesaplama (protein / karbonhidrat / yağ), plan notları. Yumurta gibi tane ile
-ölçülen gıdalar gram yerine adetle giriliyor (boy başına ortalama gramaj).
+ölçülen gıdalar gram yerine adetle giriliyor; boy (S/M/L) seçilince ortalama
+gramajı üzerinden hesaplanıyor.
 
 **Supplement** — Zamanlamaya göre (Sabah, Aç Karnına, Antrenman Öncesi…) plan,
 her takviyeye hatırlatma saati, günlük "aldım" işareti.
@@ -37,6 +38,10 @@ onayladıklarını plana ekler. Gemini API anahtarı gerektirir.
 
 **Bildirimler** — Hatırlatma saati geldiğinde telefona bildirim. Uygulama
 kapalıyken çalışması için Cloudflare Worker kurulumu gerekir (aşağıda).
+
+**Dokunma jestleri** — Sayfalar arasında parmakla sağa/sola kaydırarak geçiş.
+İki parmakla yakınlaştırma; parmak kalkınca eski haline dönüyor (tarayıcının
+kendi zoom'u kapalı, çünkü seviyesi koddan geri alınamıyor).
 
 **Ayarlar** — Gemini API anahtarı, yedekleme ve geri yükleme, bildirim sunucusu
 bağlantısı.
