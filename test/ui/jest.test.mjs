@@ -8,8 +8,12 @@ const SIRA = ['home', 'profile', 'workout', 'nutrition', 'supplement'];
 export default async function ({ rapor, adres, browser }) {
   const { ctx, page, hatalar } = await sayfaAc(browser, { adres, dokunmatik: true });
 
-  const aktif = () => page.evaluate(() =>
-    [...document.querySelectorAll('.page')].find(p => !p.classList.contains('hidden')).id.replace(/^page-/, ''));
+  // Slide sırasında iki sayfa birden görünür; çıkan olan mutlak konumda.
+  // "Aktif" olan akışta kalandır.
+  const aktif = () => page.evaluate(() => {
+    const g = [...document.querySelectorAll('.page')].filter(p => !p.classList.contains('hidden'));
+    return (g.find(p => p.style.position !== 'absolute') || g[0]).id.replace(/^page-/, '');
+  });
 
   /* Tek parmak sürükleme. sec: jestin başladığı öğe. */
   const surukle = (dx, dy = 0, sec = '.app-main') => page.evaluate(([dx, dy, sec]) => {
@@ -20,7 +24,7 @@ export default async function ({ rapor, adres, browser }) {
     at('touchstart', [d(200, 400)]);
     at('touchmove', [d(200 + dx / 2, 400 + dy / 2)]);
     at('touchend', [], [d(200 + dx, 400 + dy)]);
-  }, [dx, dy, sec]).then(() => page.waitForTimeout(160));
+  }, [dx, dy, sec]).then(() => page.waitForTimeout(420));   // slide 340 ms sürüyor
 
   /* İki parmak. birak=false ise parmaklar ekranda kalır. */
   const pinch = (bas, son, birak = true) => page.evaluate(([bas, son, birak]) => {
@@ -46,13 +50,62 @@ export default async function ({ rapor, adres, browser }) {
   await surukle(120);
   rapor.kontrol('Sağa çekince önceki sayfa', (await aktif()) === 'profile', await aktif());
 
-  rapor.kontrol('Geçiş animasyonu yön alıyor',
-    await page.evaluate(() => document.getElementById('page-profile').classList.contains('gecis-sag')));
+  rapor.baslik('slide geçişi');
+  // Geçişin ORTASINDA iki sayfa da ekranda olmalı; biri çıkarken öbürü giriyor
+  await page.evaluate(() => showPage('home'));
+  await page.waitForTimeout(300);
+  await page.evaluate(() => {
+    const el = document.querySelector('.app-main');
+    const d = (x, y) => new Touch({ identifier: 1, target: el, clientX: x, clientY: y });
+    const at = (t, l, c) => el.dispatchEvent(new TouchEvent(t,
+      { bubbles: true, cancelable: true, touches: l, targetTouches: l, changedTouches: c || l }));
+    at('touchstart', [d(300, 400)]); at('touchmove', [d(240, 400)]); at('touchend', [], [d(180, 400)]);
+  });
+  await page.waitForTimeout(120);
+  const orta = await page.evaluate(() => {
+    const gorunen = [...document.querySelectorAll('.page')].filter(p => !p.classList.contains('hidden'));
+    return {
+      suruyor: document.querySelector('.app-main').classList.contains('gecis-suruyor'),
+      sayfalar: gorunen.map(p => p.id),
+      cikan: (gorunen.find(p => p.style.position === 'absolute') || {}).id,
+      giren: (gorunen.find(p => p.style.position !== 'absolute') || {}).id,
+      tasma: document.documentElement.scrollWidth - document.documentElement.clientWidth
+    };
+  });
+  rapor.kontrol('Geçiş sırasında iki sayfa birden görünüyor', orta.sayfalar.length === 2, orta.sayfalar.join(','));
+  rapor.kontrol('Çıkan sayfa ana sayfa', orta.cikan === 'page-home', orta.cikan);
+  rapor.kontrol('Giren sayfa akışta kalıyor (yüksekliği o belirliyor)',
+    orta.giren === 'page-profile', orta.giren);
+  rapor.kontrol('Kayan sayfalar yatay taşma yaratmıyor', orta.tasma === 0, String(orta.tasma));
+
+  await page.waitForTimeout(400);
+  const bitis = await page.evaluate(() => {
+    const p = document.getElementById('page-profile');
+    return {
+      suruyor: document.querySelector('.app-main').classList.contains('gecis-suruyor'),
+      gorunen: [...document.querySelectorAll('.page')].filter(x => !x.classList.contains('hidden')).length,
+      artik: p.style.transform + p.style.position + p.style.width
+    };
+  });
+  rapor.kontrol('Geçiş bitince tek sayfa kalıyor', bitis.gorunen === 1, String(bitis.gorunen));
+  rapor.kontrol('Geçiş sınıfı temizleniyor', !bitis.suruyor);
+  rapor.kontrol('Satır içi stiller temizleniyor', bitis.artik === '', bitis.artik || '(boş)');
+
+  // Üst üste hızlı kaydırmada artık kalmamalı
+  await surukle(-60); await page.waitForTimeout(60); await surukle(-60);
+  await page.waitForTimeout(500);
+  rapor.kontrol('Hızlı art arda kaydırmada artık kalmıyor', await page.evaluate(() =>
+    [...document.querySelectorAll('.page')].filter(p => !p.classList.contains('hidden')).length === 1 &&
+    !document.querySelector('.app-main').classList.contains('gecis-suruyor')));
+
+  rapor.baslik('yanlışlıkla tetiklenmiyor (devam)');
+  await page.evaluate(() => showPage('profile'));
+  await page.waitForTimeout(300);
 
   rapor.baslik('yanlışlıkla tetiklenmiyor');
-  await surukle(-30);
+  await surukle(-20);
   rapor.kontrol('Kısa hareket sayfayı değiştirmiyor', (await aktif()) === 'profile', await aktif());
-  await surukle(-120, 220);
+  await surukle(-60, 220);
   rapor.kontrol('Dikey baskın hareket sayfayı değiştirmiyor', (await aktif()) === 'profile', await aktif());
 
   // Gün şeridi kendi yatay kaydırmasını yapıyor; orada jest yutulmamalı
