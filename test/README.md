@@ -27,6 +27,13 @@ Ortak parçalar:
 - `worker/_ortam.mjs` — sahte KV, gerçek VAPID anahtarları, gönderim yakalayıcı.
 - `ui/_veri.mjs` — paylaşılan örnek veriler.
 
+### `ui/kontrast.test.mjs` neden piksel örnekliyor
+
+Alt menü `backdrop-filter` ile saydam. Etiketin arkasındaki renk arkadan kayan
+içeriğe göre değişir ve CSS'ten hesaplanamaz. Bu takım ekran görüntüsü alıp
+etiketin altındaki pikselleri gerçekten ölçüyor; sayfa listesini de DOM'dan
+okuyor, böylece yeni bir sayfa eklendiğinde ölçüm dışında kalmıyor.
+
 ## Yeni takım eklemek
 
 İlgili klasöre `<ad>.test.mjs` koy; runner kendiliğinden bulur.
