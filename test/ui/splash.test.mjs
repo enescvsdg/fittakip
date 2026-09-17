@@ -29,7 +29,23 @@ export default async function ({ rapor, adres, browser }) {
       rapor.kontrol('Gecede zemin lacivert kalıyor', d.zemin === LACIVERT, d.zemin);
     }
 
-    await page.waitForTimeout(900);
+    // Perde kapanırken altındaki içerik de beliriyor: tek taraflı silinme
+    // yerine çapraz geçiş. Sınıf perde 'bitti' olurken konuyor.
+    await page.waitForTimeout(150);
+    const gecis = await page.evaluate(() => {
+      const ana = document.querySelector('.app-main');
+      return {
+        sinif: document.body.classList.contains('perde-cikiyor'),
+        animasyon: getComputedStyle(ana).animationName,
+        sarmalayici: !!document.querySelector('#appSplash .splash-icerik')
+      };
+    });
+    rapor.kontrol('Perde içeriği sarmalayıcıda', gecis.sarmalayici);
+    rapor.kontrol('Çıkışta gövdeye perde-cikiyor konuyor', gecis.sinif);
+    rapor.kontrol('İçerik belirme animasyonu çalışıyor',
+      gecis.animasyon === 'uygulamaGir', gecis.animasyon);
+
+    await page.waitForTimeout(750);
     d = await durum(page);
     rapor.kontrol('Perde tamamen kapandı', d.goster === 'none', d.sinif);
 
@@ -75,7 +91,9 @@ export default async function ({ rapor, adres, browser }) {
     await page.goto(adres + '/index.html', { waitUntil: 'commit' });
     await page.waitForTimeout(250);
     await page.click('#appSplash');
-    await page.waitForTimeout(450);
+    // Çıkış solması 500 ms; 600 ms sonra kapanmış olmalı. Kendiliğinden kapanış
+    // 1650 ms'de olduğu için burada 'none' görmek dokunuşun işlediğini kanıtlıyor.
+    await page.waitForTimeout(600);
     rapor.kontrol('Dokununca erken kapanıyor', (await durum(page)).goster === 'none');
     await ctx.close();
   }

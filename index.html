@@ -23,11 +23,19 @@
   <style>
     #appSplash {
       position: fixed; inset: 0; z-index: 9999;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px;
+      display: flex; align-items: center; justify-content: center;
       /* Sistemin açılış ekranıyla birebir aynı renk — devralma görünmesin */
       background: #0c121b;
-      transition: background .55s ease, opacity .35s ease;
+      /* Çıkış, girişten uzun ve yavaşlayan eğride: son kare göze çarpmıyor */
+      transition: background .5s cubic-bezier(.4,0,.2,1), opacity .5s cubic-bezier(.4,0,.2,1);
     }
+    #appSplash .splash-icerik {
+      display: flex; flex-direction: column; align-items: center; gap: 15px;
+      /* Perde silinirken içerik hafifçe büyüyüp soluyor — iOS'un uygulama
+         açılışındaki hissi. Perdenin düz kaybolmasından yumuşak. */
+      transition: opacity .4s ease-in, transform .5s cubic-bezier(.32,.72,0,1);
+    }
+    #appSplash.bitti .splash-icerik { opacity: 0; transform: scale(1.06); }
     #appSplash.tema { background: var(--bg, #0c121b); }
     #appSplash.bitti { opacity: 0; pointer-events: none; }
     #appSplash.kapali { display: none; }
@@ -44,7 +52,7 @@
     #appSplash.tema .splash-name { color: var(--text, #f0f0f0); }
     #appSplash .splash-bar {
       width: 96px; height: 3px; border-radius: 2px; overflow: hidden;
-      background: rgba(255,255,255,.14); transition: opacity .3s ease;
+      background: rgba(255,255,255,.14); transition: opacity .42s ease;
     }
     #appSplash.tema .splash-bar { opacity: 0; }
     #appSplash .splash-bar span {
@@ -58,6 +66,8 @@
     @media (prefers-reduced-motion: reduce) {
       #appSplash .splash-logo, #appSplash .splash-name { animation: none; }
       #appSplash .splash-bar span { animation: none; width: 100%; }
+      #appSplash .splash-icerik { transition: opacity .2s linear; }
+      #appSplash.bitti .splash-icerik { transform: none; }
     }
   </style>
 
@@ -77,9 +87,11 @@
        başına ayrı renk veremiyor. Perde o renkten (lacivert) başlayıp geçerli
        temanın zeminine geçerek devralmayı görünmez kılıyor. -->
   <div id="appSplash" aria-hidden="true">
-    <img class="splash-logo" src="icons/icon-512.png" alt="" />
-    <p class="splash-name">FitTakip</p>
-    <div class="splash-bar"><span></span></div>
+    <div class="splash-icerik">
+      <img class="splash-logo" src="icons/icon-512.png" alt="" />
+      <p class="splash-name">FitTakip</p>
+      <div class="splash-bar"><span></span></div>
+    </div>
   </div>
   <script>
     (function () {
@@ -99,12 +111,16 @@
       // da örtsün. Zaten tamamlanmış bir perde ise tekrar çıkmaz.
       var kapat = function () {
         try { sessionStorage.setItem('ft_splash', '1'); } catch (e) {}
+        // Perde solarken altındaki içerik aynı anda beliriyor (bkz. style.css)
+        document.body.classList.add('perde-cikiyor');
         perde.classList.add('bitti');
-        setTimeout(function () { perde.classList.add('kapali'); }, 360);
+        setTimeout(function () { perde.classList.add('kapali'); }, 500);
       };
 
-      setTimeout(function () { perde.classList.add('tema'); }, 700);
-      var zaman = setTimeout(kapat, 1250);
+      // Zemin geçişi erken başlıyor ve perdenin kapanışıyla çakışmıyor:
+      // iki ayrı hareket üst üste binmeyince göz tek akıcı geçiş görüyor.
+      setTimeout(function () { perde.classList.add('tema'); }, 500);
+      var zaman = setTimeout(kapat, 1150);
       perde.addEventListener('click', function () { clearTimeout(zaman); kapat(); });
     })();
   </script>

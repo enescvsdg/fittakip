@@ -2036,8 +2036,15 @@ var TURKISH_FOODS = {
     { name: 'Somon (pişmiş)', kcal: 208, protein: 20, carbs: 0, fat: 13 },
     { name: 'Levrek', kcal: 97, protein: 18.4, carbs: 0, fat: 2.5 },
     { name: 'Ton Balığı (suda, süzülmüş)', kcal: 116, protein: 26, carbs: 0, fat: 1 },
-    { name: 'Yumurta (tam)', kcal: 155, protein: 13, carbs: 1.1, fat: 11 },
-    { name: 'Yumurta Akı', kcal: 52, protein: 11, carbs: 0.7, fat: 0.2 }
+    // Yumurta: TS/AB boy sınıfları (S<53g, M 53-63g, L 63-73g — kabuk dahil).
+    // birim.gram = kabuğu çıkarılmış ortalama yenilebilir ağırlık (kabuk ~%12).
+    // Ak, yenilebilir kısmın ~%65'i; kalanı sarı.
+    { name: 'Yumurta, tam (S)', kcal: 155, protein: 13, carbs: 1.1, fat: 11, birim: { ad: 'adet', gram: 44 } },
+    { name: 'Yumurta, tam (M)', kcal: 155, protein: 13, carbs: 1.1, fat: 11, birim: { ad: 'adet', gram: 51 } },
+    { name: 'Yumurta, tam (L)', kcal: 155, protein: 13, carbs: 1.1, fat: 11, birim: { ad: 'adet', gram: 60 } },
+    { name: 'Yumurta Akı (S)', kcal: 52, protein: 11, carbs: 0.7, fat: 0.2, birim: { ad: 'adet', gram: 29 } },
+    { name: 'Yumurta Akı (M)', kcal: 52, protein: 11, carbs: 0.7, fat: 0.2, birim: { ad: 'adet', gram: 33 } },
+    { name: 'Yumurta Akı (L)', kcal: 52, protein: 11, carbs: 0.7, fat: 0.2, birim: { ad: 'adet', gram: 39 } }
   ],
   'Süt Ürünleri': [
     { name: 'Lor Peyniri', kcal: 98, protein: 11, carbs: 3.4, fat: 4.3 },
@@ -2093,7 +2100,8 @@ var completeMealBtn      = document.getElementById('completeMealBtn');
 var mealPlanListEl       = document.getElementById('mealPlanList');
 
 var mealCartItems = [];
-var currentFoodMeta = null; // { kcal100, protein100, carbs100, fat100, isEstimated }
+var currentFoodMeta = null; // { kcal100, protein100, carbs100, fat100, isEstimated, birim }
+var gidaBirimAktif = false; // miktar alanı şu an adet mi (true) gram mı (false) sayıyor
 
 // ── GIDA SEÇİM LİSTESİNİ DOLDUR ──────────────────
 function fillFoodSelect() {
@@ -2115,10 +2123,47 @@ function findLocalFood(name) {
   return all.find(function(f) { return f.name === name; });
 }
 
-function updateMealPreview() {
-  var grams = parseFloat(foodAmountInput.value) || 0;
+/* Miktar alanına girilen sayıyı grama çevirir.
+   Birimsiz gıdalarda sayı zaten gramdır; adet bazlılarda adet × birim ağırlığı. */
+function porsiyonGrami(meta, miktar) {
+  return (meta && meta.birim) ? miktar * meta.birim.gram : miktar;
+}
 
-  if (!currentFoodMeta || grams <= 0) {
+/* Sepette ve planda porsiyonu okunur biçimde yazar: "2 adet (120 g)" ya da "150 g". */
+function porsiyonMetni(item) {
+  if (item.birimAd && item.birimAdet) {
+    return item.birimAdet + ' ' + item.birimAd + ' (' + Math.round(item.grams) + ' g)';
+  }
+  return item.grams + ' g';
+}
+
+/* Seçilen gıda adet bazlıysa miktar alanını adede, değilse grama ayarlar.
+   Birim tipi değiştiğinde varsayılan değeri de tazeler (1 adet / 100 gram). */
+function gidaMiktarAlaniniAyarla() {
+  var birim = currentFoodMeta && currentFoodMeta.birim;
+  var etiket = document.querySelector('label[for="food-amount"]');
+  var aralik = birim ? SAYI_ARALIK.foodAdet : SAYI_ARALIK.foodAmount;
+
+  if (etiket) etiket.textContent = 'Miktar (' + (birim ? birim.ad : 'gram') + ')';
+  foodAmountInput.min = aralik.min;
+  foodAmountInput.max = aralik.max;
+
+  if (gidaBirimAktif !== !!birim) {
+    foodAmountInput.value = birim ? 1 : 100;
+    gidaBirimAktif = !!birim;
+  }
+}
+
+/* Seçici hangi aralığı göstersin — gıda değiştikçe değişir, o yüzden fonksiyon. */
+function gidaMiktarTuru() {
+  return (currentFoodMeta && currentFoodMeta.birim) ? 'foodAdet' : 'foodAmount';
+}
+
+function updateMealPreview() {
+  var miktar = parseFloat(foodAmountInput.value) || 0;
+  var grams = porsiyonGrami(currentFoodMeta, miktar);
+
+  if (!currentFoodMeta || miktar <= 0 || grams <= 0) {
     mealFoodPreview.innerHTML = 'Önce bir gıda seç';
     addFoodToCartBtn.disabled = true;
     return;
@@ -2131,10 +2176,14 @@ function updateMealPreview() {
   var fat = (currentFoodMeta.fat100 * factor).toFixed(1);
   var badge = currentFoodMeta.isEstimated ? '<span class="estimated-badge">~ Tahmini</span>' : '';
 
+  var porsiyon = currentFoodMeta.birim
+    ? miktar + ' ' + currentFoodMeta.birim.ad + ' ≈ ' + Math.round(grams) + ' g · '
+    : '';
+
   mealFoodPreview.innerHTML =
     '<strong>' + kcal + ' kcal</strong>' + badge + '<br>' +
-    'Protein: ' + protein + 'g · Karbonhidrat: ' + carbs + 'g · Yağ: ' + fat + 'g (100g için: ' +
-    currentFoodMeta.kcal100 + ' kcal)';
+    'Protein: ' + protein + 'g · Karbonhidrat: ' + carbs + 'g · Yağ: ' + fat + 'g<br>' +
+    escapeHtml(porsiyon) + '100g için: ' + currentFoodMeta.kcal100 + ' kcal';
   addFoodToCartBtn.disabled = false;
 }
 
@@ -2147,14 +2196,17 @@ foodSelect.addEventListener('change', function() {
     aiEstimateBtn.classList.add('hidden');
     usdaResultsListEl.innerHTML = '';
     currentFoodMeta = null;
+    gidaMiktarAlaniniAyarla();
     updateMealPreview();
     return;
   }
   customFoodGroup.classList.add('hidden');
   var found = findLocalFood(foodSelect.value);
   currentFoodMeta = found
-    ? { kcal100: found.kcal, protein100: found.protein, carbs100: found.carbs, fat100: found.fat, isEstimated: false }
+    ? { kcal100: found.kcal, protein100: found.protein, carbs100: found.carbs, fat100: found.fat,
+        isEstimated: false, birim: found.birim || null }
     : null;
+  gidaMiktarAlaniniAyarla();
   updateMealPreview();
 });
 
@@ -2343,7 +2395,7 @@ function buildMealCartItemHTML(item, index) {
         '<span class="cart-item-number">' + (index + 1) + '</span>' +
         '<div class="cart-item-info">' +
           '<p class="cart-item-name">' + escapeHtml(item.name) + badge + '</p>' +
-          '<p class="cart-item-meta">' + escapeHtml(item.meal) + ' · ' + escapeHtml(item.grams) + 'g · ' + escapeHtml(item.kcal) + ' kcal</p>' +
+          '<p class="cart-item-meta">' + escapeHtml(item.meal) + ' · ' + escapeHtml(porsiyonMetni(item)) + ' · ' + escapeHtml(item.kcal) + ' kcal</p>' +
         '</div>' +
         '<button type="button" class="cart-item-remove" data-cart-id="' + escapeHtml(item.cartId) + '" title="Sil">✕</button>' +
       '</div>' +
@@ -2370,7 +2422,9 @@ mealCartListEl.addEventListener('click', function(e) {
 
 addFoodToCartBtn.addEventListener('click', function() {
   if (!currentFoodMeta) return;
-  var grams = parseFloat(foodAmountInput.value) || 100;
+  var birim = currentFoodMeta.birim;
+  var miktar = parseFloat(foodAmountInput.value) || (birim ? 1 : 100);
+  var grams = porsiyonGrami(currentFoodMeta, miktar);
   var factor = grams / 100;
   var name = foodSelect.value === '__custom__' ? customFoodNameInput.value.trim() : foodSelect.value;
   if (!name) return;
@@ -2380,6 +2434,8 @@ addFoodToCartBtn.addEventListener('click', function() {
     meal: mealSelect.value,
     name: name,
     grams: grams,
+    birimAd: birim ? birim.ad : null,
+    birimAdet: birim ? miktar : null,
     kcal100: currentFoodMeta.kcal100,
     protein100: currentFoodMeta.protein100,
     carbs100: currentFoodMeta.carbs100,
@@ -2410,6 +2466,8 @@ completeMealBtn.addEventListener('click', function() {
       id: 'food_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
       name: item.name,
       grams: item.grams,
+      birimAd: item.birimAd || null,
+      birimAdet: item.birimAdet || null,
       kcal100: item.kcal100,
       protein100: item.protein100,
       carbs100: item.carbs100,
@@ -2451,7 +2509,7 @@ function renderMealPlanView() {
           '<div class="food-log-item">' +
             '<div>' +
               '<p class="food-log-item-name">' + escapeHtml(item.name) + badge + '</p>' +
-              '<p class="food-log-item-meta">' + escapeHtml(item.grams) + 'g · P:' + escapeHtml(item.protein) + ' K:' + escapeHtml(item.carbs) + ' Y:' + escapeHtml(item.fat) + '</p>' +
+              '<p class="food-log-item-meta">' + escapeHtml(porsiyonMetni(item)) + ' · P:' + escapeHtml(item.protein) + ' K:' + escapeHtml(item.carbs) + ' Y:' + escapeHtml(item.fat) + '</p>' +
             '</div>' +
             '<span class="food-log-item-kcal">' + escapeHtml(item.kcal) + ' kcal</span>' +
             '<button class="food-log-item-remove" data-meal="' + escapeHtml(meal) + '" data-id="' + escapeHtml(item.id) + '" title="Kaldır">✕</button>' +
@@ -4299,7 +4357,8 @@ function girdiyiSeciciyeBagla(inputId, tur, ondalik) {
   el.setAttribute('inputmode', 'none');
 
   var ac = function() {
-    sayiSecicisiAc(tur, el.value, ondalik, function(deger) {
+    // tur bir fonksiyon olabilir: aralık, alanın o anki bağlamına göre değişsin diye
+    sayiSecicisiAc(typeof tur === 'function' ? tur() : tur, el.value, ondalik, function(deger) {
       el.value = deger;
       el.dispatchEvent(new Event('input', { bubbles: true }));
       el.dispatchEvent(new Event('change', { bubbles: true }));
@@ -4317,4 +4376,4 @@ girdiyiSeciciyeBagla('input-weight',    'weight',     true);
 girdiyiSeciciyeBagla('input-age',       'age',        false);
 girdiyiSeciciyeBagla('goal-weight',     'goalWeight', true);
 girdiyiSeciciyeBagla('weighin-weight',  'weight',     true);
-girdiyiSeciciyeBagla('food-amount',     'foodAmount', false);
+girdiyiSeciciyeBagla('food-amount',     gidaMiktarTuru, false);
