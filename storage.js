@@ -27,6 +27,7 @@ var KEYS = {
   height:      'ft_height',
   weight:      'ft_weight',
   age:         'ft_age',
+  gender:      'ft_gender',
   goal:        'ft_goal',
   workout:     'ft_workout',
   nutrition:   'ft_nutrition',

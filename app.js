@@ -124,6 +124,7 @@ function loadFormData() {
   document.getElementById('input-weight').value     = localStorage.getItem(KEYS.weight)     || '';
   document.getElementById('input-age').value        = localStorage.getItem(KEYS.age)        || '';
   document.getElementById('input-goal').value       = localStorage.getItem(KEYS.goal)       || '';
+  document.getElementById('input-gender').value     = localStorage.getItem(KEYS.gender)     || '';
   document.getElementById('input-workout').value    = localStorage.getItem(KEYS.workout)    || '';
   document.getElementById('input-cardio').value      = localStorage.getItem(KEYS.cardio)     || '';
   document.getElementById('input-nutrition').value  = localStorage.getItem(KEYS.nutrition)  || '';
@@ -161,6 +162,8 @@ document.getElementById('save-profile').addEventListener('click', function() {
 
   var g = document.getElementById('input-goal').value.trim();
   if (g) localStorage.setItem(KEYS.goal, g);
+
+  localStorage.setItem(KEYS.gender, document.getElementById('input-gender').value);
 
   document.getElementById('profile-feedback').textContent = '✅ Kaydedildi!';
   showFeedback('profile-feedback');

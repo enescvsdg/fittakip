@@ -97,3 +97,67 @@ function showFeedback(id) {
   clearTimeout(el._timer);
   el._timer = setTimeout(function() { el.classList.add('hidden'); }, 2200);
 }
+/* ══════════════════════════════════════════
+   GÜNLÜK KALORİ VE MAKRO HEDEFİ
+   Hesap kodda yapılıyor, yapay zekâya bırakılmıyor: üretilen sayı her
+   çalıştırmada değişmesin, nereden geldiği gösterilebilsin ve teste bağlanabilsin
+   diye. Yapay zekâya kalan iş bu hedefi tutturacak öğünleri kurmak.
+   ══════════════════════════════════════════ */
+
+/* Mifflin-St Jeor — bazal metabolizma (kcal/gün).
+   Cinsiyet bilinmiyorsa iki formülün ortalaması alınıyor; hata payı ±%5 olur
+   ama hesabı hiç yapmamaktan iyi. */
+function bazalMetabolizma(cinsiyet, kilo, boy, yas) {
+  var ortak = 10 * kilo + 6.25 * boy - 5 * yas;
+  if (cinsiyet === 'erkek') return ortak + 5;
+  if (cinsiyet === 'kadin') return ortak - 161;
+  return ortak + (5 - 161) / 2;
+}
+
+/* Gün içi hareketlilik + haftalık antrenman yükü tek katsayıya iniyor.
+   Klasik "aktivite çarpanı" tablosu masa başı/ayakta/fiziksel iş ayrımını
+   yapmıyor; burada ikisi ayrı ayrı toplanıyor. */
+var HAREKET_KATSAYISI = { masa: 1.25, ayakta: 1.45, fiziksel: 1.65 };
+
+function aktiviteKatsayisi(gunlukHareket, haftalikAntrenman) {
+  var taban = HAREKET_KATSAYISI[gunlukHareket] || HAREKET_KATSAYISI.masa;
+  var gun = Math.max(0, Math.min(7, Number(haftalikAntrenman) || 0));
+  return taban + gun * 0.035;          // 4 gün antrenman ≈ +0.14
+}
+
+/* Hedefe göre günlük açık/fazla. Yüzde kullanılıyor: 120 kiloluk birinin
+   500 kcal açığı ile 55 kiloluk birininki aynı şey değil. */
+var HEDEF_ORANI = { 'Kilo Vermek': -0.20, 'Sabit Kalmak': 0, 'Kilo Almak': 0.12 };
+
+/* { bmr, tdee, kalori, protein, yag, karbonhidrat, uyari } döndürür.
+   Eksik veri varsa null döner — çağıran taraf kullanıcıdan istesin. */
+function gunlukHedef(veri) {
+  var kilo = parseFloat(veri.kilo), boy = parseFloat(veri.boy), yas = parseFloat(veri.yas);
+  if (!kilo || !boy || !yas) return null;
+
+  var bmr = bazalMetabolizma(veri.cinsiyet, kilo, boy, yas);
+  var tdee = bmr * aktiviteKatsayisi(veri.gunlukHareket, veri.haftalikAntrenman);
+  var oran = HEDEF_ORANI[veri.hedefTipi];
+  if (oran === undefined) oran = 0;
+  var kalori = tdee * (1 + oran);
+
+  // Çok düşük kaloriye inmesin: bazalın altına düşen plan sürdürülebilir değil
+  var uyari = '';
+  if (kalori < bmr) { kalori = bmr; uyari = 'Hedef, bazal metabolizmanın altına inmesin diye yükseltildi.'; }
+
+  // Protein kiloya göre (kas koruma), yağ kalorinin %25'i, kalanı karbonhidrat
+  var protein = Math.round(kilo * (oran < 0 ? 2.0 : 1.8));
+  var yag = Math.round((kalori * 0.25) / 9);
+  var kalan = kalori - (protein * 4 + yag * 9);
+  var karbonhidrat = Math.max(0, Math.round(kalan / 4));
+
+  return {
+    bmr: Math.round(bmr),
+    tdee: Math.round(tdee),
+    kalori: Math.round(kalori),
+    protein: protein,
+    yag: yag,
+    karbonhidrat: karbonhidrat,
+    uyari: uyari
+  };
+}
