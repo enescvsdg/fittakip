@@ -19,7 +19,11 @@ function showPage(pageId, sessiz) {
   var target = document.getElementById('page-' + pageId);
   if (target) {
     target.classList.remove('hidden');
-    if (!sessiz) {
+    if (sessiz) {
+      // Sürüklenerek gelen sayfa yatay olarak zaten yerine oturdu. Giriş
+      // animasyonu da oynarsa üstüne bir de yukarıdan aşağı hareket biniyor.
+      target.style.animation = 'none';
+    } else {
       target.style.animation = 'none';
       void target.offsetHeight;
       target.style.animation = '';
@@ -4543,14 +4547,16 @@ function komsuyuKur(ileri) {
   if (!yeni) return;
 
   var k = surukleme.eski.getBoundingClientRect();
-  var baslik = document.querySelector('.app-header');
   yeni.classList.remove('hidden');
   yeni.classList.add('suruklenen');
   yeni.style.animation = 'none';
   yeni.style.position = 'fixed';
   yeni.style.left = k.left + 'px';
   yeni.style.width = k.width + 'px';
-  yeni.style.top = (baslik ? baslik.getBoundingClientRect().bottom : 0) + 'px';
+  // Sayfa akışa döndüğünde .app-main'in üst boşluğundan başlıyor. Sürüklerken
+  // başlığın hemen altına konsaydı, geçiş bitince içerik o farkı kadar aşağı
+  // sıçrardı — ölçülen 15 px'lik zıplama buradan geliyordu.
+  yeni.style.top = (parseFloat(getComputedStyle(surukleme.ana).paddingTop) || 0) + 'px';
   yeni.style.bottom = '0';
   yeni.style.overflow = 'hidden';
   yeni.style.transition = 'none';

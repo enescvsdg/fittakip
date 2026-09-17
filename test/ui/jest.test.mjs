@@ -160,6 +160,37 @@ export default async function ({ rapor, adres, browser }) {
   rapor.kontrol('Kapsül hiç oynamadı', son.kapsulX === durgun.kapsulX,
     durgun.kapsulX + ' → ' + son.kapsulX);
 
+  rapor.baslik('geçişte dikey oynama yok');
+  /* Geçiş yatay olmalı. İki ayrı sıçrama buradan çıkmıştı: gelen sayfa
+     sürüklenirken başlığın hemen altında duruyordu ama akışa dönünce
+     .app-main'in üst boşluğuna oturuyordu (15 px), üstüne de sayfanın giriş
+     animasyonu yeniden oynuyordu (12 px). Toplam 27 px aşağı kayma. */
+  await page.evaluate(() => showPage('home'));
+  await page.waitForTimeout(300);
+  await dokun('touchstart', 330, 500);
+  await dokun('touchmove', 300, 500);
+  await dokun('touchmove', 150, 500);
+  await dokun('touchend', 150, 500);
+  const dikey = await page.evaluate(() => new Promise(bitir => {
+    const kayit = []; const t0 = performance.now();
+    (function kare() {
+      const e = document.getElementById('page-profile');
+      kayit.push(Math.round(e.getBoundingClientRect().y * 10) / 10);
+      if (performance.now() - t0 < 650) requestAnimationFrame(kare); else bitir(kayit);
+    })();
+  }));
+  const oynama = Math.max(...dikey) - Math.min(...dikey);
+  rapor.kontrol('Gelen sayfa dikeyde hiç oynamıyor', oynama === 0, oynama.toFixed(1) + ' px');
+  rapor.kontrol('Giriş animasyonu tekrar oynamıyor',
+    (await page.evaluate(() =>
+      getComputedStyle(document.getElementById('page-profile')).animationName)) === 'none');
+  // Menüden geçince animasyon yine çalışmalı — sessiz yol yalnız sürüklemeye ait
+  await page.evaluate(() => showPage('workout'));
+  await page.waitForTimeout(80);
+  rapor.kontrol('Menüden geçişte animasyon duruyor',
+    (await page.evaluate(() =>
+      getComputedStyle(document.getElementById('page-workout')).animationName)) === 'fadeSlideIn');
+
   rapor.baslik('yeterince çekilmezse geri dönüyor');
   // Genişliğin %30'u eşik; 40 px hem eşiğin hem de fiske hızının altında
   const oncekiSayfa = await aktif();
@@ -170,8 +201,10 @@ export default async function ({ rapor, adres, browser }) {
     !document.querySelector('.app-main').classList.contains('gecis-suruyor')));
 
   rapor.baslik('kısa ama hızlı fiske tamamlıyor');
+  await page.evaluate(() => showPage('home'));   // bilinen bir yerden başla
+  await page.waitForTimeout(300);
   await surukle(-60);                          // duraklatmasız: hız eşiği geçer
-  rapor.kontrol('Hızlı fiske kısa yolda da geçiriyor', (await aktif()) === 'workout', await aktif());
+  rapor.kontrol('Hızlı fiske kısa yolda da geçiriyor', (await aktif()) === 'profile', await aktif());
 
   rapor.baslik('yanlışlıkla tetiklenmiyor (devam)');
   await page.evaluate(() => showPage('profile'));
