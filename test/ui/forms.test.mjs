@@ -25,29 +25,36 @@ export default async function ({ rapor, adres, browser }) {
   await page.evaluate(() => showPage('profile'));
   await page.waitForTimeout(220);
 
-  await page.fill('#input-height', '400'); await page.fill('#input-weight', '80');
+  /* Alanlar artık salt okunur ve yalnızca seçiciden doluyor, yani arayüzden
+     geçersiz değer girilemiyor. Doğrulama yine de gerekli: yedek geri
+     yüklendiğinde değer dosyadan geliyor. Testler o yolu taklit ediyor. */
+  const yaz = (id, deger) => page.evaluate(([i, d]) => {
+    document.getElementById(i).value = d;
+  }, [id, deger]);
+
+  await yaz('input-height', '400'); await yaz('input-weight', '80');
   await page.click('#save-profile'); await page.waitForTimeout(220);
   let depo = await page.evaluate(() => ({ h: localStorage.getItem('ft_height'), w: localStorage.getItem('ft_weight') }));
   rapor.kontrol('Bir alan hatalıysa hiçbiri kaydedilmiyor', depo.h === null && depo.w === null, JSON.stringify(depo));
   const uyari = (await page.textContent('#profile-feedback')).trim();
   rapor.kontrol('Hangi alanın hatalı olduğu söyleniyor', uyari.includes('Boy'), uyari);
 
-  await page.fill('#input-height', '178'); await page.fill('#input-weight', '75.4'); await page.fill('#input-age', '29');
+  await yaz('input-height', '178'); await yaz('input-weight', '75.4'); await yaz('input-age', '29');
   await page.click('#save-profile'); await page.waitForTimeout(220);
   depo = await page.evaluate(() => ({
     h: localStorage.getItem('ft_height'), w: localStorage.getItem('ft_weight'), a: localStorage.getItem('ft_age')
   }));
   rapor.kontrol('Geçerli değerler kaydediliyor', depo.h === '178' && depo.w === '75.4' && depo.a === '29', JSON.stringify(depo));
 
-  await page.fill('#goal-weight', '120'); await page.click('#save-goal'); await page.waitForTimeout(220);
+  await yaz('goal-weight', '120'); await page.click('#save-goal'); await page.waitForTimeout(220);
   rapor.kontrol('120 kg hedef kaydedildi', await page.evaluate(() => localStorage.getItem('ft_goal_weight')) === '120');
 
-  await page.fill('#weighin-date', '2026-09-16'); await page.fill('#weighin-weight', '500');
+  await page.fill('#weighin-date', '2026-09-16'); await yaz('weighin-weight', '500');
   await page.click('#add-weighin'); await page.waitForTimeout(220);
   const bos = await page.evaluate(() => JSON.parse(localStorage.getItem('ft_weighins') || '[]'));
   rapor.kontrol('500 kg tartım eklenmiyor', bos.length === 0, JSON.stringify(bos));
 
-  await page.fill('#weighin-weight', '75.4'); await page.click('#add-weighin'); await page.waitForTimeout(220);
+  await yaz('weighin-weight', '75.4'); await page.click('#add-weighin'); await page.waitForTimeout(220);
   const dolu = await page.evaluate(() => JSON.parse(localStorage.getItem('ft_weighins') || '[]'));
   rapor.kontrol('Geçerli tartım ekleniyor', dolu.length === 1 && dolu[0].weight === 75.4, JSON.stringify(dolu));
 

@@ -4147,3 +4147,174 @@ dietPdfConfirmBtn.addEventListener('click', function() {
   dietPdfModal.classList.add('hidden');
   dietPdfParsed = null;
 });
+
+/* ══════════════════════════════════════════
+   SAYI SEÇİCİ — kaydırarak değer girme
+
+   Elle yazmak yerine iOS tarzı tekerlek. Alanın kendisi <input> olarak
+   kalıyor; yalnızca salt okunur olup dokununca seçiciyi açıyor. Böylece
+   kaydetme, doğrulama ve testler hiç değişmeden çalışmaya devam ediyor.
+
+   Aralıklar SAYI_ARALIK'tan okunuyor — sınırların tek kaynağı orası.
+   ══════════════════════════════════════════ */
+
+var SECICI_OGE_Y = 40;      // .secici-oge yüksekliğiyle aynı olmalı
+var seciciDurum = null;
+
+var sayiSeciciEl   = document.getElementById('sayiSecici');
+var seciciTekerlek = document.getElementById('seciciTekerlek');
+var seciciBaslikEl = document.getElementById('seciciBaslik');
+
+/* Bir sütun kurar ve seçili değere kaydırır.
+   degerler: gösterilecek diziler, secili: başlangıç değeri */
+function seciciSutunKur(degerler, secili, etiket) {
+  var sutun = document.createElement('div');
+  sutun.className = 'secici-sutun';
+  sutun.tabIndex = 0;
+  sutun.setAttribute('role', 'listbox');
+  if (etiket) sutun.setAttribute('aria-label', etiket);
+
+  var html = '';
+  for (var i = 0; i < degerler.length; i++) {
+    html += '<div class="secici-oge" data-deger="' + escapeHtml(degerler[i]) + '">' +
+            escapeHtml(degerler[i]) + '</div>';
+  }
+  sutun.innerHTML = html;
+
+  var indeks = degerler.indexOf(secili);
+  if (indeks < 0) indeks = 0;
+  sutun._degerler = degerler;
+
+  // Kaydırma bittiğinde ortadaki öğeyi seçili say
+  var zaman = null;
+  sutun.addEventListener('scroll', function() {
+    clearTimeout(zaman);
+    zaman = setTimeout(function() { seciciSutunIsaretle(sutun); }, 90);
+  }, { passive: true });
+
+  // Öğeye dokununca oraya kaydır
+  sutun.addEventListener('click', function(e) {
+    var oge = e.target.closest('.secici-oge');
+    if (!oge) return;
+    var i = [].indexOf.call(sutun.children, oge);
+    sutun.scrollTo({ top: i * SECICI_OGE_Y, behavior: 'smooth' });
+  });
+
+  // Yerleşim oturduktan sonra konumlandır
+  requestAnimationFrame(function() {
+    sutun.scrollTop = indeks * SECICI_OGE_Y;
+    seciciSutunIsaretle(sutun);
+  });
+  return sutun;
+}
+
+function seciciSutunIndeksi(sutun) {
+  var i = Math.round(sutun.scrollTop / SECICI_OGE_Y);
+  return Math.max(0, Math.min(sutun._degerler.length - 1, i));
+}
+
+function seciciSutunIsaretle(sutun) {
+  var i = seciciSutunIndeksi(sutun);
+  for (var k = 0; k < sutun.children.length; k++) {
+    sutun.children[k].classList.toggle('secili', k === i);
+  }
+}
+
+function seciciSutunDegeri(sutun) {
+  return sutun._degerler[seciciSutunIndeksi(sutun)];
+}
+
+/* Seçiciyi açar.
+   tur: SAYI_ARALIK anahtarı, ondalik: 0.1 adımlı ikinci sütun olsun mu */
+function sayiSecicisiAc(tur, mevcutDeger, ondalik, onayla) {
+  var k = SAYI_ARALIK[tur];
+  if (!k) return;
+
+  var sayi = parseFloat(String(mevcutDeger).replace(',', '.'));
+  if (isNaN(sayi)) sayi = Math.round((k.min + k.max) / 2);
+  sayi = Math.max(k.min, Math.min(k.max, sayi));
+
+  var tamlar = [];
+  for (var v = Math.ceil(k.min); v <= Math.floor(k.max); v++) tamlar.push(String(v));
+
+  seciciBaslikEl.textContent = k.ad + (k.birim ? ' (' + k.birim + ')' : '');
+  // Bandı koru, sütunları tazele
+  [].slice.call(seciciTekerlek.querySelectorAll('.secici-sutun, .secici-birim'))
+    .forEach(function(el) { el.remove(); });
+
+  var tamSutun = seciciSutunKur(tamlar, String(Math.floor(sayi)), k.ad);
+  seciciTekerlek.appendChild(tamSutun);
+
+  var ondalikSutun = null;
+  if (ondalik) {
+    var basamaklar = [];
+    for (var d = 0; d < 10; d++) basamaklar.push('.' + d);
+    var mevcutOndalik = '.' + Math.round((sayi - Math.floor(sayi)) * 10);
+    ondalikSutun = seciciSutunKur(basamaklar, mevcutOndalik, 'ondalık');
+    seciciTekerlek.appendChild(ondalikSutun);
+  }
+
+  if (k.birim) {
+    var birim = document.createElement('span');
+    birim.className = 'secici-birim';
+    birim.textContent = k.birim;
+    seciciTekerlek.appendChild(birim);
+  }
+
+  seciciDurum = {
+    tamSutun: tamSutun, ondalikSutun: ondalikSutun, onayla: onayla
+  };
+  sayiSeciciEl.classList.remove('hidden');
+}
+
+function sayiSecicisiKapat() {
+  sayiSeciciEl.classList.add('hidden');
+  seciciDurum = null;
+}
+
+document.getElementById('seciciKapat').addEventListener('click', sayiSecicisiKapat);
+sayiSeciciEl.addEventListener('click', function(e) {
+  if (e.target === sayiSeciciEl) sayiSecicisiKapat();
+});
+
+document.getElementById('seciciOnayla').addEventListener('click', function() {
+  if (!seciciDurum) return;
+  var deger = seciciSutunDegeri(seciciDurum.tamSutun);
+  if (seciciDurum.ondalikSutun) {
+    var kesir = seciciSutunDegeri(seciciDurum.ondalikSutun);   // ".4"
+    if (kesir !== '.0') deger = deger + kesir;
+  }
+  var onayla = seciciDurum.onayla;
+  sayiSecicisiKapat();
+  if (onayla) onayla(deger);
+});
+
+/* Bir <input>'u seçiciye bağlar. Alan salt okunur olur, dokununca seçici açılır.
+   Klavye kullanıcısı için Enter ve Boşluk da açıyor. */
+function girdiyiSeciciyeBagla(inputId, tur, ondalik) {
+  var el = document.getElementById(inputId);
+  if (!el) return;
+  el.readOnly = true;
+  el.classList.add('secici-alan');
+  el.setAttribute('inputmode', 'none');
+
+  var ac = function() {
+    sayiSecicisiAc(tur, el.value, ondalik, function(deger) {
+      el.value = deger;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  };
+  el.addEventListener('click', ac);
+  el.addEventListener('focus', function() { el.blur(); });   // klavye açılmasın
+  el.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ac(); }
+  });
+}
+
+girdiyiSeciciyeBagla('input-height',    'height',     false);
+girdiyiSeciciyeBagla('input-weight',    'weight',     true);
+girdiyiSeciciyeBagla('input-age',       'age',        false);
+girdiyiSeciciyeBagla('goal-weight',     'goalWeight', true);
+girdiyiSeciciyeBagla('weighin-weight',  'weight',     true);
+girdiyiSeciciyeBagla('food-amount',     'foodAmount', false);

@@ -1594,3 +1594,69 @@ select.form-input {
    BUGÜN NE YAPMALIYIM? — öneri kartı
    ══════════════════════════════════════════ */
 
+
+/* ══════════════════════════════════════════
+   SAYI SEÇİCİ — kaydırarak değer girme
+   Öğe yüksekliği JS'teki SECICI_OGE_Y ile aynı olmalı.
+   ══════════════════════════════════════════ */
+.secici-tekerlek {
+  position: relative;
+  display: flex; justify-content: center; align-items: stretch; gap: 2px;
+  height: 200px;
+  overflow: hidden;
+}
+
+/* Ortadaki seçim bandı */
+.secici-band {
+  position: absolute; left: 4px; right: 4px; top: 50%;
+  transform: translateY(-50%);
+  height: 40px; border-radius: 12px;
+  background: var(--surface-2);
+  pointer-events: none;
+}
+
+/* Üstte ve altta soluklaşma — tekerlek hissi buradan geliyor */
+.secici-tekerlek::before,
+.secici-tekerlek::after {
+  content: ''; position: absolute; left: 0; right: 0; height: 64px;
+  pointer-events: none; z-index: 2;
+}
+.secici-tekerlek::before { top: 0;    background: linear-gradient(var(--surface), transparent); }
+.secici-tekerlek::after  { bottom: 0; background: linear-gradient(transparent, var(--surface)); }
+
+.secici-sutun {
+  /* Bant konumlandırılmış bir öğe; sütun da konumlandırılmazsa bant
+     sayıların üstüne boyanıyor ve seçili değer görünmez oluyor. */
+  position: relative; z-index: 1;
+  height: 100%; overflow-y: auto; overscroll-behavior: contain;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  text-align: center;
+  padding: 80px 0;           /* (200 - 40) / 2 — ilk ve son öğe ortalanabilsin */
+  min-width: 62px;
+}
+.secici-sutun::-webkit-scrollbar { display: none; }
+
+.secici-oge {
+  height: 40px; line-height: 40px;
+  scroll-snap-align: center;
+  font-size: 21px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+  transition: color 0.14s ease;
+  user-select: none;
+}
+.secici-oge.secili { color: var(--text); }
+
+.secici-birim {
+  align-self: center; z-index: 3;
+  font-size: 15px; font-weight: 600; color: var(--text-muted);
+  padding-left: 4px;
+}
+
+/* Seçiciyle doldurulan alanlar: klavye açılmasın, dokunulabilir görünsün */
+.form-input.secici-alan {
+  cursor: pointer;
+  caret-color: transparent;
+}

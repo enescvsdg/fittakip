@@ -65,7 +65,8 @@ var SAYI_ARALIK = {
   height:     { min: 100, max: 250, ad: 'Boy',         birim: 'cm' },
   weight:     { min: 30,  max: 300, ad: 'Kilo',        birim: 'kg' },
   age:        { min: 10,  max: 120, ad: 'Yaş',         birim: '' },
-  goalWeight: { min: 30,  max: 300, ad: 'Hedef kilo',  birim: 'kg' }
+  goalWeight: { min: 30,  max: 300, ad: 'Hedef kilo',  birim: 'kg' },
+  foodAmount: { min: 1,   max: 2000, ad: 'Miktar',      birim: 'g'  }
 };
 
 /* { bos: true } | { hata: '...' } | { deger: 75.4 } döndürür. */
