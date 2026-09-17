@@ -1,0 +1,43 @@
+name: Testler
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  # Tarayıcı gerektirmeyen kontroller — saniyeler içinde biter, hızlı geri bildirim verir
+  hizli:
+    name: Söz dizimi, birim ve worker testleri
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Söz dizimi ve yapılandırma
+        run: npm run check
+
+      - name: Birim ve worker testleri
+        run: npm run test:unit
+
+  # Gerçek tarayıcıda çalışan arayüz testleri
+  arayuz:
+    name: Arayüz testleri
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Bağımlılıklar
+        run: npm install --no-audit --no-fund
+
+      - name: Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Arayüz testleri
+        run: npm run test:ui

@@ -1,0 +1,17 @@
+{
+  "name": "fittakip",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kişisel fitness, beslenme ve supplement takip uygulaması (PWA)",
+  "scripts": {
+    "test": "node test/run.mjs",
+    "test:unit": "node test/run.mjs unit worker",
+    "test:ui": "node test/run.mjs ui",
+    "check": "node test/syntax.mjs",
+    "serve": "node test/server.mjs 8080"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  },
+  "engines": { "node": ">=18" }
+}

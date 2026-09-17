@@ -308,7 +308,7 @@
         </div>
         <div class="form-group">
           <label class="form-label" for="goal-weight">Hedef Kilo (kg)</label>
-          <input class="form-input" type="number" id="goal-weight" min="1" max="99" step="0.1" placeholder="örn. 70" />
+          <input class="form-input" type="number" id="goal-weight" min="30" max="300" step="0.1" placeholder="örn. 70" />
         </div>
         <button class="btn-save" id="save-goal">Hedefi Kaydet</button>
         <p class="save-feedback hidden" id="goal-feedback">✅ Hedef kaydedildi!</p>
@@ -347,7 +347,7 @@
       </button>
 
       <div class="form-card hidden" id="aiSettingsSection">
-        <p class="food-source-note">PDF'den program yükleme özelliği için Gemini API anahtarın gerekiyor. Anahtarın sadece bu cihazda saklanır, hiçbir sunucuya gönderilmez.</p>
+        <p class="food-source-note">PDF'den program yükleme özelliği için Gemini API anahtarın gerekiyor. Anahtarın bu cihazda saklanır ve <strong>yalnızca Google'a</strong>, PDF'i çözümlerken gönderilir — bizim ya da başka bir sunucuya gitmez. Google tarafında anahtarına kısıtlama tanımlaman önerilir.</p>
         <div class="form-group">
           <label class="form-label" for="gemini-api-key">Gemini API Anahtarı</label>
           <input class="form-input" type="password" id="gemini-api-key" placeholder="AIza..." autocomplete="off" />
@@ -364,7 +364,8 @@
       </button>
 
       <div class="form-card hidden" id="backupSection">
-        <p class="food-source-note">Tüm verilerini (profil, antrenman, beslenme, supplement, tartım geçmişi, ayarlar) tek bir dosyaya yedekle. Telefonunu değiştirdiğinde veya veri kaybına karşı bu dosyayı geri yükleyebilirsin.</p>
+        <p class="food-source-note">Verilerini (profil, antrenman, beslenme, supplement, tartım geçmişi) tek bir dosyaya yedekle. Telefonunu değiştirdiğinde veya veri kaybına karşı bu dosyayı geri yükleyebilirsin.</p>
+        <p class="food-source-note"><strong>Gemini API anahtarın ve bildirim sunucusu bilgilerin yedeğe konmaz.</strong> Bunlar birer parola niteliğinde; yedek dosyası e-postaya veya buluta gidebildiği için güvenlik gereği dışarıda bırakılıyor. Yeni cihazda bu iki ayarı elle girmen gerekir.</p>
         <button class="btn-save" id="exportDataBtn" type="button">📥 Verileri Yedekle (İndir)</button>
         <p class="food-source-note" style="margin-top:16px;">Daha önce aldığın bir yedeği geri yükle. <strong>Mevcut verilerinin üzerine yazılır</strong>, dikkatli ol.</p>
         <input type="file" id="importDataInput" accept="application/json,.json" class="hidden" />
@@ -914,6 +915,10 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- Yükleme sırası önemli: storage ve utils hiçbir şeye bağımlı değil,
+       app.js ikisini de kullanıyor. -->
+  <script src="storage.js"></script>
+  <script src="utils.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
