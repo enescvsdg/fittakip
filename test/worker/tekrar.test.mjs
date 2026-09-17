@@ -71,4 +71,6 @@ export default async function ({ rapor }) {
   await o.cagir('/sync', 'POST', { subscription: o.subscription, reminders: [hatirlatma('w', 0)], taken: { w: o.bugun }, timezone: 'Europe/Istanbul' });
   const dbg2 = await o.cagir('/debug', 'GET');
   rapor.kontrol('"aldım" durumunu yazıyor', dbg2.body.abonelikler[0].hatirlatmalar[0].durum === 'kullanıcı aldım dedi, susuldu');
+
+  o.zamaniCoz();   // gerçek saati geri bırak, sonraki takımlar etkilenmesin
 }

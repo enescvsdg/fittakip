@@ -1,12 +1,13 @@
 /* Ana sayfadaki supplement kartı: günlük "alındı" sayacı ve ilerleme çubuğu. */
-import { sayfaAc, bugunAnahtari } from '../harness.mjs';
+import { sayfaAc, SABIT_AN, SABIT_TARIH } from '../harness.mjs';
 import { takviye } from './_veri.mjs';
 
-const BUGUN = bugunAnahtari();
-const now = new Date();
+const BUGUN = SABIT_TARIH;
+// Saatler sabit ana göre hesaplanıyor; tarayıcının saati de aynı ana dondurulmuş
+const SABIT = new Date(SABIT_AN);
 const kaydir = n => {
-  const d = new Date(now.getTime() + n * 60000);
-  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  const d = new Date(SABIT.getTime() + n * 60000);
+  return String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0');
 };
 // Biri çoktan geçmiş, biri yaklaşan — "sıradaki" hesabı denenebilsin
 const PLAN = {
@@ -17,7 +18,7 @@ const PLAN = {
 export default async function ({ rapor, adres, browser }) {
   const kartOku = async (alinan, plan = PLAN) => {
     const { ctx, page } = await sayfaAc(browser, {
-      adres,
+      adres, zamanSabit: true,
       veri: { ft_height: '178', ft_weight: '75.4', ft_supplement_plan: JSON.stringify(plan),
               ft_supp_taken: JSON.stringify(alinan || {}) }
     });

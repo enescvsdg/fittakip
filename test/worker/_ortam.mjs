@@ -3,6 +3,28 @@
    Şifreleme ve imzalama gerçekten çalışır; yalnızca push servisi taklittir. */
 import { fileURLToPath } from 'node:url';
 
+/* Testler saatten bağımsız olmalı.
+
+   Hatırlatma saatleri "şu ana göre" kurulduğu için gece yarısını geçen bir
+   koşuda saat(-10) bir önceki güne düşüyor; worker onu "gecikmiş" değil
+   "henüz vakti gelmemiş" sayıyor ve testler kırılıyor. Bu CI'ın ilk gerçek
+   koşusunda, 00:02'de yakalandı.
+
+   Zamanı gün ortasına sabitliyoruz: ±3 saatlik kaydırmalar gün sınırını
+   geçmiyor ve sonuç koşu saatinden bağımsız hale geliyor. */
+const SABIT_AN = '2026-09-17T09:00:00Z';   // İstanbul'da 12:00
+
+function zamaniDondur(iso) {
+  const an = new Date(iso).getTime();
+  const Gercek = Date;
+  class SabitDate extends Gercek {
+    constructor(...a) { super(...(a.length ? a : [an])); }
+    static now() { return an; }
+  }
+  globalThis.Date = SabitDate;
+  return () => { globalThis.Date = Gercek; };
+}
+
 const b64u = b => Buffer.from(b).toString('base64')
   .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
@@ -22,7 +44,8 @@ function sahteKV() {
   };
 }
 
-export async function kur() {
+export async function kur({ an = SABIT_AN } = {}) {
+  const zamaniCoz = zamaniDondur(an);
   const worker = (await import(fileURLToPath(new URL('../../worker/src/worker.js', import.meta.url)))).default;
 
   const vk = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
@@ -88,7 +111,7 @@ export async function kur() {
 
   const bugun = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul' }).format(new Date());
 
-  return { worker, env, vapidPublic, subscription, gonderimler, durum, cagir, cron, saat, bugun };
+  return { worker, env, vapidPublic, subscription, gonderimler, durum, cagir, cron, saat, bugun, zamaniCoz };
 }
 
 // Cron kayıtlarını test çıktısından uzak tut

@@ -1,5 +1,5 @@
 /* "Aldım" kutucuğu, günlük sıfırlanma ve bildirimden ilgili satıra gitme. */
-import { sayfaAc, bugunAnahtari } from '../harness.mjs';
+import { sayfaAc, SABIT_TARIH } from '../harness.mjs';
 import { takviye } from './_veri.mjs';
 
 const PLAN = {
@@ -8,10 +8,10 @@ const PLAN = {
   'Akşam / Yatmadan Önce': [takviye('s4', 'Magnezyum', '1 tablet', '23:00')]
 };
 const VERI = { ft_height: '178', ft_weight: '75.4', ft_supplement_plan: JSON.stringify(PLAN) };
-const BUGUN = bugunAnahtari();
+const BUGUN = SABIT_TARIH;
 
 export default async function ({ rapor, adres, browser }) {
-  let { ctx, page, hatalar } = await sayfaAc(browser, { adres, veri: VERI });
+  let { ctx, page, hatalar } = await sayfaAc(browser, { adres, veri: VERI, zamanSabit: true });
   const depo = () => page.evaluate(() => JSON.parse(localStorage.getItem('ft_supp_taken') || '{}'));
 
   await page.evaluate(() => { showPage('supplement'); renderSupplementPlanView(); });
@@ -64,7 +64,7 @@ export default async function ({ rapor, adres, browser }) {
   await ctx.close();
 
   rapor.baslik('bildirimden gelme — uygulama kapalıyken');
-  ({ ctx, page, hatalar } = await sayfaAc(browser, { adres, veri: VERI, yol: '/index.html?supp=s2' }));
+  ({ ctx, page, hatalar } = await sayfaAc(browser, { adres, veri: VERI, zamanSabit: true, yol: '/index.html?supp=s2' }));
   await page.waitForTimeout(500);
   rapor.kontrol('Adresle açılınca supplement sayfası geldi', await page.isVisible('#page-supplement'));
   rapor.kontrol('Adresle gelen satır vurgulandı',

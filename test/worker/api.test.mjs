@@ -4,7 +4,12 @@ import { kur, cronLoglariniSustur } from './_ortam.mjs';
 
 export default async function ({ rapor }) {
   cronLoglariniSustur();
-  const { env, vapidPublic, subscription, gonderimler, durum, cagir, cron, saat } = await kur();
+  const o = await kur();
+  const { env, vapidPublic, subscription, gonderimler, durum, cagir, cron, saat } = o;
+
+  // Zaman sabitlendi: testler koşu saatinden bağımsız olmalı
+  rapor.kontrol('Test saati sabit (12:00 İstanbul)',
+    new Date().toISOString() === '2026-09-17T09:00:00.000Z', new Date().toISOString());
 
   rapor.baslik('yetkilendirme');
   rapor.kontrol('Yanlış cihaz anahtarı reddediliyor', (await cagir('/health', 'GET', null, 'yanlis')).status === 401);
@@ -76,4 +81,6 @@ export default async function ({ rapor }) {
 
   rapor.kontrol('Eksik abonelik reddediliyor', (await cagir('/sync', 'POST', { reminders: [] })).status === 400);
   rapor.kontrol('Bilinmeyen adres 404', (await cagir('/bilinmeyen', 'GET')).status === 404);
+
+  o.zamaniCoz();   // gerçek saati geri bırak, sonraki takımlar etkilenmesin
 }

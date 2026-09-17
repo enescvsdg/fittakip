@@ -35,4 +35,6 @@ export default async function ({ rapor }) {
   const oncesi = o.gonderimler.length;
   await o.cron();
   rapor.kontrol('Erken gönderilen bildirim hedef dakikada tekrarlanmıyor', o.gonderimler.length === oncesi);
+
+  o.zamaniCoz();   // gerçek saati geri bırak, sonraki takımlar etkilenmesin
 }

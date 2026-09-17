@@ -5,6 +5,16 @@ import { fileURLToPath } from 'node:url';
 
 export const KOK = fileURLToPath(new URL('..', import.meta.url));
 
+/* Zamana bağlı testler için sabit an.
+
+   Worker testlerinde bu dersi CI'da öğrendik: saatler "şu ana göre"
+   kurulunca gece yarısını geçen bir koşuda testler kırılıyor. Arayüz
+   testlerinde de aynı tuzak var, sadece farklı bir saatte patlıyor.
+   Gün ortasına sabitliyoruz ki ±birkaç saatlik kaydırmalar gün sınırını
+   geçmesin. */
+export const SABIT_AN = '2026-09-17T09:00:00Z';   // UTC'de 12:00 değil 09:00 — gün ortası
+export const SABIT_TARIH = '2026-09-17';
+
 /* ── Sonuç toplayıcı ── */
 export class Rapor {
   constructor(ad) { this.ad = ad; this.gecti = 0; this.kaldi = 0; }
@@ -33,13 +43,19 @@ export async function chromiumAc() {
    - servisCalisani: false ise kaydolmaz, böylece controllerchange yeniden
      yüklemesi testin ölçümünü bozmaz */
 export async function sayfaAc(browser, { adres, tema = 'dark', veri = {}, perde = false,
-                                         servisCalisani = false, yol = '/index.html' } = {}) {
+                                         servisCalisani = false, yol = '/index.html',
+                                         zamanSabit = false } = {}) {
   const ctx = await browser.newContext({
     viewport: { width: 390, height: 844 },
     deviceScaleFactor: 2,
     colorScheme: tema,
+    timezoneId: 'UTC',
     serviceWorkers: servisCalisani ? 'allow' : 'block'
   });
+
+  // Tarihe bağlı testler koşu saatinden etkilenmesin. Yalnızca Date sabitlenir;
+  // zamanlayıcılar gerçek kalır, yoksa açılış perdesi hiç kapanmaz.
+  if (zamanSabit) await ctx.clock.setFixedTime(new Date(SABIT_AN));
   await ctx.addInitScript(([v, p]) => {
     Object.entries(v).forEach(([k, val]) => localStorage.setItem(k, val));
     if (!p) { try { sessionStorage.setItem('ft_splash', '1'); } catch (e) {} }

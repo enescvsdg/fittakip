@@ -1,13 +1,13 @@
 /* Dış kaynaklı metin HTML'e kaçışsız girerse kod çalışır. Gerçekçi yol:
    diyetisyenden gelen bir PDF'in içindeki ad, yapay zekâ tarafından çıkarılıp
    DOM'a basılır. Çalışan kod localStorage'daki anahtarları okuyabilir. */
-import { sayfaAc, TR_GUNLER } from '../harness.mjs';
+import { sayfaAc, TR_GUNLER, SABIT_AN, SABIT_TARIH } from '../harness.mjs';
 
 const ETIKET  = '<img src=x onerror="window.__xss=1">';
 const NITELIK = '" onmouseover="window.__xss=1" x="';
 const TEK     = "' onmouseover='window.__xss=1' x='";
 
-const BUGUN_ADI = TR_GUNLER[new Date().getDay()];
+const BUGUN_ADI = TR_GUNLER[new Date(SABIT_AN).getUTCDay()];
 
 const ZARARLI = {
   ft_height: '178', ft_weight: '75.4', ft_goal_weight: '70',
@@ -32,7 +32,7 @@ const ZARARLI = {
 };
 
 export default async function ({ rapor, adres, browser }) {
-  const { ctx, page, hatalar } = await sayfaAc(browser, { adres, veri: ZARARLI });
+  const { ctx, page, hatalar } = await sayfaAc(browser, { adres, veri: ZARARLI, zamanSabit: true });
 
   rapor.baslik('sayfalar gezilirken kod çalışıyor mu');
   for (const sayfa of ['home', 'profile', 'workout', 'nutrition', 'supplement', 'settings']) {
@@ -70,9 +70,7 @@ export default async function ({ rapor, adres, browser }) {
   await page.click('.supp-row[data-supp-id="s1"] .supp-take-btn');
   await page.waitForTimeout(280);
   const isaret = await page.evaluate(() => JSON.parse(localStorage.getItem('ft_supp_taken') || '{}').s1);
-  const bugun = new Date();
-  const beklenen = bugun.getFullYear() + '-' + String(bugun.getMonth() + 1).padStart(2, '0') + '-' + String(bugun.getDate()).padStart(2, '0');
-  rapor.kontrol('Zararlı veri varken işaretleme çalışıyor', isaret === beklenen, String(isaret));
+  rapor.kontrol('Zararlı veri varken işaretleme çalışıyor', isaret === SABIT_TARIH, String(isaret));
 
   const hrefler = await page.evaluate(() => [...document.querySelectorAll('a[href]')].map(a => a.getAttribute('href')));
   rapor.kontrol('javascript: şemalı bağlantı yok', !hrefler.some(h => /^javascript:/i.test(h)));
