@@ -44,12 +44,13 @@ export async function chromiumAc() {
      yüklemesi testin ölçümünü bozmaz */
 export async function sayfaAc(browser, { adres, tema = 'dark', veri = {}, perde = false,
                                          servisCalisani = false, yol = '/index.html',
-                                         zamanSabit = false } = {}) {
+                                         zamanSabit = false, dokunmatik = false } = {}) {
   const ctx = await browser.newContext({
     viewport: { width: 390, height: 844 },
     deviceScaleFactor: 2,
     colorScheme: tema,
     timezoneId: 'UTC',
+    hasTouch: dokunmatik,
     serviceWorkers: servisCalisani ? 'allow' : 'block'
   });
 

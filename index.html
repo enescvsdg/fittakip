@@ -878,6 +878,20 @@
     <!-- ── SAYI SEÇİCİ ──
          Elle yazmak yerine kaydırarak değer seçme. Sütunlar ve aralıklar
          JS'te SAYI_ARALIK'tan üretiliyor; sınırların tek kaynağı orası. -->
+    <!-- Yumurta boyu: listeyi boy başına ayrı satırla şişirmemek için ayrı pencere -->
+    <div class="modal-overlay-2 hidden" id="boySecici">
+      <div class="modal-box-2 boy-kutu">
+        <div class="modal-header">
+          <h2 class="modal-title" id="boyBaslik">Boy seç</h2>
+          <button class="modal-close" id="boyKapat" aria-label="Kapat">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="boy-aciklama" id="boyAciklama"></p>
+          <div class="boy-secenekler" id="boySecenekler"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="modal-overlay-2 hidden" id="sayiSecici">
       <div class="modal-box-2">
         <div class="modal-header">

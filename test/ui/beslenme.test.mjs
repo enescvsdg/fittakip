@@ -1,15 +1,15 @@
 /* Beslenme planı — adet bazlı porsiyonlar.
-   Yumurta gram yerine adetle giriliyor: boy (S/M/L) başına ortalama yenilebilir
-   ağırlık tanımlı, girilen adet o ağırlıkla çarpılıp 100 g'lık değerlere
-   ölçekleniyor. Bu takım hem saf hesabı hem de arayüzün birim değiştirmesini
-   sınıyor: alanın etiketi, varsayılan değeri, aralığı ve sepet/plan yazıları. */
+   Yumurta gram yerine adetle giriliyor. Liste kalabalıklaşmasın diye gıda tek
+   satır duruyor; boy (S/M/L) seçilince ortalama ağırlığı adetle çarpılıp
+   100 g'lık değerlere ölçekleniyor. Bu takım hem saf hesabı hem boy penceresini
+   hem de arayüzün birim değiştirmesini sınıyor. */
 import { sayfaAc, appFonksiyonlari } from '../harness.mjs';
 
 // Kaynaktaki tanımla testin beklentisi ayrı ayrı yazılı olsun ki
 // gramaj sessizce değişirse test bunu yakalasın.
-const BEKLENEN_GRAM = {
-  'Yumurta, tam (S)': 44, 'Yumurta, tam (M)': 51, 'Yumurta, tam (L)': 60,
-  'Yumurta Akı (S)': 29,  'Yumurta Akı (M)': 33,  'Yumurta Akı (L)': 39
+const GRAM = {
+  'Yumurta (tam)': { S: 44, M: 51, L: 60 },
+  'Yumurta Akı':   { S: 29, M: 33, L: 39 }
 };
 
 export default async function ({ rapor, adres, browser }) {
@@ -34,7 +34,6 @@ export default async function ({ rapor, adres, browser }) {
   /* ── arayüz ── */
   const { ctx, page, hatalar } = await sayfaAc(browser, { adres });
   const builderAc = async () => {
-    await page.evaluate(() => showPage('nutrition'));
     await page.click('#toggleMealBuilderBtn');
     await page.waitForTimeout(150);
   };
@@ -45,7 +44,8 @@ export default async function ({ rapor, adres, browser }) {
     max: document.getElementById('food-amount').max,
     onizleme: document.getElementById('mealFoodPreview').textContent.replace(/\s+/g, ' ')
   }));
-  const gidaSec = async ad => { await page.selectOption('#food-select', ad); await page.waitForTimeout(150); };
+  const gidaSec = async ad => { await page.selectOption('#food-select', ad); await page.waitForTimeout(180); };
+  const boySec = async boy => { await page.click(`.boy-dugme[data-boy="${boy}"]`); await page.waitForTimeout(180); };
   const miktarGir = async v => {
     await page.evaluate(x => {
       const e = document.getElementById('food-amount');
@@ -54,18 +54,37 @@ export default async function ({ rapor, adres, browser }) {
     await page.waitForTimeout(150);
   };
 
+  await page.evaluate(() => showPage('nutrition'));
   await builderAc();
 
-  rapor.baslik('listede yumurta boyları');
+  rapor.baslik('liste kalabalıklaşmıyor');
   const secenekler = await page.$$eval('#food-select option', o => o.map(x => x.value));
-  Object.keys(BEKLENEN_GRAM).forEach(ad => {
-    rapor.kontrol('"' + ad + '" listede', secenekler.indexOf(ad) !== -1);
-  });
+  const yumurtalar = secenekler.filter(v => /Yumurta/.test(v));
+  rapor.kontrol('Yumurta listede iki satır', yumurtalar.length === 2, yumurtalar.join(' | '));
+  // "Yumurta (tam)" adında da parantez var; aranan şey boy son eki: (S) (M) (L)
+  rapor.kontrol('Boylar listeye yazılmamış', !secenekler.some(v => /\((S|M|L)\)\s*$/.test(v)),
+    secenekler.filter(v => /\((S|M|L)\)\s*$/.test(v)).join(' | '));
   rapor.kontrol('Gram bazlı gıdalar duruyor',
     secenekler.indexOf('Tavuk Göğsü (ızgara/haşlama)') !== -1);
 
-  rapor.baslik('birim değişimi');
-  await gidaSec('Yumurta Akı (L)');
+  rapor.baslik('boy penceresi');
+  await gidaSec('Yumurta Akı');
+  rapor.kontrol('Yumurta seçilince pencere açılıyor', await page.isVisible('#boySecici'));
+  const dugmeler = await page.$$eval('.boy-dugme', d => d.map(x => ({
+    boy: x.dataset.boy, yazi: x.textContent.replace(/\s+/g, ' ')
+  })));
+  rapor.kontrol('Üç boy da var', dugmeler.length === 3, dugmeler.map(d => d.boy).join(','));
+  Object.keys(GRAM['Yumurta Akı']).forEach(boy => {
+    const d = dugmeler.find(x => x.boy === boy) || { yazi: '(yok)' };
+    rapor.kontrol(boy + ' düğmesinde gramaj yazıyor',
+      d.yazi.indexOf(GRAM['Yumurta Akı'][boy] + ' g') !== -1, d.yazi);
+  });
+  rapor.kontrol('Boy seçilmeden gıda etkin değil',
+    (await page.evaluate(() => document.getElementById('addFoodToCartBtn').disabled)) === true);
+
+  await boySec('L');
+  rapor.kontrol('Seçince pencere kapanıyor', !(await page.isVisible('#boySecici')));
+
   let d = await alanDurumu();
   rapor.kontrol('Etiket adede dönüyor', d.etiket === 'Miktar (adet)', d.etiket);
   rapor.kontrol('Varsayılan 1 adet', d.deger === '1', d.deger);
@@ -73,17 +92,35 @@ export default async function ({ rapor, adres, browser }) {
   rapor.kontrol('Önizlemede adet ve gram birlikte',
     d.onizleme.indexOf('1 adet ≈ 39 g') !== -1, d.onizleme);
   // 39 g × 0.52 kcal/g = 20,3 → 20
-  rapor.kontrol('1 adet L yumurta akı 20 kcal',
-    d.onizleme.indexOf('20 kcal') === 0, d.onizleme.slice(0, 20));
+  rapor.kontrol('1 adet L yumurta akı 20 kcal', d.onizleme.indexOf('20 kcal') === 0, d.onizleme.slice(0, 20));
 
+  rapor.baslik('gram bazlı gıdaya dönüş');
   await gidaSec('Tavuk Göğsü (ızgara/haşlama)');
+  rapor.kontrol('Boylu olmayan gıdada pencere açılmıyor', !(await page.isVisible('#boySecici')));
   d = await alanDurumu();
-  rapor.kontrol('Gram gıdada etiket grama dönüyor', d.etiket === 'Miktar (gram)', d.etiket);
-  rapor.kontrol('Gram gıdada varsayılan 100', d.deger === '100', d.deger);
+  rapor.kontrol('Etiket grama dönüyor', d.etiket === 'Miktar (gram)', d.etiket);
+  rapor.kontrol('Varsayılan 100', d.deger === '100', d.deger);
   rapor.kontrol('Gram aralığı geri geliyor', d.max === '2000', d.max);
 
-  rapor.baslik('makro ölçeği');
-  await gidaSec('Yumurta, tam (L)');
+  rapor.baslik('son boy hatırlanıyor');
+  await gidaSec('Yumurta (tam)');
+  rapor.kontrol('Önceki boy işaretli geliyor',
+    (await page.evaluate(() => document.querySelector('.boy-dugme.secili').dataset.boy)) === 'L');
+  rapor.kontrol('Depoya yazıldı',
+    (await page.evaluate(() => localStorage.getItem('ft_yumurta_boy'))) === 'L');
+
+  rapor.baslik('iptal');
+  await page.click('#boyKapat');
+  await page.waitForTimeout(180);
+  rapor.kontrol('Pencere kapanıyor', !(await page.isVisible('#boySecici')));
+  rapor.kontrol('Seçim önceki gıdaya dönüyor',
+    (await page.evaluate(() => document.getElementById('food-select').value)) === 'Tavuk Göğsü (ızgara/haşlama)');
+  rapor.kontrol('Önceki gıdanın birimi bozulmadı',
+    (await alanDurumu()).etiket === 'Miktar (gram)');
+
+  rapor.baslik('makro ölçeği ve kayıt');
+  await gidaSec('Yumurta (tam)');
+  await boySec('L');
   await miktarGir(3);
   d = await alanDurumu();
   // 3 × 60 g = 180 g → 155 × 1.8 = 279 kcal, 13 × 1.8 = 23.4 g protein
@@ -91,11 +128,14 @@ export default async function ({ rapor, adres, browser }) {
   rapor.kontrol('Protein 23.4 g', d.onizleme.indexOf('Protein: 23.4g') !== -1, d.onizleme);
   rapor.kontrol('Gram karşılığı 180 g', d.onizleme.indexOf('3 adet ≈ 180 g') !== -1, d.onizleme);
 
-  rapor.baslik('sepet ve plan');
   await page.click('#addFoodToCartBtn');
   await page.waitForTimeout(150);
-  const sepet = await page.evaluate(() => document.querySelector('.cart-item-meta').textContent);
-  rapor.kontrol('Sepette adet yazıyor', sepet.indexOf('3 adet (180 g)') !== -1, sepet);
+  const sepet = await page.evaluate(() => ({
+    ad: document.querySelector('.cart-item-name').textContent,
+    meta: document.querySelector('.cart-item-meta').textContent
+  }));
+  rapor.kontrol('Sepette ad boyuyla yazıyor', sepet.ad === 'Yumurta (tam) (L)', sepet.ad);
+  rapor.kontrol('Sepette adet yazıyor', sepet.meta.indexOf('3 adet (180 g)') !== -1, sepet.meta);
 
   await page.click('#completeMealBtn');
   await page.waitForTimeout(200);
@@ -113,9 +153,9 @@ export default async function ({ rapor, adres, browser }) {
 
   rapor.baslik('kaydırmalı seçici');
   // Öğün tamamlanınca ekleme bölümü kapanıyor; seçiciyi denemek için yeniden aç
-  await page.click('#toggleMealBuilderBtn');
-  await page.waitForTimeout(150);
-  await gidaSec('Yumurta, tam (M)');
+  await builderAc();
+  await gidaSec('Yumurta (tam)');
+  await boySec('M');
   await page.click('#food-amount');
   await page.waitForTimeout(250);
   const secici = await page.evaluate(() => {

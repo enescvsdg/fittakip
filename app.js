@@ -11,12 +11,15 @@ var bottomItems  = document.querySelectorAll('.bottom-nav-item');
 var pages        = document.querySelectorAll('.page');
 
 // ── SPA: SHOW PAGE ──────────────────────────
-function showPage(pageId) {
+/* Kaydırma yönü: 'sol' (sonraki sayfa soldan gelir) | 'sag' | null (dikey, varsayılan) */
+function showPage(pageId, yon) {
   pages.forEach(function(p) { p.classList.add('hidden'); });
 
   var target = document.getElementById('page-' + pageId);
   if (target) {
     target.classList.remove('hidden');
+    target.classList.remove('gecis-sol', 'gecis-sag');
+    if (yon) target.classList.add(yon === 'sol' ? 'gecis-sol' : 'gecis-sag');
     target.style.animation = 'none';
     void target.offsetHeight;
     target.style.animation = '';
@@ -2036,15 +2039,15 @@ var TURKISH_FOODS = {
     { name: 'Somon (pişmiş)', kcal: 208, protein: 20, carbs: 0, fat: 13 },
     { name: 'Levrek', kcal: 97, protein: 18.4, carbs: 0, fat: 2.5 },
     { name: 'Ton Balığı (suda, süzülmüş)', kcal: 116, protein: 26, carbs: 0, fat: 1 },
-    // Yumurta: TS/AB boy sınıfları (S<53g, M 53-63g, L 63-73g — kabuk dahil).
-    // birim.gram = kabuğu çıkarılmış ortalama yenilebilir ağırlık (kabuk ~%12).
+    // Yumurta boyla ölçülüyor: listeyi altı satırla şişirmemek için tek satır
+    // duruyor, seçilince boy ayrı pencereden soruluyor.
+    // TS/AB boy sınıfları (S<53g, M 53-63g, L 63-73g — kabuk dahil); buradaki
+    // gramaj kabuğu çıkarılmış ortalama yenilebilir ağırlık (kabuk ~%12).
     // Ak, yenilebilir kısmın ~%65'i; kalanı sarı.
-    { name: 'Yumurta, tam (S)', kcal: 155, protein: 13, carbs: 1.1, fat: 11, birim: { ad: 'adet', gram: 44 } },
-    { name: 'Yumurta, tam (M)', kcal: 155, protein: 13, carbs: 1.1, fat: 11, birim: { ad: 'adet', gram: 51 } },
-    { name: 'Yumurta, tam (L)', kcal: 155, protein: 13, carbs: 1.1, fat: 11, birim: { ad: 'adet', gram: 60 } },
-    { name: 'Yumurta Akı (S)', kcal: 52, protein: 11, carbs: 0.7, fat: 0.2, birim: { ad: 'adet', gram: 29 } },
-    { name: 'Yumurta Akı (M)', kcal: 52, protein: 11, carbs: 0.7, fat: 0.2, birim: { ad: 'adet', gram: 33 } },
-    { name: 'Yumurta Akı (L)', kcal: 52, protein: 11, carbs: 0.7, fat: 0.2, birim: { ad: 'adet', gram: 39 } }
+    { name: 'Yumurta (tam)', kcal: 155, protein: 13, carbs: 1.1, fat: 11,
+      boylar: { S: 44, M: 51, L: 60 } },
+    { name: 'Yumurta Akı', kcal: 52, protein: 11, carbs: 0.7, fat: 0.2,
+      boylar: { S: 29, M: 33, L: 39 } }
   ],
   'Süt Ürünleri': [
     { name: 'Lor Peyniri', kcal: 98, protein: 11, carbs: 3.4, fat: 4.3 },
@@ -2101,6 +2104,8 @@ var mealPlanListEl       = document.getElementById('mealPlanList');
 
 var mealCartItems = [];
 var currentFoodMeta = null; // { kcal100, protein100, carbs100, fat100, isEstimated, birim }
+var currentFoodAdi = '';    // sepete yazılacak ad — boylu gıdalarda "Yumurta Akı (L)"
+var sonGidaSecimi = '';     // boy penceresi iptal edilirse geri dönülecek seçim
 var gidaBirimAktif = false; // miktar alanı şu an adet mi (true) gram mı (false) sayıyor
 
 // ── GIDA SEÇİM LİSTESİNİ DOLDUR ──────────────────
@@ -2159,6 +2164,56 @@ function gidaMiktarTuru() {
   return (currentFoodMeta && currentFoodMeta.birim) ? 'foodAdet' : 'foodAmount';
 }
 
+/* ── YUMURTA BOYU PENCERESİ ──
+   Yumurta listede tek satır duruyor; boy burada seçiliyor. Son seçilen boy
+   hatırlanıyor, bir dahakine o işaretli geliyor. */
+var boySeciciEl    = document.getElementById('boySecici');
+var boySeceneklerEl = document.getElementById('boySecenekler');
+var BOY_ADI = { S: 'Küçük', M: 'Orta', L: 'Büyük' };
+
+function sonBoy() {
+  var b = localStorage.getItem(YUMURTA_BOY_KEY);
+  return (b === 'S' || b === 'M' || b === 'L') ? b : 'M';
+}
+
+function boySecicisiKapat() {
+  boySeciciEl.classList.add('hidden');
+}
+
+/* gida: boylar tablosu olan kayıt. onayla(boy) seçim yapılınca, iptal() kapanınca. */
+function boySecicisiAc(gida, onayla, iptal) {
+  document.getElementById('boyBaslik').textContent = gida.name + ' — boy';
+  document.getElementById('boyAciklama').textContent =
+    'Standart boy sınıflarına göre ortalama ağırlık (kabuk hariç).';
+
+  var secili = sonBoy();
+  var html = '';
+  Object.keys(gida.boylar).forEach(function(boy) {
+    html +=
+      '<button type="button" class="boy-dugme' + (boy === secili ? ' secili' : '') + '" data-boy="' + boy + '">' +
+        '<span class="boy-dugme-ad">' + boy + ' — ' + BOY_ADI[boy] + '</span>' +
+        '<span class="boy-dugme-gram">' + gida.boylar[boy] + ' g</span>' +
+        (boy === secili ? '<span class="boy-dugme-son">son</span>' : '') +
+      '</button>';
+  });
+  boySeceneklerEl.innerHTML = html;
+
+  boySeceneklerEl.onclick = function(e) {
+    var d = e.target.closest('.boy-dugme');
+    if (!d) return;
+    var boy = d.dataset.boy;
+    try { localStorage.setItem(YUMURTA_BOY_KEY, boy); } catch (err) {}
+    boySecicisiKapat();
+    onayla(boy);
+  };
+
+  var kapat = function() { boySecicisiKapat(); if (iptal) iptal(); };
+  document.getElementById('boyKapat').onclick = kapat;
+  boySeciciEl.onclick = function(e) { if (e.target === boySeciciEl) kapat(); };
+
+  boySeciciEl.classList.remove('hidden');
+}
+
 function updateMealPreview() {
   var miktar = parseFloat(foodAmountInput.value) || 0;
   var grams = porsiyonGrami(currentFoodMeta, miktar);
@@ -2187,6 +2242,21 @@ function updateMealPreview() {
   addFoodToCartBtn.disabled = false;
 }
 
+/* Seçilen gıdayı (varsa boyuyla birlikte) etkin hale getirir. */
+function gidayiKur(found, boy) {
+  if (!found) { currentFoodMeta = null; currentFoodAdi = ''; }
+  else {
+    currentFoodMeta = {
+      kcal100: found.kcal, protein100: found.protein, carbs100: found.carbs, fat100: found.fat,
+      isEstimated: false,
+      birim: boy ? { ad: 'adet', gram: found.boylar[boy] } : (found.birim || null)
+    };
+    currentFoodAdi = boy ? found.name + ' (' + boy + ')' : found.name;
+  }
+  gidaMiktarAlaniniAyarla();
+  updateMealPreview();
+}
+
 foodSelect.addEventListener('change', function() {
   if (foodSelect.value === '__custom__') {
     customFoodGroup.classList.remove('hidden');
@@ -2196,18 +2266,28 @@ foodSelect.addEventListener('change', function() {
     aiEstimateBtn.classList.add('hidden');
     usdaResultsListEl.innerHTML = '';
     currentFoodMeta = null;
+    currentFoodAdi = '';
+    sonGidaSecimi = foodSelect.value;
     gidaMiktarAlaniniAyarla();
     updateMealPreview();
     return;
   }
   customFoodGroup.classList.add('hidden');
   var found = findLocalFood(foodSelect.value);
-  currentFoodMeta = found
-    ? { kcal100: found.kcal, protein100: found.protein, carbs100: found.carbs, fat100: found.fat,
-        isEstimated: false, birim: found.birim || null }
-    : null;
-  gidaMiktarAlaniniAyarla();
-  updateMealPreview();
+
+  if (found && found.boylar) {
+    // Boy seçilene kadar gıdayı belirlemiyoruz; iptal edilirse önceki seçime dönülür
+    boySecicisiAc(found, function(boy) {
+      sonGidaSecimi = foodSelect.value;
+      gidayiKur(found, boy);
+    }, function() {
+      foodSelect.value = sonGidaSecimi;
+    });
+    return;
+  }
+
+  sonGidaSecimi = foodSelect.value;
+  gidayiKur(found, null);
 });
 
 foodAmountInput.addEventListener('input', updateMealPreview);
@@ -2426,7 +2506,9 @@ addFoodToCartBtn.addEventListener('click', function() {
   var miktar = parseFloat(foodAmountInput.value) || (birim ? 1 : 100);
   var grams = porsiyonGrami(currentFoodMeta, miktar);
   var factor = grams / 100;
-  var name = foodSelect.value === '__custom__' ? customFoodNameInput.value.trim() : foodSelect.value;
+  var name = foodSelect.value === '__custom__'
+    ? customFoodNameInput.value.trim()
+    : (currentFoodAdi || foodSelect.value);
   if (!name) return;
 
   mealCartItems.push({
@@ -2556,6 +2638,7 @@ toggleMealBuilderBtn.addEventListener('click', function() {
 
 // ── INIT (Beslenme) ─────────────────────────────
 fillFoodSelect();
+sonGidaSecimi = foodSelect.value;
 renderMealCartList();
 renderMealPlanView();
 
@@ -4377,3 +4460,128 @@ girdiyiSeciciyeBagla('input-age',       'age',        false);
 girdiyiSeciciyeBagla('goal-weight',     'goalWeight', true);
 girdiyiSeciciyeBagla('weighin-weight',  'weight',     true);
 girdiyiSeciciyeBagla('food-amount',     gidaMiktarTuru, false);
+
+/* ══════════════════════════════════════════
+   DOKUNMA JESTLERİ — sayfa kaydırma ve yakınlaştırma
+   Tek parmak yatay: sayfalar arası geçiş.
+   İki parmak: yakınlaştırma; parmak kalkınca eski haline döner.
+   İkisi aynı dokunma akışını paylaştığı için tek yerde toplandı — ayrı
+   dinleyiciler birbirinin jestini yarıda keserdi.
+   ══════════════════════════════════════════ */
+
+// Alt menüdeki sıra; kaydırma bu sırayı izliyor. Ayarlar alt menüde yok.
+var SAYFA_SIRASI = [].map.call(bottomItems, function(b) { return b.dataset.page; });
+
+function aktifSayfa() {
+  for (var i = 0; i < pages.length; i++) {
+    if (!pages[i].classList.contains('hidden')) return pages[i].id.replace(/^page-/, '');
+  }
+  return SAYFA_SIRASI[0];
+}
+
+/* Jestin başladığı yer sayfa geçişine uygun mu?
+   Modal açıkken, yatay kaydırılan bir şeridin ya da form öğesinin üstünde
+   jesti yutmuyoruz — oradaki hareket kendi işine ait. */
+function jestUygunMu(hedef) {
+  if (document.querySelector('.modal-overlay-2:not(.hidden)')) return false;
+  if (dropdownMenu.classList.contains('open')) return false;
+  if (!hedef || !hedef.closest) return false;
+  if (hedef.closest('.day-tabs-scroll, input, select, textarea, .secici-tekerlek')) return false;
+  return true;
+}
+
+var KAYDIRMA_ESIK = 60;      // bu kadar yatay yol gidilmeden sayfa değişmez
+var KAYDIRMA_ORAN = 1.6;     // yatay hareket dikeyden bu kadar baskın olmalı
+var KAYDIRMA_SURE = 700;     // yavaş sürüklemeler kaydırma sayılmaz
+
+var jest = null;
+
+function sayfayiKaydir(ileri) {
+  var su = SAYFA_SIRASI.indexOf(aktifSayfa());
+  if (su === -1) return;
+  var hedef = su + (ileri ? 1 : -1);
+  if (hedef < 0 || hedef >= SAYFA_SIRASI.length) return;   // uçlarda dönmüyor
+  showPage(SAYFA_SIRASI[hedef], ileri ? 'sol' : 'sag');
+}
+
+/* ── Yakınlaştırma ──
+   Tarayıcının kendi pinch-zoom'u geri alınamıyor (seviyeyi okuyabiliyoruz ama
+   ayarlayamıyoruz), o yüzden onu kapatıp kendi ölçeğimizi uyguluyoruz. */
+var ZUM_EN_COK = 3;
+var zumKatmani = document.querySelector('.app-main');
+var zum = null;
+
+function ikiParmakArasi(t) {
+  var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function zumBaslat(t) {
+  if (!zumKatmani) return;
+  var kutu = zumKatmani.getBoundingClientRect();
+  zum = {
+    mesafe: ikiParmakArasi(t),
+    // Büyütme iki parmağın ortasından açılsın, köşeden değil
+    ox: (t[0].clientX + t[1].clientX) / 2 - kutu.left,
+    oy: (t[0].clientY + t[1].clientY) / 2 - kutu.top
+  };
+  zumKatmani.style.transition = 'none';
+  zumKatmani.style.transformOrigin = zum.ox + 'px ' + zum.oy + 'px';
+}
+
+function zumGuncelle(t) {
+  if (!zum || !zum.mesafe) return;
+  var olcek = ikiParmakArasi(t) / zum.mesafe;
+  olcek = Math.max(1, Math.min(ZUM_EN_COK, olcek));
+  zumKatmani.style.transform = 'scale(' + olcek + ')';
+}
+
+function zumBitir() {
+  if (!zum) return;
+  zum = null;
+  // Parmak kalkınca eski haline dönüş — istenen davranış bu
+  zumKatmani.style.transition = 'transform 0.28s cubic-bezier(0.32, 0.72, 0, 1)';
+  zumKatmani.style.transform = '';
+}
+
+document.addEventListener('touchstart', function(e) {
+  if (e.touches.length === 2 && jestUygunMu(e.target)) {
+    jest = null;               // iki parmak başladıysa sayfa kaydırma iptal
+    zumBaslat(e.touches);
+    return;
+  }
+  if (e.touches.length !== 1) return;
+  zumBitir();
+  if (!jestUygunMu(e.target)) { jest = null; return; }
+  jest = { x: e.touches[0].clientX, y: e.touches[0].clientY, an: Date.now() };
+}, { passive: true });
+
+document.addEventListener('touchmove', function(e) {
+  if (zum && e.touches.length === 2) {
+    e.preventDefault();        // tarayıcının kendi zoom'u devreye girmesin
+    zumGuncelle(e.touches);
+  }
+}, { passive: false });
+
+document.addEventListener('touchend', function(e) {
+  if (zum && e.touches.length < 2) { zumBitir(); jest = null; return; }
+  if (!jest || e.touches.length) return;
+
+  var d = e.changedTouches[0];
+  var dx = d.clientX - jest.x, dy = d.clientY - jest.y;
+  var gecen = Date.now() - jest.an;
+  jest = null;
+
+  if (gecen > KAYDIRMA_SURE) return;
+  if (Math.abs(dx) < KAYDIRMA_ESIK) return;
+  if (Math.abs(dx) < Math.abs(dy) * KAYDIRMA_ORAN) return;   // dikey kaydırmayı bozma
+
+  sayfayiKaydir(dx < 0);       // sola çekmek sonraki sayfa
+}, { passive: true });
+
+document.addEventListener('touchcancel', function() { zumBitir(); jest = null; }, { passive: true });
+
+// iOS Safari kendi jest olaylarını ayrıca yolluyor; engellenmezse yine zoom yapar
+['gesturestart', 'gesturechange', 'gestureend'].forEach(function(ad) {
+  document.addEventListener(ad, function(e) { e.preventDefault(); }, { passive: false });
+});

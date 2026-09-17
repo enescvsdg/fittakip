@@ -268,6 +268,12 @@ body {
 .page.hidden { display: none; }
 @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
+/* Parmakla geçişte sayfa, gidilen yönün tersinden girer */
+.page.gecis-sol { animation: sayfaSoldan 0.26s cubic-bezier(0.32, 0.72, 0, 1) both; }
+.page.gecis-sag { animation: sayfaSagdan 0.26s cubic-bezier(0.32, 0.72, 0, 1) both; }
+@keyframes sayfaSoldan { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: none; } }
+@keyframes sayfaSagdan { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
+
 /* ── BUGÜN KARTLARI (ana sayfa) ── */
 .today-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
 
@@ -772,6 +778,33 @@ body.perde-cikiyor .bottom-nav {
   animation: uygulamaGir 0.52s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 @keyframes uygulamaGir { from { opacity: 0.4; } to { opacity: 1; } }
+
+/* Yumurta boyu seçimi */
+.boy-kutu { max-width: 340px; }
+.boy-aciklama { font-size: 13px; color: var(--text-dim); margin: 0 0 14px; }
+.boy-secenekler { display: flex; flex-direction: column; gap: 10px; }
+.boy-dugme {
+  display: flex; align-items: baseline; gap: 10px;
+  width: 100%; padding: 14px 16px;
+  background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--surface-3); border-radius: 14px;
+  font-family: var(--font); font-size: 16px; font-weight: 600;
+  cursor: pointer; text-align: left;
+  transition: background 0.15s, border-color 0.15s;
+}
+.boy-dugme:hover { background: var(--surface-3); }
+.boy-dugme.secili { border-color: var(--accent); }
+.boy-dugme-ad { flex: 1; }
+.boy-dugme-gram { font-size: 13px; font-weight: 500; color: var(--text-dim); }
+.boy-dugme-son { font-size: 11px; font-weight: 600; color: var(--accent); }
+
+/* Tarayıcının kendi pinch-zoom'u kapalı: yerine kendi yakınlaştırmamız var
+   (bkz. app.js — parmak kalkınca eski haline dönüyor). Kaydırma serbest.
+   overflow-x: yakınlaştırırken içerik ekranın dışına taşıyor, kesilmezse sayfa
+   yatay kaydırılabilir hale geliyor. 'hidden' değil 'clip' — hidden kaydırma
+   kabı oluşturup window scroll'u, dolayısıyla menü toplanmasını bozuyor.
+   Gövdeye değil html'e yazılmalı; gövdede kesme viewport'a yansımıyor. */
+html, body { touch-action: pan-x pan-y; overflow-x: clip; }
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
