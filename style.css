@@ -268,11 +268,14 @@ body {
 .page.hidden { display: none; }
 @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Parmakla geçiş: iki sayfa yan yana kayar. Çıkan sayfa mutlak konuma alınıyor,
-   giren sayfa akışta kalıp yüksekliği belirliyor. Kesme olmazsa kayan sayfalar
-   yatay taşma yaratır. */
+/* Parmakla geçiş: sayfa parmağı anlık takip ediyor. Çıkan sayfa akışta kalıp
+   kayıyor, gelen sayfa sabit konumda ekranın dışından geliyor. Kesme olmazsa
+   kayan sayfa yatay taşma yaratır. */
 .app-main.gecis-suruyor { position: relative; overflow-x: clip; }
 .app-main.gecis-suruyor > .page { will-change: transform; }
+/* Gelen sayfa şeffaf kalırsa altındaki sayfa sızar; kenarındaki gölge de
+   hangisinin üstte olduğunu belli ediyor. */
+.page.suruklenen { background: var(--bg); box-shadow: 0 0 26px rgba(0, 0, 0, 0.22); }
 
 /* ── BUGÜN KARTLARI (ana sayfa) ── */
 .today-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
