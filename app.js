@@ -11,18 +11,79 @@ var bottomItems  = document.querySelectorAll('.bottom-nav-item');
 var pages        = document.querySelectorAll('.page');
 
 // ── SPA: SHOW PAGE ──────────────────────────
-/* Kaydırma yönü: 'sol' (sonraki sayfa soldan gelir) | 'sag' | null (dikey, varsayılan) */
-function showPage(pageId, yon) {
-  pages.forEach(function(p) { p.classList.add('hidden'); });
+/* İki sayfayı yan yana kaydırarak değiştirir: çıkan sayfa mutlak konuma alınıp
+   bir yana, giren sayfa öbür yandan içeri süzülür. Tek sayfayı gösterip
+   diğerini anında gizlemek "geçiş" hissi vermiyordu. */
+var GECIS_SURE = 340;
+var gecisTemizle = null;
 
+function sayfayiKaydirarakGoster(eski, yeni, yon) {
+  var ana = document.querySelector('.app-main');
+  if (!ana) { eski.classList.add('hidden'); return; }
+
+  if (gecisTemizle) gecisTemizle();          // üst üste kaydırmada artık kalmasın
+  window.scrollTo(0, 0);                      // iki sayfa da tepeden hizalansın
+  ana.classList.add('gecis-suruyor');         // konumlama ve kesme bu sınıfta
+
+  // Ölçüler sınıf eklendikten sonra okunuyor: offsetParent artık .app-main
+  var g = eski.offsetWidth, sol = eski.offsetLeft, ust = eski.offsetTop;
+  eski.style.position = 'absolute';
+  eski.style.left = sol + 'px';
+  eski.style.top = ust + 'px';
+  eski.style.width = g + 'px';
+
+  var disari = yon === 'sol' ? '-100%' : '100%';
+  var iceri  = yon === 'sol' ? '100%'  : '-100%';
+
+  eski.style.animation = 'none';
+  yeni.style.animation = 'none';
+  eski.style.transform = 'translateX(0)';
+  yeni.style.transform = 'translateX(' + iceri + ')';
+  void yeni.offsetHeight;                     // başlangıç konumu uygulansın
+
+  var gecis = 'transform ' + GECIS_SURE + 'ms cubic-bezier(0.32, 0.72, 0, 1)';
+  eski.style.transition = gecis;
+  yeni.style.transition = gecis;
+  eski.style.transform = 'translateX(' + disari + ')';
+  yeni.style.transform = 'translateX(0)';
+
+  var zaman = setTimeout(function() { if (gecisTemizle) gecisTemizle(); }, GECIS_SURE + 30);
+  gecisTemizle = function() {
+    clearTimeout(zaman);
+    gecisTemizle = null;
+    [eski, yeni].forEach(function(p) {
+      p.style.position = p.style.left = p.style.top = p.style.width = '';
+      p.style.transition = p.style.transform = p.style.animation = '';
+    });
+    eski.classList.add('hidden');
+    ana.classList.remove('gecis-suruyor');
+  };
+}
+
+/* Kaydırma yönü: 'sol' (ileri gidiyoruz, yeni sayfa sağdan gelir) | 'sag' | null */
+function showPage(pageId, yon) {
   var target = document.getElementById('page-' + pageId);
+
+  // Kaydırarak geçişte eski sayfa animasyon boyunca ekranda kalıyor
+  var eski = null;
+  if (yon && target) {
+    for (var i = 0; i < pages.length; i++) {
+      if (!pages[i].classList.contains('hidden')) { eski = pages[i]; break; }
+    }
+    if (eski === target) eski = null;
+  }
+
+  pages.forEach(function(p) { if (p !== eski) p.classList.add('hidden'); });
+
   if (target) {
     target.classList.remove('hidden');
-    target.classList.remove('gecis-sol', 'gecis-sag');
-    if (yon) target.classList.add(yon === 'sol' ? 'gecis-sol' : 'gecis-sag');
-    target.style.animation = 'none';
-    void target.offsetHeight;
-    target.style.animation = '';
+    if (eski) {
+      sayfayiKaydirarakGoster(eski, target, yon);
+    } else {
+      target.style.animation = 'none';
+      void target.offsetHeight;
+      target.style.animation = '';
+    }
   }
 
   navItems.forEach(function(btn) {
@@ -4490,8 +4551,8 @@ function jestUygunMu(hedef) {
   return true;
 }
 
-var KAYDIRMA_ESIK = 60;      // bu kadar yatay yol gidilmeden sayfa değişmez
-var KAYDIRMA_ORAN = 1.6;     // yatay hareket dikeyden bu kadar baskın olmalı
+var KAYDIRMA_ESIK = 35;      // bu kadar yatay yol gidilmeden sayfa değişmez
+var KAYDIRMA_ORAN = 1.2;     // yatay hareket dikeyden bu kadar baskın olmalı
 var KAYDIRMA_SURE = 700;     // yavaş sürüklemeler kaydırma sayılmaz
 
 var jest = null;

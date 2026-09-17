@@ -268,11 +268,11 @@ body {
 .page.hidden { display: none; }
 @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Parmakla geçişte sayfa, gidilen yönün tersinden girer */
-.page.gecis-sol { animation: sayfaSoldan 0.26s cubic-bezier(0.32, 0.72, 0, 1) both; }
-.page.gecis-sag { animation: sayfaSagdan 0.26s cubic-bezier(0.32, 0.72, 0, 1) both; }
-@keyframes sayfaSoldan { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: none; } }
-@keyframes sayfaSagdan { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
+/* Parmakla geçiş: iki sayfa yan yana kayar. Çıkan sayfa mutlak konuma alınıyor,
+   giren sayfa akışta kalıp yüksekliği belirliyor. Kesme olmazsa kayan sayfalar
+   yatay taşma yaratır. */
+.app-main.gecis-suruyor { position: relative; overflow-x: clip; }
+.app-main.gecis-suruyor > .page { will-change: transform; }
 
 /* ── BUGÜN KARTLARI (ana sayfa) ── */
 .today-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
