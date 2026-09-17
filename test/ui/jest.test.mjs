@@ -39,6 +39,8 @@ export default async function ({ rapor, adres, browser }) {
   }, [bas, son, birak]).then(() => page.waitForTimeout(120));
 
   const olcek = () => page.evaluate(() => document.querySelector('.app-main').style.transform || '');
+  // transform artık kaydırmayı da taşıyor; yalnız ölçeği okumak için
+  const kat = async () => Number(((await olcek()).match(/scale\(([\d.]+)\)/) || [])[1]);
 
   rapor.baslik('sayfalar arası kaydırma');
   rapor.kontrol('Ana sayfada başlıyor', (await aktif()) === 'home', await aktif());
@@ -149,11 +151,11 @@ export default async function ({ rapor, adres, browser }) {
 
   rapor.baslik('yakınlaştırma');
   await pinch(100, 200, false);
-  rapor.kontrol('İki parmak açılınca büyüyor', (await olcek()) === 'scale(2)', await olcek());
+  rapor.kontrol('İki parmak açılınca büyüyor', (await kat()) === 2, await olcek());
   await pinch(100, 1000, false);
-  rapor.kontrol('Üst sınırda duruyor', (await olcek()) === 'scale(3)', await olcek());
+  rapor.kontrol('Üst sınırda duruyor', (await kat()) === 3, await olcek());
   await pinch(200, 100, false);
-  rapor.kontrol('Birin altına inmiyor', (await olcek()) === 'scale(1)', await olcek());
+  rapor.kontrol('Birin altına inmiyor', (await kat()) === 1, await olcek());
 
   rapor.kontrol('Tarayıcının kendi zoom\'u engelleniyor', await page.evaluate(() => {
     const el = document.querySelector('.app-main');
@@ -168,6 +170,39 @@ export default async function ({ rapor, adres, browser }) {
   }));
   rapor.kontrol('touch-action pinch\'i tarayıcıdan alıyor',
     (await page.evaluate(() => getComputedStyle(document.documentElement).touchAction)) === 'pan-x pan-y');
+
+  rapor.baslik('yakınken gezinme');
+  // İki parmağın ortası kaydıkça içerik de kaymalı — yoksa pinch yapılan noktaya
+  // mahkûm kalınıyor, yakınlaştırmanın bir işe yaramıyor.
+  const cift = (aralik, cx, cy, tip) => page.evaluate(([aralik, cx, cy, tip]) => {
+    const el = document.querySelector('.app-main');
+    const t = (id, x, y) => new Touch({ identifier: id, target: el, clientX: x, clientY: y });
+    const c = [t(1, cx - aralik / 2, cy), t(2, cx + aralik / 2, cy)];
+    const at = (tp, l, ch) => el.dispatchEvent(new TouchEvent(tp,
+      { bubbles: true, cancelable: true, touches: l, targetTouches: l, changedTouches: ch || l }));
+    if (tip === 'end') at('touchend', [], c); else at(tip, c);
+  }, [aralik, cx, cy, tip]).then(() => page.waitForTimeout(60));
+
+  await cift(100, 195, 400, 'touchstart');
+  await cift(200, 195, 400, 'touchmove');
+  rapor.kontrol('Büyütme kaydırmasız başlıyor',
+    (await olcek()) === 'translate(0px, 0px) scale(2)', await olcek());
+
+  await cift(200, 115, 300, 'touchmove');
+  rapor.kontrol('Parmaklar kayınca içerik de kayıyor',
+    (await olcek()) === 'translate(-80px, -100px) scale(2)', await olcek());
+
+  await cift(200, 600, 400, 'touchmove');
+  const uzak = await olcek();
+  const kx = Number((uzak.match(/translate\((-?\d+)px/) || [])[1]);
+  // Sınır: (ölçek - 1) × genişlik / 2 = 1 × 390 / 2
+  rapor.kontrol('Kaydırma taşan miktarla sınırlı', kx === 195, uzak);
+
+  await cift(200, 600, 400, 'end');
+  await page.waitForTimeout(400);
+  rapor.kontrol('Gezindikten sonra da eski haline dönüyor', (await olcek()) === '', await olcek() || '(boş)');
+
+  await pinch(100, 300, false);
 
   // Asıl istenen davranış: parmak kalkınca eski haline dönmesi
   await page.evaluate(() => {

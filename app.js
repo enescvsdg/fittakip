@@ -4577,14 +4577,20 @@ function ikiParmakArasi(t) {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
+function ikiParmakOrtasi(t) {
+  return { x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2 };
+}
+
 function zumBaslat(t) {
   if (!zumKatmani) return;
   var kutu = zumKatmani.getBoundingClientRect();
+  var orta = ikiParmakOrtasi(t);
   zum = {
     mesafe: ikiParmakArasi(t),
+    baslangicOrtasi: orta,
     // Büyütme iki parmağın ortasından açılsın, köşeden değil
-    ox: (t[0].clientX + t[1].clientX) / 2 - kutu.left,
-    oy: (t[0].clientY + t[1].clientY) / 2 - kutu.top
+    ox: orta.x - kutu.left,
+    oy: orta.y - kutu.top
   };
   zumKatmani.style.transition = 'none';
   zumKatmani.style.transformOrigin = zum.ox + 'px ' + zum.oy + 'px';
@@ -4594,7 +4600,19 @@ function zumGuncelle(t) {
   if (!zum || !zum.mesafe) return;
   var olcek = ikiParmakArasi(t) / zum.mesafe;
   olcek = Math.max(1, Math.min(ZUM_EN_COK, olcek));
-  zumKatmani.style.transform = 'scale(' + olcek + ')';
+
+  // İki parmağın ortası kaydıkça içerik de kayıyor: yakınlaşınca ekranda
+  // kalan yere mahkûm olmamak, gezinebilmek için.
+  var orta = ikiParmakOrtasi(t);
+  var kutu = zumKatmani.getBoundingClientRect();
+  // Kaydırma, taşan miktarla sınırlı — içerik ekrandan tamamen çekilmesin
+  var enCokX = (olcek - 1) * zumKatmani.offsetWidth / 2;
+  var enCokY = (olcek - 1) * Math.min(zumKatmani.offsetHeight, window.innerHeight) / 2;
+  var kx = Math.max(-enCokX, Math.min(enCokX, orta.x - zum.baslangicOrtasi.x));
+  var ky = Math.max(-enCokY, Math.min(enCokY, orta.y - zum.baslangicOrtasi.y));
+
+  zumKatmani.style.transform =
+    'translate(' + Math.round(kx) + 'px, ' + Math.round(ky) + 'px) scale(' + olcek + ')';
 }
 
 function zumBitir() {
