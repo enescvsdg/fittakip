@@ -4543,7 +4543,7 @@ function komsuyuKur(ileri) {
   if (!yeni) return;
 
   var k = surukleme.eski.getBoundingClientRect();
-  var baslik = document.querySelector('.app-header');
+  var baslik = surukleme.baslik;
   yeni.classList.remove('hidden');
   yeni.classList.add('suruklenen');
   yeni.style.animation = 'none';
@@ -4554,11 +4554,29 @@ function komsuyuKur(ileri) {
   yeni.style.bottom = '0';
   yeni.style.overflow = 'hidden';
   yeni.style.transition = 'none';
-  yeni.style.transform = 'translateX(' + (ileri ? surukleme.genislik : -surukleme.genislik) + 'px)';
+  yeni.style.transform = 'translateX(' + (ileri ? surukleme.hucre : -surukleme.hucre) + 'px)';
+
+  // Başlık da sayfayla birlikte akıyor; sabit kalan tek şey alttaki kapsül.
+  // Gelen sayfa kendi başlığını getirmezse tepede boşluk kalırdı, o yüzden
+  // başlığın bir kopyası onunla beraber içeri süzülüyor.
+  if (baslik) {
+    var kopya = baslik.cloneNode(true);
+    kopya.removeAttribute('id');
+    [].forEach.call(kopya.querySelectorAll('[id]'), function(e) { e.removeAttribute('id'); });
+    kopya.setAttribute('aria-hidden', 'true');
+    kopya.classList.add('suruklenen-baslik');
+    kopya.style.transition = 'none';
+    kopya.style.transform =
+      'translateX(' + (ileri ? surukleme.baslikYolu : -surukleme.baslikYolu) + 'px)';
+    document.body.appendChild(kopya);
+    surukleme.kopya = kopya;
+  }
 }
 
 function komsuyuKaldir() {
-  if (!surukleme || !surukleme.yeni) return;
+  if (!surukleme) return;
+  if (surukleme.kopya) { surukleme.kopya.remove(); surukleme.kopya = null; }
+  if (!surukleme.yeni) return;
   stilleriSil(surukleme.yeni);
   surukleme.yeni.classList.remove('suruklenen');
   surukleme.yeni.classList.add('hidden');
@@ -4573,9 +4591,20 @@ function suruklemeyeBasla() {
   ana.classList.add('gecis-suruyor');
   surukleme.ana = ana;
   surukleme.eski = eski;
-  surukleme.genislik = eski.getBoundingClientRect().width || 1;
+  // "Hücre" genişliği: sayfa + iki yanındaki boşluk. Sayfa yalnız kendi
+  // genişliği kadar kaysaydı kenarında ince bir şerit ekranda kalırdı.
+  surukleme.hucre = ana.getBoundingClientRect().width || 1;
+  surukleme.baslik = document.querySelector('.app-header');
+  // Başlık tam genişlikte; sayfa kadar kayarsa ekrandan tam çıkmıyor
+  surukleme.baslikYolu = window.innerWidth || surukleme.hucre;
   surukleme.ileri = null;
   surukleme.yeni = null;
+
+  // Sayfanın giriş animasyonu 'both' dolgusuyla tanımlı, yani bittikten sonra
+  // da transform'u tutuyor. Animasyon satır içi stilden güçlü olduğu için
+  // kapatılmazsa buradaki kaydırmayı eziyor ve çıkan sayfa hiç kımıldamıyor.
+  eski.style.animation = 'none';
+  if (surukleme.baslik) surukleme.baslik.style.transition = 'none';
   return true;
 }
 
@@ -4584,9 +4613,18 @@ function suruklemeyiGuncelle(dx) {
   var yol = surukleme.yeni ? dx : dx / UC_DIRENCI;   // uçta lastik gibi direniyor
   surukleme.eski.style.transition = 'none';
   surukleme.eski.style.transform = 'translateX(' + yol + 'px)';
+
+  // Başlık sayfayla aynı ORANDA ama kendi genişliği kadar yol alıyor
+  var basYol = (yol / surukleme.hucre) * surukleme.baslikYolu;
+  if (surukleme.baslik) surukleme.baslik.style.transform = 'translateX(' + basYol + 'px)';
+
   if (surukleme.yeni) {
-    var disarisi = surukleme.ileri ? surukleme.genislik : -surukleme.genislik;
+    var disarisi = surukleme.ileri ? surukleme.hucre : -surukleme.hucre;
     surukleme.yeni.style.transform = 'translateX(' + (disarisi + dx) + 'px)';
+  }
+  if (surukleme.kopya) {
+    var basDisarisi = surukleme.ileri ? surukleme.baslikYolu : -surukleme.baslikYolu;
+    surukleme.kopya.style.transform = 'translateX(' + (basDisarisi + basYol) + 'px)';
   }
 }
 
@@ -4595,7 +4633,7 @@ function suruklemeyiBitir(dx, sure) {
   surukleme = null;
   if (!s || !s.eski) return;
 
-  var g = s.genislik;
+  var g = s.hucre, b = s.baslikYolu;
   var hiz = sure > 0 ? Math.abs(dx) / sure : 0;
   var tamamla = !!s.yeni && ((dx < 0) === s.ileri) &&
     (Math.abs(dx) > g * TAMAMLAMA_ORANI ||
@@ -4604,13 +4642,19 @@ function suruklemeyiBitir(dx, sure) {
   var gecis = 'transform ' + SURUKLEME_SURE + 'ms cubic-bezier(0.32, 0.72, 0, 1)';
   s.eski.style.transition = gecis;
   if (s.yeni) s.yeni.style.transition = gecis;
+  if (s.baslik) s.baslik.style.transition = gecis;
+  if (s.kopya) s.kopya.style.transition = gecis;
 
   if (tamamla) {
     s.eski.style.transform = 'translateX(' + (s.ileri ? -g : g) + 'px)';
     s.yeni.style.transform = 'translateX(0px)';
+    if (s.baslik) s.baslik.style.transform = 'translateX(' + (s.ileri ? -b : b) + 'px)';
+    if (s.kopya) s.kopya.style.transform = 'translateX(0px)';
   } else {
     s.eski.style.transform = 'translateX(0px)';
     if (s.yeni) s.yeni.style.transform = 'translateX(' + (s.ileri ? g : -g) + 'px)';
+    if (s.baslik) s.baslik.style.transform = 'translateX(0px)';
+    if (s.kopya) s.kopya.style.transform = 'translateX(' + (s.ileri ? b : -b) + 'px)';
   }
 
   var hedef = tamamla ? s.yeni.id.replace(/^page-/, '') : null;
@@ -4623,6 +4667,8 @@ function suruklemeyiBitir(dx, sure) {
     stilleriSil(s.eski);
     stilleriSil(s.yeni);
     if (s.yeni) s.yeni.classList.remove('suruklenen');
+    if (s.kopya) s.kopya.remove();
+    if (s.baslik) { s.baslik.style.transition = ''; s.baslik.style.transform = ''; }
     s.ana.classList.remove('gecis-suruyor');
     if (hedef) showPage(hedef, true);
     else if (s.yeni) s.yeni.classList.add('hidden');

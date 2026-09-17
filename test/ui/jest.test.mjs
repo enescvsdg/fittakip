@@ -70,18 +70,25 @@ export default async function ({ rapor, adres, browser }) {
   await page.evaluate(() => showPage('home'));
   await page.waitForTimeout(300);
 
+  /* Konumlar satır içi stilden DEĞİL, ekrandaki gerçek kutudan okunuyor.
+     Bir kez stile bakıp geçmiştim: sayfanın giriş animasyonu transform'u
+     tutuyordu, stilde doğru değer yazarken sayfa hiç kımıldamıyordu ve test
+     bunu göremedi. */
   const anlik = () => page.evaluate(() => {
     const g = [...document.querySelectorAll('.page')].filter(p => !p.classList.contains('hidden'));
-    const oku = p => Number((p.style.transform.match(/(-?[\d.]+)px/) || [])[1]);
+    const cikan = g.find(p => p.style.position !== 'fixed');
+    const gelen = g.find(p => p.style.position === 'fixed');
+    const x = e => (e ? Math.round(e.getBoundingClientRect().x) : null);
     return {
       suruyor: document.querySelector('.app-main').classList.contains('gecis-suruyor'),
       sayi: g.length,
-      cikan: g.find(p => p.style.position !== 'fixed'),
-      gelen: g.find(p => p.style.position === 'fixed'),
-      cikanId: (g.find(p => p.style.position !== 'fixed') || {}).id,
-      gelenId: (g.find(p => p.style.position === 'fixed') || {}).id,
-      cikanX: oku(g.find(p => p.style.position !== 'fixed') || { style: { transform: '' } }),
-      gelenX: oku(g.find(p => p.style.position === 'fixed') || { style: { transform: '' } }),
+      cikanId: (cikan || {}).id,
+      gelenId: (gelen || {}).id,
+      cikanX: x(cikan),
+      gelenX: x(gelen),
+      baslikX: x(document.querySelector('.app-header')),
+      kapsulX: x(document.querySelector('.bottom-nav')),
+      kopya: document.querySelectorAll('.suruklenen-baslik').length,
       tasma: document.documentElement.scrollWidth - document.documentElement.clientWidth
     };
   });
@@ -91,19 +98,32 @@ export default async function ({ rapor, adres, browser }) {
   let d1 = await anlik();
   rapor.kontrol('Eşik altında hiçbir şey kımıldamıyor', !d1.suruyor && d1.sayi === 1, JSON.stringify(d1.sayi));
 
+  const durgun = await anlik();               // kaymadan önceki konumlar
+
   await dokun('touchmove', 280, 400);          // 20 px — yön kilitleniyor
   d1 = await anlik();
   rapor.kontrol('Kilitlenince sürükleme başlıyor', d1.suruyor);
   rapor.kontrol('İki sayfa birden ekranda', d1.sayi === 2, String(d1.sayi));
-  rapor.kontrol('Çıkan sayfa parmakla kaydı', d1.cikanX === -20, String(d1.cikanX));
+  rapor.kontrol('Çıkan sayfa EKRANDA gerçekten kaydı',
+    d1.cikanX === durgun.cikanX - 20, durgun.cikanX + ' → ' + d1.cikanX);
   rapor.kontrol('Gelen sayfa hemen ekran dışında', d1.gelenId === 'page-profile', d1.gelenId);
 
   await dokun('touchmove', 200, 400);          // 100 px
   const d2 = await anlik();
-  rapor.kontrol('Parmak ilerledikçe sayfa da ilerliyor', d2.cikanX === -100, String(d2.cikanX));
+  rapor.kontrol('Parmak ilerledikçe sayfa da ilerliyor',
+    d2.cikanX === durgun.cikanX - 100, String(d2.cikanX));
   rapor.kontrol('Gelen sayfa aynı miktarda yaklaştı',
     d2.gelenX === d1.gelenX - 80, d1.gelenX + ' → ' + d2.gelenX);
+  rapor.kontrol('İki sayfa üst üste binmiyor',
+    d2.gelenX > d2.cikanX + 358, d2.cikanX + ' | ' + d2.gelenX);
   rapor.kontrol('Sürüklerken yatay taşma yok', d2.tasma === 0, String(d2.tasma));
+
+  rapor.baslik('geçişte yalnız kapsül sabit');
+  rapor.kontrol('Başlık da sayfayla akıyor',
+    d2.baslikX === durgun.baslikX - 100, durgun.baslikX + ' → ' + d2.baslikX);
+  rapor.kontrol('Gelen sayfa kendi başlığını getiriyor', d2.kopya === 1, String(d2.kopya));
+  rapor.kontrol('Kapsül yerinde kalıyor',
+    d2.kapsulX === durgun.kapsulX, durgun.kapsulX + ' → ' + d2.kapsulX);
 
   await dokun('touchend', 200, 400);
   await page.waitForTimeout(340);
@@ -121,6 +141,13 @@ export default async function ({ rapor, adres, browser }) {
   rapor.kontrol('Geçiş sınıfı temizleniyor', !bitis.suruyor);
   rapor.kontrol('Satır içi stiller temizleniyor', bitis.artik === '', bitis.artik || '(boş)');
   rapor.kontrol('Yeni sayfa tepeden başlıyor', bitis.kaydirma === 0, String(bitis.kaydirma));
+
+  const son = await anlik();
+  rapor.kontrol('Başlık kopyası siliniyor', son.kopya === 0, String(son.kopya));
+  rapor.kontrol('Başlık yerine dönüyor', son.baslikX === durgun.baslikX,
+    durgun.baslikX + ' → ' + son.baslikX);
+  rapor.kontrol('Kopya çift kimlik bırakmıyor',
+    (await page.evaluate(() => document.querySelectorAll('#menuToggle').length)) === 1);
 
   rapor.baslik('yeterince çekilmezse geri dönüyor');
   // Genişliğin %30'u eşik; 40 px hem eşiğin hem de fiske hızının altında
