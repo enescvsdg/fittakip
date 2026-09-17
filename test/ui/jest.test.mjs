@@ -118,12 +118,24 @@ export default async function ({ rapor, adres, browser }) {
     d2.gelenX > d2.cikanX + 358, d2.cikanX + ' | ' + d2.gelenX);
   rapor.kontrol('Sürüklerken yatay taşma yok', d2.tasma === 0, String(d2.tasma));
 
-  rapor.baslik('geçişte yalnız kapsül sabit');
-  rapor.kontrol('Başlık da sayfayla akıyor',
-    d2.baslikX === durgun.baslikX - 100, durgun.baslikX + ' → ' + d2.baslikX);
-  rapor.kontrol('Gelen sayfa kendi başlığını getiriyor', d2.kopya === 1, String(d2.kopya));
+  rapor.baslik('geçişte yalnız içerik kayıyor');
+  // Çerçeve yerinde duruyor: üstte başlık, altta kapsül, arkada zemin.
+  rapor.kontrol('Başlık yerinde kalıyor',
+    d2.baslikX === durgun.baslikX, durgun.baslikX + ' → ' + d2.baslikX);
   rapor.kontrol('Kapsül yerinde kalıyor',
     d2.kapsulX === durgun.kapsulX, durgun.kapsulX + ' → ' + d2.kapsulX);
+  rapor.kontrol('Başlık kopyası üretilmiyor', d2.kopya === 0, String(d2.kopya));
+  // Sayfanın kendi zemini/gölgesi olsaydı geçişte kayan bir "kart" görünürdü
+  const zeminli = await page.evaluate(() => {
+    const g = document.querySelector('.page.suruklenen');
+    if (!g) return null;
+    const c = getComputedStyle(g);
+    return { zemin: c.backgroundColor, golge: c.boxShadow };
+  });
+  rapor.kontrol('Kayan sayfanın kendi zemini yok',
+    zeminli && /rgba\(0, 0, 0, 0\)|transparent/.test(zeminli.zemin), zeminli && zeminli.zemin);
+  rapor.kontrol('Kayan sayfanın gölgesi yok',
+    zeminli && zeminli.golge === 'none', zeminli && zeminli.golge);
 
   await dokun('touchend', 200, 400);
   await page.waitForTimeout(340);
@@ -143,11 +155,10 @@ export default async function ({ rapor, adres, browser }) {
   rapor.kontrol('Yeni sayfa tepeden başlıyor', bitis.kaydirma === 0, String(bitis.kaydirma));
 
   const son = await anlik();
-  rapor.kontrol('Başlık kopyası siliniyor', son.kopya === 0, String(son.kopya));
-  rapor.kontrol('Başlık yerine dönüyor', son.baslikX === durgun.baslikX,
+  rapor.kontrol('Başlık hiç oynamadı', son.baslikX === durgun.baslikX,
     durgun.baslikX + ' → ' + son.baslikX);
-  rapor.kontrol('Kopya çift kimlik bırakmıyor',
-    (await page.evaluate(() => document.querySelectorAll('#menuToggle').length)) === 1);
+  rapor.kontrol('Kapsül hiç oynamadı', son.kapsulX === durgun.kapsulX,
+    durgun.kapsulX + ' → ' + son.kapsulX);
 
   rapor.baslik('yeterince çekilmezse geri dönüyor');
   // Genişliğin %30'u eşik; 40 px hem eşiğin hem de fiske hızının altında

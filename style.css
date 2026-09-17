@@ -273,17 +273,12 @@ body {
    kayan sayfa yatay taşma yaratır. */
 .app-main.gecis-suruyor { position: relative; overflow-x: clip; }
 .app-main.gecis-suruyor > .page { will-change: transform; }
-/* Gelen sayfa şeffaf kalırsa altındaki sayfa sızar. z-index şart: sayfalar
-   DOM sırasına göre boyanıyor, geriye giderken gelen sayfa daha erken sırada
-   olduğu için çıkan sayfanın kartları arasından sızıyordu. */
-.page.suruklenen {
-  background: var(--bg);
-  box-shadow: 0 0 26px rgba(0, 0, 0, 0.22);
-  z-index: 50;
-}
-/* Başlık da sayfayla akıyor; gelen sayfanın başlığı onun kopyası.
-   Yalnız alttaki kapsül yerinde kalıyor. */
-.suruklenen-baslik { pointer-events: none; }
+/* Gelen sayfanın kendi zemini ve gölgesi yok: geçişte kayan tek şey içerik.
+   Zemin, başlık ve kapsül yerinde duruyor. Sayfalar yan yana (üst üste değil)
+   durduğu için şeffaf olmaları sızmaya yol açmıyor; z-index yine de duruyor,
+   sayfalar DOM sırasına göre boyandığı için geriye giderken gelen sayfa alta
+   düşüyordu. */
+.page.suruklenen { z-index: 50; }
 
 /* ── BUGÜN KARTLARI (ana sayfa) ── */
 .today-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
