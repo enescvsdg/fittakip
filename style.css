@@ -33,7 +33,12 @@
   --bnav-antrenman:  #fe967a;
   --bnav-beslenme:   #6ee787;
   --bnav-supplement: #d4bcff;
-  --bnav-profil:     #fe967a;
+  /* Profil, antrenmanın turuncusunu ödünç alıyordu — ikisi menüde yan yana
+     olduğu için ayırt edilemiyordu. Mavi/turuncu/yeşil/mor dolu olduğundan
+     pembe seçildi: takımın en zayıf çifti (mor↔mavi) değişmeden kalıyor,
+     yani profil zayıf halka olmuyor. Turkuaz denendi ve elendi — normal
+     görmede analizin mavisine fazla yakındı. */
+  --bnav-profil:     #ff8fd8;
 
   --accent:      #ff5c2b;
   --accent-2:    #ff8c42;
@@ -123,7 +128,7 @@
     --bnav-antrenman:  #b53000;
     --bnav-beslenme:   #006048;
     --bnav-supplement: #6200ad;
-    --bnav-profil:     #b53000;
+    --bnav-profil:     #a3005c;
 
     --accent:      #b23b0a;
     --accent-2:    #98330a;
