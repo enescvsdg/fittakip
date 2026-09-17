@@ -183,6 +183,13 @@
 
       <div class="today-cards" id="todayCards"></div>
 
+      <!-- Üç planı birden üreten tek giriş. Sayfa başına ayrı düğme yoktu:
+           planlar birbirine bağlı (kalori hedefi antrenman gününe, takviye
+           zamanlaması antrenman saatine göre belirleniyor). -->
+      <button class="btn-pdf-upload btn-program-uret" id="openProgramBtn" type="button">
+        <span>✨</span> Yapay Zekâ ile Program Oluştur
+      </button>
+
       <div class="empty-state" id="home-empty">
         <p class="empty-icon">📋</p>
         <p class="empty-text">Analiz için önce <strong>Kişisel Bilgiler</strong> sayfasından boy ve kilonu gir.</p>
@@ -438,10 +445,6 @@
       </div>
 
       <!-- PDF'DEN PROGRAM YÜKLE -->
-      <button class="btn-pdf-upload btn-program-uret" id="openProgramBtnWork" type="button">
-        <span>✨</span> Yapay Zekâ ile Program Oluştur
-      </button>
-
       <button class="btn-pdf-upload" id="openPdfUploadBtn" type="button">
         <span>📄</span> PDF'den Program Yükle
       </button>
@@ -601,10 +604,6 @@
         <h1 class="page-title">Beslenme Planı</h1>
         <p class="page-subtitle">Öğün öğün besin değeriyle takip</p>
       </div>
-
-      <button class="btn-pdf-upload btn-program-uret" id="openProgramBtnNut" type="button">
-        <span>✨</span> Yapay Zekâ ile Program Oluştur
-      </button>
 
       <!-- PDF'DEN BESLENME PLANI YÜKLE -->
       <button class="btn-pdf-upload" id="openDietPdfBtn" type="button">
@@ -806,10 +805,6 @@
       </div>
 
       <!-- PDF'DEN SUPPLEMENT PLANI YÜKLE -->
-      <button class="btn-pdf-upload btn-program-uret" id="openProgramBtnSupp" type="button">
-        <span>✨</span> Yapay Zekâ ile Program Oluştur
-      </button>
-
       <button class="btn-pdf-upload" id="openDietPdfBtnSupp" type="button">
         <span>📄</span> PDF'den Supplement Planı Yükle
       </button>

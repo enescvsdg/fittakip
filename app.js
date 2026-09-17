@@ -4728,10 +4728,7 @@ function programSihirbaziniKapat() {
   programModal.classList.add('hidden');
 }
 
-['openProgramBtnWork', 'openProgramBtnNut', 'openProgramBtnSupp'].forEach(function(id) {
-  var b = document.getElementById(id);
-  if (b) b.addEventListener('click', programSihirbaziniAc);
-});
+document.getElementById('openProgramBtn').addEventListener('click', programSihirbaziniAc);
 document.getElementById('programKapat').addEventListener('click', programSihirbaziniKapat);
 programModal.addEventListener('click', function(e) {
   if (e.target === programModal) programSihirbaziniKapat();
