@@ -45,8 +45,8 @@ export default async function ({ rapor, adres, browser }) {
   };
 
   rapor.baslik('sihirbaz');
-  await page.evaluate(() => showPage('workout'));
-  await page.click('#openProgramBtnWork');
+  await page.evaluate(() => showPage('home'));
+  await page.click('#openProgramBtn');
   await page.waitForTimeout(200);
   rapor.kontrol('Sihirbaz açılıyor', await page.isVisible('#programModal'));
   rapor.kontrol('İlk adımda geri düğmesi yok', !(await page.isVisible('#programGeri')));
@@ -68,7 +68,7 @@ export default async function ({ rapor, adres, browser }) {
   // Geri, özetten SON adıma döner. Baştan doldurmak için sihirbazı yeniden aç.
   await page.click('#programKapat');
   await page.waitForTimeout(150);
-  await page.click('#openProgramBtnWork');
+  await page.click('#openProgramBtn');
   await page.waitForTimeout(200);
   rapor.kontrol('Yeniden açılınca ilk adımdan başlıyor',
     (await page.textContent('#programIlerleme')) === 'Adım 1 / 5',
