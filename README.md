@@ -39,9 +39,10 @@ onayladıklarını plana ekler. Gemini API anahtarı gerektirir.
 **Bildirimler** — Hatırlatma saati geldiğinde telefona bildirim. Uygulama
 kapalıyken çalışması için Cloudflare Worker kurulumu gerekir (aşağıda).
 
-**Dokunma jestleri** — Sayfalar arasında parmakla sağa/sola kaydırarak geçiş.
-İki parmakla yakınlaştırma; parmak kalkınca eski haline dönüyor (tarayıcının
-kendi zoom'u kapalı, çünkü seviyesi koddan geri alınamıyor).
+**Dokunma jestleri** — Sayfalar arasında parmakla geçiş: sayfa parmağı anlık
+takip ediyor, yeterince çekilmezse geri dönüyor. İki parmakla yakınlaştırma ve
+yakınken gezinme; parmak kalkınca eski haline dönüyor (tarayıcının kendi zoom'u
+kapalı, çünkü seviyesi koddan geri alınamıyor).
 
 **Ayarlar** — Gemini API anahtarı, yedekleme ve geri yükleme, bildirim sunucusu
 bağlantısı.

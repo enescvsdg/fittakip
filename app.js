@@ -11,75 +11,15 @@ var bottomItems  = document.querySelectorAll('.bottom-nav-item');
 var pages        = document.querySelectorAll('.page');
 
 // ── SPA: SHOW PAGE ──────────────────────────
-/* İki sayfayı yan yana kaydırarak değiştirir: çıkan sayfa mutlak konuma alınıp
-   bir yana, giren sayfa öbür yandan içeri süzülür. Tek sayfayı gösterip
-   diğerini anında gizlemek "geçiş" hissi vermiyordu. */
-var GECIS_SURE = 340;
-var gecisTemizle = null;
+/* sessiz: sayfa parmakla sürüklenerek zaten yerine geldiyse giriş animasyonu
+   oynatılmaz — yoksa hareket iki kez yapılmış gibi görünür. */
+function showPage(pageId, sessiz) {
+  pages.forEach(function(p) { p.classList.add('hidden'); });
 
-function sayfayiKaydirarakGoster(eski, yeni, yon) {
-  var ana = document.querySelector('.app-main');
-  if (!ana) { eski.classList.add('hidden'); return; }
-
-  if (gecisTemizle) gecisTemizle();          // üst üste kaydırmada artık kalmasın
-  window.scrollTo(0, 0);                      // iki sayfa da tepeden hizalansın
-  ana.classList.add('gecis-suruyor');         // konumlama ve kesme bu sınıfta
-
-  // Ölçüler sınıf eklendikten sonra okunuyor: offsetParent artık .app-main
-  var g = eski.offsetWidth, sol = eski.offsetLeft, ust = eski.offsetTop;
-  eski.style.position = 'absolute';
-  eski.style.left = sol + 'px';
-  eski.style.top = ust + 'px';
-  eski.style.width = g + 'px';
-
-  var disari = yon === 'sol' ? '-100%' : '100%';
-  var iceri  = yon === 'sol' ? '100%'  : '-100%';
-
-  eski.style.animation = 'none';
-  yeni.style.animation = 'none';
-  eski.style.transform = 'translateX(0)';
-  yeni.style.transform = 'translateX(' + iceri + ')';
-  void yeni.offsetHeight;                     // başlangıç konumu uygulansın
-
-  var gecis = 'transform ' + GECIS_SURE + 'ms cubic-bezier(0.32, 0.72, 0, 1)';
-  eski.style.transition = gecis;
-  yeni.style.transition = gecis;
-  eski.style.transform = 'translateX(' + disari + ')';
-  yeni.style.transform = 'translateX(0)';
-
-  var zaman = setTimeout(function() { if (gecisTemizle) gecisTemizle(); }, GECIS_SURE + 30);
-  gecisTemizle = function() {
-    clearTimeout(zaman);
-    gecisTemizle = null;
-    [eski, yeni].forEach(function(p) {
-      p.style.position = p.style.left = p.style.top = p.style.width = '';
-      p.style.transition = p.style.transform = p.style.animation = '';
-    });
-    eski.classList.add('hidden');
-    ana.classList.remove('gecis-suruyor');
-  };
-}
-
-/* Kaydırma yönü: 'sol' (ileri gidiyoruz, yeni sayfa sağdan gelir) | 'sag' | null */
-function showPage(pageId, yon) {
   var target = document.getElementById('page-' + pageId);
-
-  // Kaydırarak geçişte eski sayfa animasyon boyunca ekranda kalıyor
-  var eski = null;
-  if (yon && target) {
-    for (var i = 0; i < pages.length; i++) {
-      if (!pages[i].classList.contains('hidden')) { eski = pages[i]; break; }
-    }
-    if (eski === target) eski = null;
-  }
-
-  pages.forEach(function(p) { if (p !== eski) p.classList.add('hidden'); });
-
   if (target) {
     target.classList.remove('hidden');
-    if (eski) {
-      sayfayiKaydirarakGoster(eski, target, yon);
-    } else {
+    if (!sessiz) {
       target.style.animation = 'none';
       void target.offsetHeight;
       target.style.animation = '';
@@ -4551,18 +4491,142 @@ function jestUygunMu(hedef) {
   return true;
 }
 
-var KAYDIRMA_ESIK = 35;      // bu kadar yatay yol gidilmeden sayfa değişmez
-var KAYDIRMA_ORAN = 1.2;     // yatay hareket dikeyden bu kadar baskın olmalı
-var KAYDIRMA_SURE = 700;     // yavaş sürüklemeler kaydırma sayılmaz
+/* ── Sayfayı parmakla sürükleme ──
+   Sayfa parmağı anlık takip ediyor: sürüklerken iki sayfa da birlikte kayıyor,
+   parmak kalkınca ya tamamlanıyor ya geri dönüyor. Önceki hâlde hareket ancak
+   parmak kalktıktan sonra başlıyordu, o yüzden jest "tutmuyor" hissi veriyordu. */
+var SURUKLEME_KILIT = 12;     // bu kadar yol gidince yön kilitlenir
+var SURUKLEME_ORAN = 1.2;     // yatay hareket dikeyden bu kadar baskın olmalı
+var TAMAMLAMA_ORANI = 0.3;    // genişliğin bu kadarı geçilirse sayfa değişir
+var TAMAMLAMA_HIZI = 0.4;     // px/ms — hızlı fiske kısa yolda da tamamlar
+var FISKE_EN_AZ = 45;         // ama fiske de bu kadar yol gitmeli; yoksa
+                              // 20 piksellik seğirme sayfayı değiştiriyor
+var SURUKLEME_SURE = 260;     // bırakınca tamamlama/geri dönüş süresi
+var UC_DIRENCI = 3;           // uçlarda sayfa bu kadar az kayar
 
-var jest = null;
+// Sürükleme sırasında sayfalara konan satır içi stiller
+var SURUKLEME_STILLERI = ['position', 'left', 'width', 'top', 'bottom',
+                          'overflow', 'transition', 'transform', 'animation'];
 
-function sayfayiKaydir(ileri) {
+var surukleme = null;
+var surukleTemizle = null;
+
+function stilleriSil(p) {
+  if (p) SURUKLEME_STILLERI.forEach(function(k) { p.style[k] = ''; });
+}
+
+function gorunenSayfa() {
+  for (var i = 0; i < pages.length; i++) {
+    if (!pages[i].classList.contains('hidden')) return pages[i];
+  }
+  return null;
+}
+
+function komsuSayfa(ileri) {
   var su = SAYFA_SIRASI.indexOf(aktifSayfa());
-  if (su === -1) return;
-  var hedef = su + (ileri ? 1 : -1);
-  if (hedef < 0 || hedef >= SAYFA_SIRASI.length) return;   // uçlarda dönmüyor
-  showPage(SAYFA_SIRASI[hedef], ileri ? 'sol' : 'sag');
+  if (su === -1) return null;
+  var h = su + (ileri ? 1 : -1);
+  if (h < 0 || h >= SAYFA_SIRASI.length) return null;   // uçlarda dönmüyor
+  return document.getElementById('page-' + SAYFA_SIRASI[h]);
+}
+
+/* Komşu sayfayı ekranın hemen dışına yerleştirir.
+   Sabit (fixed) konum kullanılıyor: sayfa aşağı kaydırılmışken akıştaki bir
+   kardeş ekranda hiç görünmezdi, sürüklemeye başlar başlamaz tepeye zıplamak
+   gerekirdi. Sabit konum sürüklemeyi kaydırma konumundan bağımsız kılıyor. */
+function komsuyuKur(ileri) {
+  if (surukleme.ileri === ileri) return;
+  komsuyuKaldir();
+  surukleme.ileri = ileri;
+  var yeni = komsuSayfa(ileri);
+  surukleme.yeni = yeni;
+  if (!yeni) return;
+
+  var k = surukleme.eski.getBoundingClientRect();
+  var baslik = document.querySelector('.app-header');
+  yeni.classList.remove('hidden');
+  yeni.classList.add('suruklenen');
+  yeni.style.animation = 'none';
+  yeni.style.position = 'fixed';
+  yeni.style.left = k.left + 'px';
+  yeni.style.width = k.width + 'px';
+  yeni.style.top = (baslik ? baslik.getBoundingClientRect().bottom : 0) + 'px';
+  yeni.style.bottom = '0';
+  yeni.style.overflow = 'hidden';
+  yeni.style.transition = 'none';
+  yeni.style.transform = 'translateX(' + (ileri ? surukleme.genislik : -surukleme.genislik) + 'px)';
+}
+
+function komsuyuKaldir() {
+  if (!surukleme || !surukleme.yeni) return;
+  stilleriSil(surukleme.yeni);
+  surukleme.yeni.classList.remove('suruklenen');
+  surukleme.yeni.classList.add('hidden');
+  surukleme.yeni = null;
+}
+
+function suruklemeyeBasla() {
+  if (surukleTemizle) surukleTemizle();     // yarım kalan geçiş varsa kapat
+  var ana = document.querySelector('.app-main');
+  var eski = gorunenSayfa();
+  if (!ana || !eski) return false;
+  ana.classList.add('gecis-suruyor');
+  surukleme.ana = ana;
+  surukleme.eski = eski;
+  surukleme.genislik = eski.getBoundingClientRect().width || 1;
+  surukleme.ileri = null;
+  surukleme.yeni = null;
+  return true;
+}
+
+function suruklemeyiGuncelle(dx) {
+  komsuyuKur(dx < 0);
+  var yol = surukleme.yeni ? dx : dx / UC_DIRENCI;   // uçta lastik gibi direniyor
+  surukleme.eski.style.transition = 'none';
+  surukleme.eski.style.transform = 'translateX(' + yol + 'px)';
+  if (surukleme.yeni) {
+    var disarisi = surukleme.ileri ? surukleme.genislik : -surukleme.genislik;
+    surukleme.yeni.style.transform = 'translateX(' + (disarisi + dx) + 'px)';
+  }
+}
+
+function suruklemeyiBitir(dx, sure) {
+  var s = surukleme;
+  surukleme = null;
+  if (!s || !s.eski) return;
+
+  var g = s.genislik;
+  var hiz = sure > 0 ? Math.abs(dx) / sure : 0;
+  var tamamla = !!s.yeni && ((dx < 0) === s.ileri) &&
+    (Math.abs(dx) > g * TAMAMLAMA_ORANI ||
+     (hiz > TAMAMLAMA_HIZI && Math.abs(dx) >= FISKE_EN_AZ));
+
+  var gecis = 'transform ' + SURUKLEME_SURE + 'ms cubic-bezier(0.32, 0.72, 0, 1)';
+  s.eski.style.transition = gecis;
+  if (s.yeni) s.yeni.style.transition = gecis;
+
+  if (tamamla) {
+    s.eski.style.transform = 'translateX(' + (s.ileri ? -g : g) + 'px)';
+    s.yeni.style.transform = 'translateX(0px)';
+  } else {
+    s.eski.style.transform = 'translateX(0px)';
+    if (s.yeni) s.yeni.style.transform = 'translateX(' + (s.ileri ? g : -g) + 'px)';
+  }
+
+  var hedef = tamamla ? s.yeni.id.replace(/^page-/, '') : null;
+  var zaman = setTimeout(function() { if (surukleTemizle) surukleTemizle(); }, SURUKLEME_SURE + 20);
+  surukleTemizle = function() {
+    clearTimeout(zaman);
+    surukleTemizle = null;
+    // Kaydırma sıfırlanması yeni sayfa ekranı kaplarken yapılıyor ki görünmesin
+    if (hedef) window.scrollTo(0, 0);
+    stilleriSil(s.eski);
+    stilleriSil(s.yeni);
+    if (s.yeni) s.yeni.classList.remove('suruklenen');
+    s.ana.classList.remove('gecis-suruyor');
+    if (hedef) showPage(hedef, true);
+    else if (s.yeni) s.yeni.classList.add('hidden');
+  };
 }
 
 /* ── Yakınlaştırma ──
@@ -4623,42 +4687,64 @@ function zumBitir() {
   zumKatmani.style.transform = '';
 }
 
+function suruklemeyiIptalEt() {
+  if (surukleme && surukleme.kilit === 'yatay') suruklemeyiBitir(0, 1);
+  surukleme = null;
+}
+
 document.addEventListener('touchstart', function(e) {
   if (e.touches.length === 2 && jestUygunMu(e.target)) {
-    jest = null;               // iki parmak başladıysa sayfa kaydırma iptal
+    suruklemeyiIptalEt();      // iki parmak başladıysa sayfa sürükleme iptal
     zumBaslat(e.touches);
     return;
   }
   if (e.touches.length !== 1) return;
   zumBitir();
-  if (!jestUygunMu(e.target)) { jest = null; return; }
-  jest = { x: e.touches[0].clientX, y: e.touches[0].clientY, an: Date.now() };
+  if (!jestUygunMu(e.target)) { surukleme = null; return; }
+  surukleme = { x: e.touches[0].clientX, y: e.touches[0].clientY, an: Date.now(), kilit: null };
 }, { passive: true });
 
 document.addEventListener('touchmove', function(e) {
   if (zum && e.touches.length === 2) {
     e.preventDefault();        // tarayıcının kendi zoom'u devreye girmesin
     zumGuncelle(e.touches);
+    return;
   }
+  if (!surukleme || e.touches.length !== 1) return;
+
+  var dx = e.touches[0].clientX - surukleme.x;
+  var dy = e.touches[0].clientY - surukleme.y;
+
+  // Yön bir kez kilitleniyor: kilitlenmeden önce tarayıcı kendi dikey
+  // kaydırmasını yapabilsin, kilitlendikten sonra jest bize ait olsun.
+  if (!surukleme.kilit) {
+    if (Math.abs(dx) >= SURUKLEME_KILIT && Math.abs(dx) > Math.abs(dy) * SURUKLEME_ORAN) {
+      if (!suruklemeyeBasla()) { surukleme = null; return; }
+      surukleme.kilit = 'yatay';
+    } else if (Math.abs(dy) >= SURUKLEME_KILIT) {
+      surukleme.kilit = 'dikey';
+    } else {
+      return;
+    }
+  }
+  if (surukleme.kilit !== 'yatay') return;
+
+  e.preventDefault();          // yatay sürüklerken sayfa dikey kaymasın
+  suruklemeyiGuncelle(dx);
 }, { passive: false });
 
 document.addEventListener('touchend', function(e) {
-  if (zum && e.touches.length < 2) { zumBitir(); jest = null; return; }
-  if (!jest || e.touches.length) return;
+  if (zum && e.touches.length < 2) { zumBitir(); surukleme = null; return; }
+  if (!surukleme || e.touches.length) return;
 
-  var d = e.changedTouches[0];
-  var dx = d.clientX - jest.x, dy = d.clientY - jest.y;
-  var gecen = Date.now() - jest.an;
-  jest = null;
-
-  if (gecen > KAYDIRMA_SURE) return;
-  if (Math.abs(dx) < KAYDIRMA_ESIK) return;
-  if (Math.abs(dx) < Math.abs(dy) * KAYDIRMA_ORAN) return;   // dikey kaydırmayı bozma
-
-  sayfayiKaydir(dx < 0);       // sola çekmek sonraki sayfa
+  if (surukleme.kilit !== 'yatay') { surukleme = null; return; }
+  var dx = e.changedTouches[0].clientX - surukleme.x;
+  suruklemeyiBitir(dx, Date.now() - surukleme.an);
 }, { passive: true });
 
-document.addEventListener('touchcancel', function() { zumBitir(); jest = null; }, { passive: true });
+document.addEventListener('touchcancel', function() {
+  zumBitir(); suruklemeyiIptalEt();
+}, { passive: true });
 
 // iOS Safari kendi jest olaylarını ayrıca yolluyor; engellenmezse yine zoom yapar
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(function(ad) {
