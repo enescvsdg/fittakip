@@ -28,17 +28,25 @@ function zamaniDondur(iso) {
 const b64u = b => Buffer.from(b).toString('base64')
   .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
+/* İşlemleri sayan sahte KV. Sayaç şart: KV'nin ücretsiz katmanında günlük
+   list sınırı 1000 ve dakikalık cron bunu aşıp hesabı bloke etmişti. Artık
+   cron'un hiç list yapmadığı testle tutuluyor. */
 function sahteKV() {
   const store = new Map();
+  const sayac = { get: 0, put: 0, delete: 0, list: 0 };
   return {
     store,
+    sayac,
+    sayaciSifirla() { sayac.get = sayac.put = sayac.delete = sayac.list = 0; },
     async get(key, tur) {
+      sayac.get++;
       const v = store.get(key);
       return v === undefined ? null : (tur === 'json' ? JSON.parse(v) : v);
     },
-    async put(key, deger) { store.set(key, deger); },
-    async delete(key) { store.delete(key); },
+    async put(key, deger) { sayac.put++; store.set(key, deger); },
+    async delete(key) { sayac.delete++; store.delete(key); },
     async list({ prefix }) {
+      sayac.list++;
       return { keys: [...store.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name })) };
     }
   };
