@@ -11,7 +11,7 @@ const LIST_SINIRI = 1000;         // Cloudflare ücretsiz katman, günlük
 const OKUMA_SINIRI = 100000;
 
 export default async function ({ rapor }) {
-  const { env, subscription, cagir, cron, saat } = await kur();
+  const { env, subscription, cagir, cron, saat, gonderimler } = await kur();
 
   await cagir('/sync', 'POST', {
     subscription, timezone: 'Europe/Istanbul',
@@ -64,6 +64,41 @@ export default async function ({ rapor }) {
   const onarilan = await env.REMINDERS.get('index:subs', 'json');
   rapor.kontrol('Dizin yeniden kuruldu', Array.isArray(onarilan) && onarilan.length === 1,
     JSON.stringify(onarilan));
+
+  rapor.baslik('list sınırı DOLUYKEN de çalışıyor');
+  /* Asıl mesele bu. Hesap bloke olduğunda list çağrıları 429 dönüyor. Düzeltme
+     blokajın kalkmasını bekliyorsa bir işe yaramaz: kullanıcı bugün bildirim
+     alamaz. O yüzden senkronizasyon yolunda list() hiç yok. */
+  env.REMINDERS.store.clear();                 // sıfırdan kurulum gibi
+  env.REMINDERS.listEngelli = true;
+  env.REMINDERS.sayaciSifirla();
+
+  const engelliSync = await cagir('/sync', 'POST', {
+    subscription, timezone: 'Europe/Istanbul',
+    reminders: [{ id: 's1', name: 'Kreatin', dose: '5g', time: saat(0) }]
+  });
+  rapor.kontrol('Senkronizasyon list engelliyken de başarılı',
+    engelliSync.status === 200, 'HTTP ' + engelliSync.status);
+  rapor.kontrol('Senkronizasyon hiç list denemiyor', env.REMINDERS.sayac.list === 0,
+    'list: ' + env.REMINDERS.sayac.list);
+  const engelliDizin = await env.REMINDERS.get('index:subs', 'json');
+  rapor.kontrol('Dizin yine de kuruldu',
+    Array.isArray(engelliDizin) && engelliDizin.length === 1, JSON.stringify(engelliDizin));
+
+  const oncekiGonderim = gonderimler.length;
+  await cron();
+  rapor.kontrol('Cron list engelliyken bildirim gönderebiliyor',
+    gonderimler.length > oncekiGonderim,
+    oncekiGonderim + ' → ' + gonderimler.length);
+  rapor.kontrol('Cron yine hiç list yapmadı', env.REMINDERS.sayac.list === 0,
+    'list: ' + env.REMINDERS.sayac.list);
+
+  rapor.baslik('teşhis ucu engeli yutuyor');
+  const debug = await cagir('/debug', 'GET');
+  rapor.kontrol('/debug list engelliyken de cevap veriyor', debug.status === 200,
+    'HTTP ' + debug.status);
+
+  env.REMINDERS.listEngelli = false;
 
   rapor.baslik('abonelik silinince dizinden de çıkıyor');
   await cagir('/unsubscribe', 'POST', { endpoint: subscription.endpoint });

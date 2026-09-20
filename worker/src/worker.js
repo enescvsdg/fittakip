@@ -63,7 +63,9 @@ async function readIndex(env) {
   return Array.isArray(idx) ? idx : null;
 }
 
-/* Kullanıcı tetikli uçlar için: dizin yoksa list() ile bir kez kurar. */
+/* Yalnız teşhis ucu (/debug) için: dizin yoksa list() ile kurmayı dener.
+   Bilerek başka hiçbir yerde kullanılmıyor — list sınırı dolmuşken bile
+   senkronizasyonun ve cron'un çalışması gerekiyor. */
 async function ensureIndex(env) {
   const idx = await readIndex(env);
   if (idx) return idx;
@@ -71,15 +73,17 @@ async function ensureIndex(env) {
   try {
     const list = await env.REMINDERS.list({ prefix: 'sub:' });
     adlar = list.keys.map(k => k.name);
+    await env.REMINDERS.put(INDEX_KEY, JSON.stringify(adlar));
   } catch (e) {
-    adlar = [];               // list engelliyse boş kur; sync dizini doldurur
+    adlar = [];               // list engelli: dizini yazma, sync zaten kuracak
   }
-  await env.REMINDERS.put(INDEX_KEY, JSON.stringify(adlar));
   return adlar;
 }
 
+/* Senkronizasyonun list()'e hiç ihtiyacı yok: eklenecek anahtar zaten elde.
+   Dizin yoksa sıfırdan kuruluyor. Böylece list sınırı dolmuşken de çalışıyor. */
 async function indexAdd(env, key) {
-  const idx = await ensureIndex(env);
+  const idx = (await readIndex(env)) || [];
   if (idx.indexOf(key) !== -1) return;
   await env.REMINDERS.put(INDEX_KEY, JSON.stringify(idx.concat([key])));
 }
