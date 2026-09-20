@@ -34,9 +34,12 @@ const b64u = b => Buffer.from(b).toString('base64')
 function sahteKV() {
   const store = new Map();
   const sayac = { get: 0, put: 0, delete: 0, list: 0 };
-  return {
+  const kv = {
     store,
     sayac,
+    // Günlük list sınırı dolduğunda Cloudflare 429 dönüyor ve Worker içindeki
+    // list çağrısı hata fırlatıyor. Testler o durumu da deneyebilsin diye.
+    listEngelli: false,
     sayaciSifirla() { sayac.get = sayac.put = sayac.delete = sayac.list = 0; },
     async get(key, tur) {
       sayac.get++;
@@ -47,9 +50,15 @@ function sahteKV() {
     async delete(key) { sayac.delete++; store.delete(key); },
     async list({ prefix }) {
       sayac.list++;
+      if (kv.listEngelli) {
+        const e = new Error('KV list failed: 429 Too Many Requests');
+        e.status = 429;
+        throw e;
+      }
       return { keys: [...store.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name })) };
     }
   };
+  return kv;
 }
 
 export async function kur({ an = SABIT_AN } = {}) {
