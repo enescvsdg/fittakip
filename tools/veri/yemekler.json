@@ -1,0 +1,116 @@
+[
+  { "ad": "Mercimek Çorbası", "malzemeler": [
+    { "gida": "Kırmızı Mercimek (çiğ)", "gram": 200 }, { "gida": "Soğan", "gram": 80 },
+    { "gida": "Havuç", "gram": 60 }, { "gida": "Zeytinyağı", "gram": 20 },
+    { "gida": "Su", "gram": 1500 }], "pisenAgirlik": 1700 },
+
+  { "ad": "Ezogelin Çorbası", "malzemeler": [
+    { "gida": "Kırmızı Mercimek (çiğ)", "gram": 180 }, { "gida": "Bulgur (çiğ)", "gram": 60 },
+    { "gida": "Pirinç (çiğ)", "gram": 30 }, { "gida": "Soğan", "gram": 80 },
+    { "gida": "Domates Salçası", "gram": 30 }, { "gida": "Tereyağı", "gram": 20 },
+    { "gida": "Su", "gram": 1600 }], "pisenAgirlik": 1800 },
+
+  { "ad": "Tarhana Çorbası", "malzemeler": [
+    { "gida": "Tarhana (kuru)", "gram": 100 }, { "gida": "Domates Salçası", "gram": 20 },
+    { "gida": "Tereyağı", "gram": 15 }, { "gida": "Su", "gram": 1200 }], "pisenAgirlik": 1300 },
+
+  { "ad": "Yayla Çorbası", "malzemeler": [
+    { "gida": "Yoğurt (sade, tam yağlı)", "gram": 400 }, { "gida": "Pirinç (çiğ)", "gram": 60 },
+    { "gida": "Yumurta (tam)", "gram": 50 }, { "gida": "Tereyağı", "gram": 20 },
+    { "gida": "Buğday Unu", "gram": 20 }, { "gida": "Su", "gram": 1200 }], "pisenAgirlik": 1600 },
+
+  { "ad": "Kuru Fasulye", "malzemeler": [
+    { "gida": "Kuru Fasulye (çiğ)", "gram": 300 }, { "gida": "Soğan", "gram": 100 },
+    { "gida": "Domates Salçası", "gram": 40 }, { "gida": "Zeytinyağı", "gram": 40 },
+    { "gida": "Su", "gram": 1200 }], "pisenAgirlik": 1500 },
+
+  { "ad": "Nohut Yemeği (etli)", "malzemeler": [
+    { "gida": "Nohut (çiğ)", "gram": 300 }, { "gida": "Kuşbaşı Dana Eti", "gram": 200 },
+    { "gida": "Soğan", "gram": 100 }, { "gida": "Domates Salçası", "gram": 40 },
+    { "gida": "Ayçiçek Yağı", "gram": 30 }, { "gida": "Su", "gram": 1200 }], "pisenAgirlik": 1600 },
+
+  { "ad": "Karnıyarık", "malzemeler": [
+    { "gida": "Patlıcan", "gram": 600 }, { "gida": "Kıyma (%15 yağlı)", "gram": 250 },
+    { "gida": "Soğan", "gram": 120 }, { "gida": "Domates", "gram": 150 },
+    { "gida": "Biber (yeşil sivri)", "gram": 60 }, { "gida": "Ayçiçek Yağı", "gram": 60 },
+    { "gida": "Su", "gram": 200 }], "pisenAgirlik": 1150 },
+
+  { "ad": "İmam Bayıldı", "malzemeler": [
+    { "gida": "Patlıcan", "gram": 600 }, { "gida": "Soğan", "gram": 200 },
+    { "gida": "Domates", "gram": 200 }, { "gida": "Sarımsak", "gram": 20 },
+    { "gida": "Zeytinyağı", "gram": 100 }, { "gida": "Su", "gram": 150 }], "pisenAgirlik": 1100 },
+
+  { "ad": "Menemen", "malzemeler": [
+    { "gida": "Yumurta (tam)", "gram": 200 }, { "gida": "Domates", "gram": 300 },
+    { "gida": "Biber (yeşil sivri)", "gram": 100 }, { "gida": "Ayçiçek Yağı", "gram": 30 }],
+    "pisenAgirlik": 520 },
+
+  { "ad": "Türlü", "malzemeler": [
+    { "gida": "Patlıcan", "gram": 200 }, { "gida": "Kabak (haşlanmış)", "gram": 200 },
+    { "gida": "Patates (haşlanmış)", "gram": 200 }, { "gida": "Biber (yeşil sivri)", "gram": 100 },
+    { "gida": "Domates", "gram": 200 }, { "gida": "Soğan", "gram": 100 },
+    { "gida": "Zeytinyağı", "gram": 50 }, { "gida": "Su", "gram": 300 }], "pisenAgirlik": 1150 },
+
+  { "ad": "Taze Fasulye Yemeği", "malzemeler": [
+    { "gida": "Yeşil Fasulye", "gram": 600 }, { "gida": "Soğan", "gram": 100 },
+    { "gida": "Domates", "gram": 150 }, { "gida": "Zeytinyağı", "gram": 60 },
+    { "gida": "Su", "gram": 300 }], "pisenAgirlik": 1050 },
+
+  { "ad": "Ispanak Yemeği", "malzemeler": [
+    { "gida": "Ispanak (çiğ)", "gram": 700 }, { "gida": "Soğan", "gram": 100 },
+    { "gida": "Pirinç (çiğ)", "gram": 40 }, { "gida": "Zeytinyağı", "gram": 40 },
+    { "gida": "Su", "gram": 200 }], "pisenAgirlik": 900 },
+
+  { "ad": "Kıymalı Bezelye", "malzemeler": [
+    { "gida": "Bezelye", "gram": 500 }, { "gida": "Kıyma (%15 yağlı)", "gram": 200 },
+    { "gida": "Soğan", "gram": 100 }, { "gida": "Havuç", "gram": 100 },
+    { "gida": "Domates Salçası", "gram": 30 }, { "gida": "Ayçiçek Yağı", "gram": 30 },
+    { "gida": "Su", "gram": 300 }], "pisenAgirlik": 1100 },
+
+  { "ad": "Etli Patates Yemeği", "malzemeler": [
+    { "gida": "Patates (haşlanmış)", "gram": 600 }, { "gida": "Kuşbaşı Dana Eti", "gram": 250 },
+    { "gida": "Soğan", "gram": 100 }, { "gida": "Domates Salçası", "gram": 30 },
+    { "gida": "Ayçiçek Yağı", "gram": 30 }, { "gida": "Su", "gram": 400 }], "pisenAgirlik": 1300 },
+
+  { "ad": "Tavuk Sote", "malzemeler": [
+    { "gida": "Tavuk Göğsü (ızgara/haşlama)", "gram": 500 }, { "gida": "Biber (yeşil sivri)", "gram": 150 },
+    { "gida": "Domates", "gram": 150 }, { "gida": "Soğan", "gram": 100 },
+    { "gida": "Ayçiçek Yağı", "gram": 30 }], "pisenAgirlik": 800 },
+
+  { "ad": "Izgara Köfte", "malzemeler": [
+    { "gida": "Kıyma (%15 yağlı)", "gram": 500 }, { "gida": "Soğan", "gram": 80 },
+    { "gida": "Ekmek (beyaz)", "gram": 50 }, { "gida": "Yumurta (tam)", "gram": 50 },
+    { "gida": "Maydanoz", "gram": 20 }], "pisenAgirlik": 550 },
+
+  { "ad": "Tavuk Şiş", "malzemeler": [
+    { "gida": "Tavuk Göğsü (ızgara/haşlama)", "gram": 600 }, { "gida": "Yoğurt (sade, tam yağlı)", "gram": 60 },
+    { "gida": "Zeytinyağı", "gram": 30 }, { "gida": "Soğan", "gram": 50 }], "pisenAgirlik": 620 },
+
+  { "ad": "Fırında Tavuk But", "malzemeler": [
+    { "gida": "Tavuk But (derisiz)", "gram": 600 }, { "gida": "Ayçiçek Yağı", "gram": 20 },
+    { "gida": "Soğan", "gram": 80 }], "pisenAgirlik": 560 },
+
+  { "ad": "Mercimek Köftesi", "malzemeler": [
+    { "gida": "Kırmızı Mercimek (çiğ)", "gram": 200 }, { "gida": "Bulgur (çiğ)", "gram": 150 },
+    { "gida": "Soğan", "gram": 100 }, { "gida": "Domates Salçası", "gram": 30 },
+    { "gida": "Zeytinyağı", "gram": 40 }, { "gida": "Maydanoz", "gram": 30 },
+    { "gida": "Su", "gram": 500 }], "pisenAgirlik": 950 },
+
+  { "ad": "Sucuklu Yumurta", "malzemeler": [
+    { "gida": "Sucuk", "gram": 100 }, { "gida": "Yumurta (tam)", "gram": 150 },
+    { "gida": "Ayçiçek Yağı", "gram": 10 }], "pisenAgirlik": 250 },
+
+  { "ad": "Cacık", "malzemeler": [
+    { "gida": "Yoğurt (sade, tam yağlı)", "gram": 500 }, { "gida": "Salatalık", "gram": 200 },
+    { "gida": "Sarımsak", "gram": 10 }, { "gida": "Zeytinyağı", "gram": 15 },
+    { "gida": "Su", "gram": 200 }], "pisenAgirlik": 900 },
+
+  { "ad": "Çoban Salata", "malzemeler": [
+    { "gida": "Domates", "gram": 300 }, { "gida": "Salatalık", "gram": 200 },
+    { "gida": "Soğan", "gram": 80 }, { "gida": "Maydanoz", "gram": 30 },
+    { "gida": "Zeytinyağı", "gram": 30 }, { "gida": "Limon Suyu", "gram": 20 }], "pisenAgirlik": 660 },
+
+  { "ad": "Sütlaç", "malzemeler": [
+    { "gida": "Süt (tam yağlı)", "gram": 1000 }, { "gida": "Pirinç (çiğ)", "gram": 80 },
+    { "gida": "Toz Şeker", "gram": 150 }, { "gida": "Su", "gram": 200 }], "pisenAgirlik": 1250 }
+]
