@@ -47,6 +47,49 @@ function secretsMatch(a, b) {
   return diff === 0;
 }
 
+/* ── ABONELİK DİZİNİ ──
+   Cron her dakika çalışıyor. Eskiden her turda KV list() yapıyordu: günde 1440
+   list işlemi, ücretsiz sınır 1000 — hesap günün sonunda bloke oluyor ve
+   bildirimler kesiliyordu. Artık anahtar adları tek bir dizin değerinde
+   tutuluyor ve cron onu get() ile okuyor; okuma sınırı 100.000/gün.
+
+   list() yalnız kullanıcı tetikli uçlarda (sync, debug), o da dizin hiç yoksa
+   bir kereye mahsus kuruluyor. Cron hiçbir koşulda list() çağırmıyor. */
+const INDEX_KEY = 'index:subs';
+
+/* Cron için: yalnız okur. Dizin yoksa boş döner — list()'e düşmez. */
+async function readIndex(env) {
+  const idx = await env.REMINDERS.get(INDEX_KEY, 'json');
+  return Array.isArray(idx) ? idx : null;
+}
+
+/* Kullanıcı tetikli uçlar için: dizin yoksa list() ile bir kez kurar. */
+async function ensureIndex(env) {
+  const idx = await readIndex(env);
+  if (idx) return idx;
+  let adlar = [];
+  try {
+    const list = await env.REMINDERS.list({ prefix: 'sub:' });
+    adlar = list.keys.map(k => k.name);
+  } catch (e) {
+    adlar = [];               // list engelliyse boş kur; sync dizini doldurur
+  }
+  await env.REMINDERS.put(INDEX_KEY, JSON.stringify(adlar));
+  return adlar;
+}
+
+async function indexAdd(env, key) {
+  const idx = await ensureIndex(env);
+  if (idx.indexOf(key) !== -1) return;
+  await env.REMINDERS.put(INDEX_KEY, JSON.stringify(idx.concat([key])));
+}
+
+async function indexRemove(env, key) {
+  const idx = await readIndex(env);
+  if (!idx || idx.indexOf(key) === -1) return;
+  await env.REMINDERS.put(INDEX_KEY, JSON.stringify(idx.filter(function(n) { return n !== key; })));
+}
+
 async function subKey(endpoint) {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(endpoint));
   return 'sub:' + Array.from(new Uint8Array(digest).slice(0, 16))
@@ -164,6 +207,7 @@ async function handleRequest(request, env) {
       fired: (existing && existing.fired) || {},
       updatedAt: new Date().toISOString()
     }));
+    await indexAdd(env, key);
 
     return json({ ok: true, count: (body.reminders || []).length }, env);
   }
@@ -171,7 +215,9 @@ async function handleRequest(request, env) {
   if (url.pathname === '/unsubscribe' && request.method === 'POST') {
     const body = await request.json().catch(() => null);
     if (!body || !body.endpoint) return json({ error: 'endpoint gerekli.' }, env, 400);
-    await env.REMINDERS.delete(await subKey(body.endpoint));
+    const silinen = await subKey(body.endpoint);
+    await env.REMINDERS.delete(silinen);
+    await indexRemove(env, silinen);
     return json({ ok: true }, env);
   }
 
@@ -194,10 +240,10 @@ async function handleRequest(request, env) {
 
   // Sunucunun kayıtlı hatırlatmalar hakkında ne gördüğünü gösterir (teşhis)
   if (url.pathname === '/debug' && request.method === 'GET') {
-    const list = await env.REMINDERS.list({ prefix: 'sub:' });
+    const adlar = await ensureIndex(env);
     const subs = [];
 
-    for (const entry of list.keys) {
+    for (const entry of adlar.map(function(n) { return { name: n }; })) {
       const record = await env.REMINDERS.get(entry.name, 'json');
       if (!record) continue;
 
@@ -267,10 +313,12 @@ async function handleRequest(request, env) {
 
 async function runReminders(env) {
   const vapid = vapidConfig(env);
-  const list = await env.REMINDERS.list({ prefix: 'sub:' });
+  // Bilerek list() değil: dakikalık cron günlük list sınırını aşıyordu.
+  // Dizin yoksa bu tur boş geçiyor; telefon bir kez senkronize edince doluyor.
+  const adlar = (await readIndex(env)) || [];
   let sent = 0;
 
-  for (const entry of list.keys) {
+  for (const entry of adlar.map(function(n) { return { name: n }; })) {
     const record = await env.REMINDERS.get(entry.name, 'json');
     if (!record || !Array.isArray(record.reminders)) continue;
 
@@ -322,6 +370,7 @@ async function runReminders(env) {
     // Abonelik iptal edilmişse kaydı sil
     if (gone) {
       await env.REMINDERS.delete(entry.name);
+      await indexRemove(env, entry.name);
       continue;
     }
 

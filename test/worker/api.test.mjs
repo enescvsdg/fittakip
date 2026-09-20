@@ -25,7 +25,11 @@ export default async function ({ rapor }) {
   ];
   const sync = await cagir('/sync', 'POST', { subscription, reminders: hatirlatmalar, timezone: 'Europe/Istanbul' });
   rapor.kontrol('Senkronizasyon kaydediliyor', sync.status === 200 && sync.body.count === 4, sync.body.count + ' hatırlatma');
-  rapor.kontrol('KV kaydı oluştu', env.REMINDERS.store.size === 1);
+  // Depoda abonelik anahtarlarının yanında dizin anahtarı da duruyor,
+  // o yüzden toplam boyut değil 'sub:' önekli olanlar sayılıyor
+  const abonelikSayisi = () =>
+    [...env.REMINDERS.store.keys()].filter(k => k.startsWith('sub:')).length;
+  rapor.kontrol('KV kaydı oluştu', abonelikSayisi() === 1, String(abonelikSayisi()));
 
   rapor.baslik('cron yalnızca zamanı geleni gönderiyor');
   await cron();
@@ -72,12 +76,16 @@ export default async function ({ rapor }) {
     reminders: [{ id: 'g', name: 'Gone', timing: 'Sabah', time: saat(0) }]
   });
   await cron();
-  rapor.kontrol('410 gelince abonelik kaydı siliniyor', env.REMINDERS.store.size === 0);
+  rapor.kontrol('410 gelince abonelik kaydı siliniyor', abonelikSayisi() === 0, String(abonelikSayisi()));
+  rapor.kontrol('410 gelince dizinden de düşüyor',
+    (await env.REMINDERS.get('index:subs', 'json') || []).length === 0);
 
   durum.kod = 201;
   await cagir('/sync', 'POST', { subscription, reminders: [], timezone: 'Europe/Istanbul' });
   await cagir('/unsubscribe', 'POST', { endpoint: subscription.endpoint });
-  rapor.kontrol('/unsubscribe kaydı siliyor', env.REMINDERS.store.size === 0);
+  rapor.kontrol('/unsubscribe kaydı siliyor', abonelikSayisi() === 0, String(abonelikSayisi()));
+  rapor.kontrol('/unsubscribe dizinden de düşürüyor',
+    (await env.REMINDERS.get('index:subs', 'json') || []).length === 0);
 
   rapor.kontrol('Eksik abonelik reddediliyor', (await cagir('/sync', 'POST', { reminders: [] })).status === 400);
   rapor.kontrol('Bilinmeyen adres 404', (await cagir('/bilinmeyen', 'GET')).status === 404);
