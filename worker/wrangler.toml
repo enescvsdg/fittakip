@@ -6,10 +6,13 @@ compatibility_date = "2025-09-01"
 [triggers]
 crons = ["* * * * *"]
 
-# "wrangler kv namespace create REMINDERS" komutunun verdiği id'yi buraya yapıştır
+# "wrangler kv namespace create REMINDERS" komutunun verdiği id.
+# Bu bir parola değil, yalnızca veritabanının adı: erişmek için yine hesaba ait
+# yetkili bir API anahtarı gerekiyor. Repoda durması deploy'u tek komuta indiriyor.
+# Kendi kurulumunu yapıyorsan kendi id'nle değiştir.
 [[kv_namespaces]]
 binding = "REMINDERS"
-id = "BURAYA_KV_NAMESPACE_ID"
+id = "3e3b82ac91764577b04402d21cd266fd"
 
 [vars]
 # Push servisleri sorun olursa iletişim için bu adresi kullanır

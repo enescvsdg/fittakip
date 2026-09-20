@@ -38,8 +38,13 @@ asla git'e ekleme** — sadece aşağıdaki `wrangler secret put` komutuyla ver.
 wrangler kv namespace create REMINDERS
 ```
 
-Komutun verdiği `id` değerini `wrangler.toml` içindeki `BURAYA_KV_NAMESPACE_ID`
-yazan yere yapıştır.
+Komutun verdiği `id` değerini `wrangler.toml` içindeki `kv_namespaces` bölümüne
+yaz. Dosyada hâlihazırda bir id duruyor; o bu deponun sahibine ait, kendi
+kurulumunu yapıyorsan kendi id'nle değiştir.
+
+Id bir parola değil, yalnızca veritabanının adı — erişmek için yine hesaba ait
+yetkili bir API anahtarı gerekiyor. Gizli olanlar aşağıdaki `secret put`
+değerleri.
 
 > Eski wrangler sürümlerinde komut `wrangler kv:namespace create REMINDERS` şeklinde.
 
