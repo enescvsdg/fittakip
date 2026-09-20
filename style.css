@@ -816,6 +816,7 @@ body.perde-cikiyor .bottom-nav {
 html, body { touch-action: pan-x pan-y; overflow-x: clip; }
 
 .form-hint { margin-top: 6px; font-size: 12px; color: var(--text-dim); }
+.gida-tarif { display: inline-block; margin-top: 6px; font-size: 11px; color: var(--text-dim); line-height: 1.5; }
 
 /* ── Program sihirbazı ── */
 .btn-program-uret { border-color: var(--accent); color: var(--accent); font-weight: 700; }

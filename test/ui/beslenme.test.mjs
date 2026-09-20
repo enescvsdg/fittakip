@@ -59,7 +59,8 @@ export default async function ({ rapor, adres, browser }) {
 
   rapor.baslik('liste kalabalıklaşmıyor');
   const secenekler = await page.$$eval('#food-select option', o => o.map(x => x.value));
-  const yumurtalar = secenekler.filter(v => /Yumurta/.test(v));
+  // Yumurtanın KENDİSİ aranıyor; "Sucuklu Yumurta" gibi yemekler ayrı kayıt
+  const yumurtalar = secenekler.filter(v => /^Yumurta/.test(v));
   rapor.kontrol('Yumurta listede iki satır', yumurtalar.length === 2, yumurtalar.join(' | '));
   // "Yumurta (tam)" adında da parantez var; aranan şey boy son eki: (S) (M) (L)
   rapor.kontrol('Boylar listeye yazılmamış', !secenekler.some(v => /\((S|M|L)\)\s*$/.test(v)),
@@ -168,6 +169,21 @@ export default async function ({ rapor, adres, browser }) {
   rapor.kontrol('Seçici başlığı adet', secici.baslik === 'Miktar (adet)', secici.baslik);
   rapor.kontrol('Seçici 1–30 arası', secici.ilk === '1' && secici.son === '30',
     secici.ilk + '..' + secici.son);
+
+  rapor.baslik('tarifden hesaplanan yemekler');
+  /* Bu yemeklerin değeri ölçülmedi, malzemelerinden hesaplandı. Sayıya
+     güvenilmesi için neyin ürettiğinin görünmesi gerekiyor. */
+  await gidaSec('Karnıyarık');
+  await miktarGir(250);
+  const yemek = await alanDurumu();
+  rapor.kontrol('Yemek listede seçilebiliyor', yemek.onizleme.indexOf('305 kcal') === 0,
+    yemek.onizleme.slice(0, 40));
+  rapor.kontrol('Tarif önizlemede gösteriliyor',
+    yemek.onizleme.indexOf('Tarif: Patlıcan 600g') !== -1, yemek.onizleme);
+  rapor.kontrol('Tarifsiz gıdada tarif satırı çıkmıyor', await (async () => {
+    await gidaSec('Elma');
+    return (await alanDurumu()).onizleme.indexOf('Tarif:') === -1;
+  })());
 
   rapor.kontrol('Konsol hatası yok', hatalar.length === 0, hatalar[0] || '');
   await ctx.close();

@@ -2023,78 +2023,7 @@ renderWorkoutTracking();
 function getMealPlan() { return getJSON(MEAL_KEYS.plan, {}); }
 function saveMealPlan(plan) { setJSON(MEAL_KEYS.plan, plan); }
 
-// (name, kcal100, protein100, carbs100, fat100) — genel beslenme kaynaklarından, 100g için
-var TURKISH_FOODS = {
-  'Tahıllar / Karbonhidrat': [
-    { name: 'Pirinç (pişmiş)', kcal: 130, protein: 2.7, carbs: 28, fat: 0.3 },
-    { name: 'Bulgur (pişmiş)', kcal: 83, protein: 3.1, carbs: 18.6, fat: 0.2 },
-    { name: 'Yulaf Ezmesi (çiğ)', kcal: 389, protein: 16.9, carbs: 66.3, fat: 6.9 },
-    { name: 'Makarna (pişmiş)', kcal: 131, protein: 5, carbs: 25, fat: 1.1 },
-    { name: 'Ekmek (beyaz)', kcal: 265, protein: 9, carbs: 49, fat: 3.2 },
-    { name: 'Tam Buğday Ekmeği', kcal: 247, protein: 13, carbs: 41, fat: 3.4 },
-    { name: 'Karabuğday (pişmiş)', kcal: 92, protein: 3.4, carbs: 19.9, fat: 0.6 },
-    { name: 'Tatlı Patates (haşlanmış)', kcal: 76, protein: 1.4, carbs: 17.7, fat: 0.1 },
-    { name: 'Patates (haşlanmış)', kcal: 87, protein: 1.9, carbs: 20.1, fat: 0.1 },
-    { name: 'Basmati Pirinç (pişmiş)', kcal: 121, protein: 2.5, carbs: 25.2, fat: 0.4 },
-    { name: 'Pirinç Pilavı (tereyağlı)', kcal: 165, protein: 2.5, carbs: 28, fat: 4 },
-    { name: 'Bulgur Pilavı (yağlı)', kcal: 128, protein: 3.2, carbs: 19, fat: 3.8 }
-  ],
-  'Et, Tavuk, Balık, Yumurta': [
-    { name: 'Tavuk Göğsü (ızgara/haşlama)', kcal: 165, protein: 31, carbs: 0, fat: 3.6 },
-    { name: 'Hindi Göğsü', kcal: 135, protein: 30, carbs: 0, fat: 1 },
-    { name: 'Yağsız Kıyma (%5)', kcal: 137, protein: 21, carbs: 0, fat: 5 },
-    { name: 'Dana Bonfile', kcal: 143, protein: 26, carbs: 0, fat: 4 },
-    { name: 'Somon (pişmiş)', kcal: 208, protein: 20, carbs: 0, fat: 13 },
-    { name: 'Levrek', kcal: 97, protein: 18.4, carbs: 0, fat: 2.5 },
-    { name: 'Ton Balığı (suda, süzülmüş)', kcal: 116, protein: 26, carbs: 0, fat: 1 },
-    // Yumurta boyla ölçülüyor: listeyi altı satırla şişirmemek için tek satır
-    // duruyor, seçilince boy ayrı pencereden soruluyor.
-    // TS/AB boy sınıfları (S<53g, M 53-63g, L 63-73g — kabuk dahil); buradaki
-    // gramaj kabuğu çıkarılmış ortalama yenilebilir ağırlık (kabuk ~%12).
-    // Ak, yenilebilir kısmın ~%65'i; kalanı sarı.
-    { name: 'Yumurta (tam)', kcal: 155, protein: 13, carbs: 1.1, fat: 11,
-      boylar: { S: 44, M: 51, L: 60 } },
-    { name: 'Yumurta Akı', kcal: 52, protein: 11, carbs: 0.7, fat: 0.2,
-      boylar: { S: 29, M: 33, L: 39 } }
-  ],
-  'Süt Ürünleri': [
-    { name: 'Lor Peyniri', kcal: 98, protein: 11, carbs: 3.4, fat: 4.3 },
-    { name: 'Yoğurt (sade, tam yağlı)', kcal: 61, protein: 3.5, carbs: 4.7, fat: 3.3 },
-    { name: 'Süzme Yoğurt (Quark)', kcal: 65, protein: 10, carbs: 3.6, fat: 0.2 },
-    { name: 'Süt (tam yağlı)', kcal: 61, protein: 3.2, carbs: 4.8, fat: 3.3 },
-    { name: 'Beyaz Peynir', kcal: 264, protein: 17, carbs: 1.5, fat: 21 },
-    { name: 'Kaşar Peyniri', kcal: 371, protein: 25, carbs: 1.5, fat: 29 },
-    { name: 'Whey Protein Tozu', kcal: 380, protein: 80, carbs: 8, fat: 4 }
-  ],
-  'Sebze': [
-    { name: 'Brokoli (haşlanmış)', kcal: 35, protein: 2.4, carbs: 7.2, fat: 0.4 },
-    { name: 'Karnabahar (haşlanmış)', kcal: 23, protein: 1.8, carbs: 4.1, fat: 0.5 },
-    { name: 'Domates', kcal: 18, protein: 0.9, carbs: 3.9, fat: 0.2 },
-    { name: 'Salatalık', kcal: 15, protein: 0.7, carbs: 3.6, fat: 0.1 },
-    { name: 'Marul', kcal: 15, protein: 1.4, carbs: 2.9, fat: 0.2 },
-    { name: 'Ispanak (haşlanmış)', kcal: 23, protein: 3, carbs: 3.6, fat: 0.3 },
-    { name: 'Kabak (haşlanmış)', kcal: 17, protein: 1.2, carbs: 3.1, fat: 0.3 },
-    { name: 'Roka', kcal: 25, protein: 2.6, carbs: 3.7, fat: 0.7 },
-    { name: 'Kuşkonmaz', kcal: 20, protein: 2.2, carbs: 3.9, fat: 0.1 }
-  ],
-  'Meyve': [
-    { name: 'Elma', kcal: 52, protein: 0.3, carbs: 14, fat: 0.2 },
-    { name: 'Muz', kcal: 89, protein: 1.1, carbs: 23, fat: 0.3 },
-    { name: 'Yaban Mersini', kcal: 57, protein: 0.7, carbs: 14.5, fat: 0.3 },
-    { name: 'Portakal', kcal: 47, protein: 0.9, carbs: 12, fat: 0.1 },
-    { name: 'Orman Meyvesi Karışımı', kcal: 50, protein: 0.8, carbs: 12, fat: 0.3 }
-  ],
-  'Kuruyemiş / Yağlar': [
-    { name: 'Çiğ Badem', kcal: 579, protein: 21, carbs: 22, fat: 50 },
-    { name: 'Ceviz', kcal: 654, protein: 15, carbs: 14, fat: 65 },
-    { name: 'Zeytinyağı', kcal: 884, protein: 0, carbs: 0, fat: 100 },
-    { name: 'Fıstık Ezmesi', kcal: 588, protein: 25, carbs: 20, fat: 50 }
-  ],
-  'Bakliyat': [
-    { name: 'Mercimek (pişmiş)', kcal: 116, protein: 9, carbs: 20, fat: 0.4 },
-    { name: 'Nohut (pişmiş)', kcal: 164, protein: 8.9, carbs: 27.4, fat: 2.6 }
-  ]
-};
+// Gıda veritabanı foods.js dosyasında; tools/gida-topla.mjs üretiyor.
 
 // ── DOM REFERANSLARI ────────────────────────────
 var mealSelect          = document.getElementById('meal-select');
@@ -2243,10 +2172,16 @@ function updateMealPreview() {
     ? miktar + ' ' + currentFoodMeta.birim.ad + ' ≈ ' + Math.round(grams) + ' g · '
     : '';
 
+  // Tarifden hesaplanan yemeklerde değerin nereden geldiği gösteriliyor:
+  // sayıya güvenmen için onu neyin ürettiğini görebilmen gerekiyor.
+  var tarifSatiri = currentFoodMeta.tarif
+    ? '<br><span class="gida-tarif">Tarif: ' + escapeHtml(currentFoodMeta.tarif) + '</span>'
+    : '';
+
   mealFoodPreview.innerHTML =
     '<strong>' + kcal + ' kcal</strong>' + badge + '<br>' +
     'Protein: ' + protein + 'g · Karbonhidrat: ' + carbs + 'g · Yağ: ' + fat + 'g<br>' +
-    escapeHtml(porsiyon) + '100g için: ' + currentFoodMeta.kcal100 + ' kcal';
+    escapeHtml(porsiyon) + '100g için: ' + currentFoodMeta.kcal100 + ' kcal' + tarifSatiri;
   addFoodToCartBtn.disabled = false;
 }
 
@@ -2257,7 +2192,9 @@ function gidayiKur(found, boy) {
     currentFoodMeta = {
       kcal100: found.kcal, protein100: found.protein, carbs100: found.carbs, fat100: found.fat,
       isEstimated: false,
-      birim: boy ? { ad: 'adet', gram: found.boylar[boy] } : (found.birim || null)
+      birim: boy ? { ad: 'adet', gram: found.boylar[boy] } : (found.birim || null),
+      // Tarifden hesaplanan yemeklerde değerin neyden çıktığı taşınıyor
+      tarif: found.tarif || null
     };
     currentFoodAdi = boy ? found.name + ' (' + boy + ')' : found.name;
   }

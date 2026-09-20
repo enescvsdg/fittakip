@@ -76,7 +76,7 @@ export async function sayfaAc(browser, { adres, tema = 'dark', veri = {}, perde 
 /* Uygulamanın kaynağından bir fonksiyonu söküp Node içinde çalıştırır.
    Saf yardımcıları (escapeHtml gibi) tarayıcı açmadan denemek için.
    Kaynak dosyalar bölündükçe burası da taransın diye liste hâlinde. */
-const KAYNAKLAR = ['storage.js', 'utils.js', 'app.js'];
+const KAYNAKLAR = ['storage.js', 'utils.js', 'foods.js', 'app.js'];
 
 export async function appFonksiyonlari(...adlar) {
   const kaynak = (await Promise.all(KAYNAKLAR.map(d => readFile(KOK + d, 'utf8')))).join('\n');

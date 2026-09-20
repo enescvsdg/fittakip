@@ -24,7 +24,8 @@ egzersiz bazlı güç gelişim grafiği, aktivite takvimi.
 program kurma, set/tekrar/ağırlık işaretleyerek uygulama, kas haritası,
 kardiyo planı ve antrenman kuralları notu.
 
-**Beslenme** — Öğün bazlı plan, USDA gıda veritabanından arama, makro
+**Beslenme** — 112 gıdalık yerel veritabanı (48'i temel gıda, 23'ü Türk
+yemeği), öğün bazlı plan, USDA'dan arama, makro
 hesaplama (protein / karbonhidrat / yağ), plan notları. Yumurta gibi tane ile
 ölçülen gıdalar gram yerine adetle giriliyor; boy (S/M/L) seçilince ortalama
 gramajı üzerinden hesaplanıyor.
@@ -114,6 +115,16 @@ kurulumu gerekiyor. Kurulmazsa hatırlatmalar yalnızca uygulama açıkken çal�
 Adım adım anlatım: [`worker/README.md`](worker/README.md)
 
 Kurulduktan sonra uygulamada: ☰ → ⚙️ Ayarlar → 🔔 Bildirim Sunucusu.
+
+## Gıda veritabanı
+
+`foods.js` elle yazılmıyor, `tools/gida-topla.mjs` üretiyor. Türk yemekleri
+malzemelerinden hesaplanıyor — bir dil modeline "karnıyarık kaç kalori" diye
+sormak yerine tarifi toplayıp pişmiş ağırlığa bölüyoruz, çünkü modelin uydurduğu
+kalori doğrulanamıyor ama tarif denetlenebiliyor. Tarif uygulamada da görünüyor.
+
+Her kayıt bir süzgeçten geçiyor; geçemeyen dosyaya girmiyor. Ayrıntı:
+[`tools/README.md`](tools/README.md)
 
 ## Test
 
