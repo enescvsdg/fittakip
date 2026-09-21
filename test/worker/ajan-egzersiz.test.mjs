@@ -250,4 +250,96 @@ export default async function ({ rapor }) {
   rapor.kontrol('Tek kayıt yeni sayıldı', ciftTur.yeni === 1, JSON.stringify(ciftTur));
   rapor.kontrol('Kopya "güncelleme" sayılmıyor', ciftTur.guncel === 0, String(ciftTur.guncel));
   rapor.kontrol('Kopya ayrı sayaçta raporlanıyor', ciftTur.kopya === 1, String(ciftTur.kopya));
+
+  // ── ÇEVİRİ ─────────────────────────────────────
+  /* Talimatlar kaynakta İngilizce, uygulama Türkçe. Çeviri başarısız olursa
+     kayıt İngilizce talimatla gitmeli — turu tamamen kaybetmek yerine. */
+  rapor.baslik('talimatlar Türkçeye çevriliyor');
+
+  const cevirmen = (yanitUret) => async (url, secenek) => {
+    const metin = JSON.parse(secenek.body).contents[0].parts[0].text;
+    if (metin.includes('Türkçeye çevir')) {
+      const girdi = JSON.parse(metin.slice(metin.indexOf('[', metin.indexOf('Girdi JSON:')),
+        metin.lastIndexOf(']', metin.indexOf('Çıktı olarak')) + 1));
+      return {
+        ok: true, status: 200,
+        json: async () => ({ candidates: [{ content: { parts: [{ text: yanitUret(girdi) }] } }] })
+      };
+    }
+    return { ok: false, status: 400, json: async () => ({ error: { message: 'beklenmeyen istek' } }) };
+  };
+
+  const ceviriKaynak = [
+    kaynakKayit('Barbell Bench Press', 'barbell', 'chest',
+      { instructions: ['Lie on the bench.', 'Press the bar up.'] }),
+    ...Array.from({ length: 120 }, (_, i) =>
+      kaynakKayit('Dolgu ' + i, 'barbell', 'chest', { instructions: ['Step one.'] }))
+  ];
+  const ceviriMevcut = [
+    { name: 'Barbell Bench Press', equipment: 'barbell', level: 'beginner', muscle: 'chest' }
+  ];
+
+  const ceviriEnv = (await kur()).env;
+  ceviriEnv.GEMINI_API_KEY = 'deneme';
+  await ceviriEnv.REMINDERS.put(MEVCUT_ANAHTAR, JSON.stringify(ceviriMevcut));
+
+  const basarili = await calistir(ceviriEnv, {
+    getir: async (url, secenek) => {
+      if (String(url).includes('free-exercise-db')) {
+        return { ok: true, status: 200, json: async () => ceviriKaynak };
+      }
+      return cevirmen(g => JSON.stringify(
+        g.map(x => ({ i: x.i, adimlar: x.adimlar.map(a => 'TR: ' + a) }))
+      ))(url, secenek);
+    }
+  });
+  rapor.kontrol('Çeviri raporu dönüyor', basarili.ceviri.cagri > 0,
+    JSON.stringify(basarili.ceviri));
+
+  const cevriliKuyruk = await bekleyenleriOku(ceviriEnv, 'egzersiz');
+  const cevriliBench = cevriliKuyruk.find(k => k.ad === 'Barbell Bench Press');
+  rapor.kontrol('Talimat Türkçeleşti',
+    cevriliBench.talimat[0].startsWith('TR: '), cevriliBench.talimat[0]);
+  rapor.kontrol('Adım sayısı korundu', cevriliBench.talimat.length === 2);
+  rapor.kontrol('İşlenecek veriye de yazıldı',
+    cevriliBench.veri.instructions[0].startsWith('TR: ') &&
+    cevriliBench.veri.talimatDili === 'tr');
+  rapor.kontrol('Çevrildiği için uyarı notu yok',
+    !cevriliBench.aciklama.includes('çevrilmedi'), cevriliBench.aciklama.slice(-40));
+
+  rapor.baslik('çeviri patlarsa tur devam ediyor');
+  const kirikEnv = (await kur()).env;
+  kirikEnv.GEMINI_API_KEY = 'deneme';
+  await kirikEnv.REMINDERS.put(MEVCUT_ANAHTAR, JSON.stringify(ceviriMevcut));
+  const kirik = await calistir(kirikEnv, {
+    getir: async (url) => {
+      if (String(url).includes('free-exercise-db')) {
+        return { ok: true, status: 200, json: async () => ceviriKaynak };
+      }
+      return { ok: false, status: 500, json: async () => ({ error: { message: 'çöktü' } }) };
+    }
+  });
+  rapor.kontrol('Tur yine de kayıt üretiyor', kirik.toplam > 0, String(kirik.toplam));
+  const kirikBench = (await bekleyenleriOku(kirikEnv, 'egzersiz'))
+    .find(k => k.ad === 'Barbell Bench Press');
+  rapor.kontrol('Talimat İngilizce kalıyor, kaybolmuyor',
+    kirikBench.talimat[0] === 'Lie on the bench.', kirikBench.talimat[0]);
+  rapor.kontrol('Kullanıcıya çevrilmediği söyleniyor',
+    kirikBench.aciklama.includes('çevrilmedi'), kirikBench.aciklama.slice(-45));
+
+  rapor.baslik('anahtar yoksa çeviri denenmiyor');
+  const anahtarsizEnv = (await kur()).env;
+  delete anahtarsizEnv.GEMINI_API_KEY;
+  await anahtarsizEnv.REMINDERS.put(MEVCUT_ANAHTAR, JSON.stringify(ceviriMevcut));
+  let agaCikti = false;
+  await calistir(anahtarsizEnv, {
+    getir: async (url) => {
+      if (String(url).includes('free-exercise-db')) {
+        return { ok: true, status: 200, json: async () => ceviriKaynak };
+      }
+      agaCikti = true;
+      return { ok: false, status: 500, json: async () => ({}) };
+    }
+  });
+  rapor.kontrol('Gemini\'ye hiç gidilmedi', agaCikti === false);
 }

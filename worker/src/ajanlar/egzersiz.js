@@ -12,6 +12,7 @@
    ══════════════════════════════════════════ */
 
 import { turuYaz } from '../onay.js';
+import { cevir, onbellegiYaz } from '../ceviri.js';
 
 export const KAYNAK_URL =
   'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
@@ -237,6 +238,47 @@ export async function calistir(env, { getir = fetch } = {}) {
   }
 
   const kayitlar = kayitlariUret(mevcut, kaynak);
+
+  /* Talimatlar kaynakta İngilizce; uygulama Türkçe. Çeviri KV'de önbellekli,
+     yalnız daha önce görülmemiş metinler modele gidiyor. Anahtar yoksa ya da
+     çeviri başarısız olursa kayıt İngilizce talimatla gidiyor — turu tamamen
+     kaybetmektense çevrilmemiş ama doğru veri iyidir. */
+  let ceviriRaporu = { cagri: 0, cevrilen: 0, atlanan: 0, ertelenen: 0 };
+  if (env.GEMINI_API_KEY) {
+    const istekler = kayitlar
+      .map((k, sira) => ({ sira, ad: k.ad, metinler: k.talimat || [] }))
+      .filter(i => i.metinler.length);
+    if (istekler.length) {
+      try {
+        const c = await cevir(env, istekler, { getir });
+        c.sonuc.forEach((r, i) => {
+          if (!r.ceviri) return;
+          const kayit = kayitlar[istekler[i].sira];
+          kayit.talimat = r.ceviri;
+          kayit.veri.instructions = r.ceviri;
+          kayit.veri.talimatDili = 'tr';
+        });
+        await onbellegiYaz(env, c.kayit);
+        ceviriRaporu = {
+          cagri: c.cagri, cevrilen: c.cevrilen, atlanan: c.atlanan, ertelenen: c.ertelenen
+        };
+      } catch (err) {
+        console.error('[ajan] çeviri tamamen başarısız:', err.message);
+      }
+    }
+  }
+
+  /* Çevrilmemiş kalanları kullanıcıya söylüyoruz — panelde İngilizce talimat
+     görünce "bozuk mu" diye düşünmesin. */
+  for (const k of kayitlar) {
+    if (k.talimat && k.talimat.length && k.veri.talimatDili !== 'tr') {
+      k.aciklama += ' Talimat henüz çevrilmedi, İngilizce görünüyor.';
+    }
+  }
+
   const sonuc = await turuYaz(env, 'egzersiz', kayitlar);
-  return { ...sonuc, kaynakBoyut: kaynak.length, mevcutBoyut: mevcut.length };
+  return {
+    ...sonuc, kaynakBoyut: kaynak.length, mevcutBoyut: mevcut.length,
+    ceviri: ceviriRaporu
+  };
 }

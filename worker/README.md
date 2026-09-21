@@ -291,6 +291,24 @@ adlarla. Kaynakta `Barbell Bench Press` diye bir kayıt **yok** — yalnızca
 `Barbell Bench Press - Medium Grip` var. 21 çeşit bench press kaydı arasından
 doğrusunu bulmak gerekiyor.
 
+### Talimatlar nasıl Türkçeleşiyor
+
+Kaynaktaki talimatlar İngilizce. Ajan bunları Gemini ile çeviriyor ve sonucu
+KV'de tek bir blob'da önbelliyor (`ceviri:egzersiz`). Önbellek anahtarı hareket
+adı değil, İngilizce metnin kendisi — kaynak metin değişirse çeviri de
+kendiliğinden yenileniyor.
+
+İlk turda 876 hareketin tamamı çevrilmemiş oluyor; bu 73 model çağrısı demek ve
+Worker'ın süre sınırını zorluyor. O yüzden tur başına en fazla 20 yığın
+çevriliyor, önbellek birkaç gecede doluyor. Bu arada çevrilmemiş kayıtlar
+İngilizce talimatla geliyor ve açıklamalarında öyle yazıyor.
+
+Model beş adımlık bir talimata üç adım dönerse çeviri **kabul edilmiyor** —
+eksik anlatımı fark etmek zor. O kayıt bir sonraki turda yeniden deneniyor.
+`GEMINI_API_KEY` yoksa çeviri hiç denenmiyor, talimatlar İngilizce geliyor.
+
+### Eşleştirme neden muhafazakâr
+
 Eşleştirme kasıtlı olarak muhafazakâr: ekipman ya da birincil kas tutmuyorsa
 aday elenir, ve yalnızca **sona** eklenen niteleme kabul edilir.
 
