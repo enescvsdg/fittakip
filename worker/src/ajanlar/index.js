@@ -6,9 +6,11 @@
    ══════════════════════════════════════════ */
 
 import * as egzersiz from './egzersiz.js';
+import * as takviye from './takviye.js';
 
 export const AJAN_KODU = {
-  egzersiz: egzersiz.calistir
+  egzersiz: egzersiz.calistir,
+  takviye: takviye.calistir
 };
 
 /* Günlük cron bunu çağırır. Bir ajanın patlaması diğerlerini durdurmasın —

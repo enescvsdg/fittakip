@@ -258,8 +258,42 @@ hareketler eve; `barbell`, `cable`, `machine`, `ez curl bar`, `dumbbell` ve
 |---|---|---|---|
 | Egzersiz | [free-exercise-db](https://github.com/yuhonas/free-exercise-db) | Unlicense (kamu malı) | 876 hareketi mevcut 281'le eşleştirir; talimat ve ikincil kas getirir |
 | Analiz | Gemini | — | Antrenman geçmişini yorumlar |
+| Supplement | 6 marka sitesi | — | Ürün sayfalarından besin değeri toplar |
 
-Gıda ve Supplement ajanları henüz yazılmadı.
+Gıda ajanı henüz yazılmadı.
+
+### Supplement ajanı
+
+Taradığı siteler koda gömülü; bu listede olmayan hiçbir adrese istek
+atılmıyor:
+
+```
+hardline.com.tr      proteinocean.com     bigjoy.com.tr
+takehiq.com          liventis.com.tr      supplementler.com
+```
+
+Keşif `sitemap.xml` üzerinden yapılıyor — kategori sayfalarını gezmek yerine,
+çünkü sitemap tam bu iş için var ve siteyi yormuyor. `robots.txt` her tarama
+öncesi okunuyor; bir kez bakıp geçmek yetmez, site şartını yarın
+değiştirebilir. `Crawl-delay` varsa ona uyuluyor, yoksa istekler arası 1,2
+saniye bekleniyor.
+
+Tur başına site başına en fazla 40 ürün okunuyor. Görülen adresler KV'de
+tutuluyor, her gece kalanlardan devam ediyor.
+
+**Bu ajanın çıktısı her koşulda "şüpheli" işaretli geliyor** ve bunun somut bir
+sebebi var: besin tablosu okuma mantığı gerçek sayfalara karşı ayarlanamadı,
+çünkü yazıldığı ortamdan o sitelere ağ çıkışı yoktu. Mantık yaygın kalıplara
+dayanıyor (JSON-LD ürün bilgisi + HTML besin tablosu) ve temsili HTML'lerle
+sınandı. İlk gerçek turda her siteyi tek tek doğrulaman, gerekirse siteye özel
+adaptör yazmamız gerekiyor. Panelde değerleri ürün sayfasıyla karşılaştırmadan
+onaylama.
+
+Okuma mantığının yakaladığı tuzaklar: "doymuş yağ" satırı toplam yağ
+sanılmıyor, `1.240` binlik ayraçla `1,240` ondalıkla karıştırılmıyor, kJ
+değerleri kcal'e çevriliyor, ve değerlerin hangi tabana ait olduğu (100 g mı
+porsiyon mu) sütun başlığından okunuyor — bunu bilmeden makro denetimi her
+ürünü hatalı işaretliyordu.
 
 ### Analiz ajanı için ek kurulum
 
