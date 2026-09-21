@@ -10,6 +10,7 @@ import { PANEL_HTML } from './panel.js';
 import { panelVerisi, kararlariIsle, onaylananlariOku, onaylananlariTemizle, geriAl, AJANLAR } from './onay.js';
 import { hepsiniCalistir, AJAN_KODU } from './ajanlar/index.js';
 import { MEVCUT_ANAHTAR } from './ajanlar/egzersiz.js';
+import { MEVCUT_ANAHTAR as GIDA_ANAHTARI, ISTEK_ANAHTARI } from './ajanlar/gida.js';
 
 const GIZLI_BASLIK = {
   'Cache-Control': 'no-store',
@@ -76,7 +77,23 @@ export async function adminIstegi(request, env, url) {
       return panelJson({ error: 'Adı olmayan kayıt var.', ornek: bozuk }, 400);
     }
     await env.REMINDERS.put(MEVCUT_ANAHTAR, JSON.stringify(liste));
-    return panelJson({ ok: true, kayit: liste.length });
+
+    const yazilan = { egzersiz: liste.length };
+
+    /* Gıda listesi ve USDA istek listesi de aynı uçtan geliyor — ikisi de
+       "uygulamada şu an ne var" sorusunun parçası. */
+    if (Array.isArray(govde.gida)) {
+      const bozukGida = govde.gida.find(g => !g || typeof g.name !== 'string' || !g.name);
+      if (bozukGida) return panelJson({ error: 'Adı olmayan gıda kaydı var.', ornek: bozukGida }, 400);
+      await env.REMINDERS.put(GIDA_ANAHTARI, JSON.stringify(govde.gida));
+      yazilan.gida = govde.gida.length;
+    }
+    if (govde.usdaIstek && Array.isArray(govde.usdaIstek.gidalar)) {
+      await env.REMINDERS.put(ISTEK_ANAHTARI, JSON.stringify(govde.usdaIstek));
+      yazilan.usdaIstek = govde.usdaIstek.gidalar.length;
+    }
+
+    return panelJson({ ok: true, kayit: liste.length, yazilan });
   }
 
   if (yol === '/admin/mevcut' && request.method === 'GET') {

@@ -97,6 +97,13 @@ function kayitYaz(g) {
     parca.push('boylar: { S: ' + g.boylar.S + ', M: ' + g.boylar.M + ', L: ' + g.boylar.L + ' }');
   }
   parca.push("kaynak: '" + (g.kaynak || 'elle') + "'");
+  /* Mikro besinler USDA'dan geliyor ve isteğe bağlı: elle girilmiş kayıtlarda
+     yok. Alan yoksa hiç yazılmıyor ki dosya gereksiz şişmesin. */
+  if (g.mikro && Object.keys(g.mikro).length) {
+    const alanlar = Object.entries(g.mikro)
+      .map(([k, v]) => k + ': ' + sayi(v)).join(', ');
+    parca.push('mikro: { ' + alanlar + ' }');
+  }
   if (g.tarif) parca.push("tarif: '" + g.tarif.replace(/'/g, "\\'") + "'");
   return '    { ' + parca.join(', ') + ' }';
 }
@@ -112,7 +119,8 @@ function dosyaYaz(kategoriler) {
    kaynak alanı verinin nereden geldiğini söyler:
      elle  — genel beslenme kaynaklarından girilmiş
      tarif — malzemelerinden hesaplanmış (tarif alanında yazıyor)
-     usda  — USDA FoodData Central'dan çekilmiş
+     usda  — USDA FoodData Central'dan çekilmiş (kamu malı)
+     off   — Open Food Facts'ten çekilmiş (ODbL; uygulamada künye var)
    ══════════════════════════════════════════ */
 
 var TURKISH_FOODS = {

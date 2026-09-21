@@ -16,6 +16,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dosyayiOku, dosyayiUret, birlestir } from './egzersiz-yaz.mjs';
+import { birlestir as gidalariBirlestir } from './gida-birlestir.mjs';
+import { execFileSync } from 'node:child_process';
 
 const KOK = path.dirname(fileURLToPath(new URL('.', import.meta.url)));
 
@@ -88,15 +90,33 @@ function onbellegiTazele() {
   return { eski: Number(m[1]), yeni };
 }
 
+/* foods.js'teki TURKISH_FOODS'u düz bir listeye çevirir. Ajan "bu gıda bizde
+   var mı" sorusunu buna bakarak yanıtlıyor. */
+export function mevcutGidalar(dosya = path.join(KOK, 'foods.js')) {
+  const kaynak = fs.readFileSync(dosya, 'utf8');
+  const bas = kaynak.indexOf('var TURKISH_FOODS');
+  if (bas < 0) throw new Error('foods.js içinde TURKISH_FOODS bulunamadı.');
+  const FOODS = new Function(kaynak.slice(bas) + '; return TURKISH_FOODS;')();
+  const duz = [];
+  for (const kategori of Object.keys(FOODS)) {
+    for (const g of FOODS[kategori]) duz.push({ ...g, kategori });
+  }
+  return duz;
+}
+
 const KOMUTLAR = {
   async gonder() {
     const liste = mevcutEgzersizler();
-    console.log('egzersizler.js\'ten okundu: ' + liste.length + ' hareket');
+    const gida = mevcutGidalar();
+    const usdaIstek = JSON.parse(fs.readFileSync(path.join(KOK, 'tools/veri/usda-istek.json'), 'utf8'));
+    console.log('egzersizler.js: ' + liste.length + ' hareket');
+    console.log('foods.js      : ' + gida.length + ' gıda');
+    console.log('istek listesi : ' + usdaIstek.gidalar.length + ' kalem');
     const sonuc = await cagir('/admin/mevcut', {
-      method: 'POST', body: JSON.stringify({ egzersiz: liste })
+      method: 'POST', body: JSON.stringify({ egzersiz: liste, gida, usdaIstek })
     });
-    console.log('Worker\'a yazıldı: ' + sonuc.kayit + ' kayıt.');
-    console.log('\nArtık ajan çalışabilir:  node tools/veri.mjs calistir');
+    console.log('\nWorker\'a yazıldı: ' + JSON.stringify(sonuc.yazilan));
+    console.log('Artık ajanlar çalışabilir:  node tools/veri.mjs calistir');
   },
 
   async calistir() {
@@ -113,13 +133,30 @@ const KOMUTLAR = {
   },
 
   async al() {
-    const kutu = await cagir('/admin/onaylananlar?ajan=egzersiz');
-    const kayitlar = kutu.egzersiz || [];
-    if (!kayitlar.length) {
-      console.log('Onaylanmış egzersiz kaydı yok. Panelde onayladıktan sonra tekrar çalıştır.');
+    const hepsi = await cagir('/admin/onaylananlar');
+    const egzersizKayitlari = hepsi.egzersiz || [];
+    const gidaKayitlari = hepsi.gida || [];
+
+    if (!egzersizKayitlari.length && !gidaKayitlari.length) {
+      console.log('Onaylanmış kayıt yok. Panelde onayladıktan sonra tekrar çalıştır.');
       return;
     }
-    console.log(kayitlar.length + ' onaylı kayıt alındı.');
+
+    if (gidaKayitlari.length) await KOMUTLAR._gidalariIsle(gidaKayitlari);
+    if (!egzersizKayitlari.length) {
+      const onbellek = onbellegiTazele();
+      console.log('  önbellek     : v' + onbellek.eski + ' → v' + onbellek.yeni);
+      await cagir('/admin/isaretle', {
+        method: 'POST',
+        body: JSON.stringify({ ajan: 'gida', idler: gidaKayitlari.map(k => k.id) })
+      });
+      await KOMUTLAR._durumuGonder();
+      console.log('\nWorker güncellendi. Şimdi: npm test && git add -A && git commit');
+      return;
+    }
+
+    const kayitlar = egzersizKayitlari;
+    console.log(kayitlar.length + ' onaylı egzersiz kaydı alındı.');
 
     const yol = path.join(KOK, 'egzersizler.js');
     const once = fs.readFileSync(yol, 'utf8');
@@ -155,14 +192,64 @@ const KOMUTLAR = {
     const onbellek = onbellegiTazele();
     console.log('  önbellek     : v' + onbellek.eski + ' → v' + onbellek.yeni);
 
-    // İşlenen kayıtları kuyruktan düş ve ajanın yeni duruma bakmasını sağla
+    // İşlenen kayıtları kuyruktan düş ve ajanların yeni duruma bakmasını sağla
     await cagir('/admin/isaretle', {
       method: 'POST',
       body: JSON.stringify({ ajan: 'egzersiz', idler: kayitlar.map(k => k.id) })
     });
-    const liste = mevcutEgzersizler();
-    await cagir('/admin/mevcut', { method: 'POST', body: JSON.stringify({ egzersiz: liste }) });
+    if (gidaKayitlari.length) {
+      await cagir('/admin/isaretle', {
+        method: 'POST',
+        body: JSON.stringify({ ajan: 'gida', idler: gidaKayitlari.map(k => k.id) })
+      });
+    }
+    await KOMUTLAR._durumuGonder();
     console.log('\nWorker güncellendi. Şimdi: npm test && git add -A && git commit');
+  },
+
+  /* Gıda kayıtları foods.js'e doğrudan yazılmıyor: kaynak dosyaya işlenip
+     gida-topla.mjs yeniden üretiyor. Böylece doğrulama kapısı devreye giriyor
+     ve saçma bir değer dosyaya hiç ulaşmıyor. */
+  async _gidalariIsle(kayitlar) {
+    console.log(kayitlar.length + ' onaylı gıda kaydı alındı.');
+    const yol = path.join(KOK, 'tools/veri/temel-gidalar.json');
+    const kategoriler = JSON.parse(fs.readFileSync(yol, 'utf8'));
+    const oncekiSayi = kategoriler.reduce((n, k) => n + k.gidalar.length, 0);
+
+    const sonuc = gidalariBirlestir(kategoriler, kayitlar);
+    fs.writeFileSync(yol, JSON.stringify(sonuc.kategoriler, null, 1) + '\n');
+
+    /* Üretici aynı zamanda doğrulama kapısı: bir kayıt süzgeçten geçmezse
+       foods.js'i hiç yazmıyor ve hata veriyor. */
+    try {
+      execFileSync(process.execPath, [path.join(KOK, 'tools/gida-topla.mjs')],
+        { cwd: KOK, stdio: 'inherit' });
+    } catch (err) {
+      throw new Error('Gıda doğrulama kapısı kayıtları geçirmedi. ' +
+        'temel-gidalar.json güncellendi ama foods.js yazılmadı — ' +
+        'yukarıdaki hataları düzeltip "node tools/gida-topla.mjs" çalıştır.');
+    }
+
+    const sonrakiSayi = sonuc.kategoriler.reduce((n, k) => n + k.gidalar.length, 0);
+    console.log('\nfoods.js güncellendi:');
+    console.log('  gıda         : ' + oncekiSayi + ' → ' + sonrakiSayi +
+      '  (' + sonuc.rapor.eklenen + ' yeni, ' + sonuc.rapor.guncellenen + ' güncelleme)');
+    if (sonuc.rapor.atlanan) {
+      console.log('  atlanan      : ' + sonuc.rapor.atlanan);
+      for (const a of sonuc.rapor.atlananlar.slice(0, 6)) console.log('     · ' + a);
+    }
+  },
+
+  /* Ajanların "uygulamada şu an ne var" bilgisini tazele. */
+  async _durumuGonder() {
+    const usdaIstek = JSON.parse(
+      fs.readFileSync(path.join(KOK, 'tools/veri/usda-istek.json'), 'utf8'));
+    await cagir('/admin/mevcut', {
+      method: 'POST',
+      body: JSON.stringify({
+        egzersiz: mevcutEgzersizler(), gida: mevcutGidalar(), usdaIstek
+      })
+    });
   },
 
   async bekleyen() {
@@ -185,9 +272,11 @@ const KOMUTLAR = {
 /* Doğrudan çalıştırıldığında komut dağıtıcısı devreye girsin; testler bu
    dosyayı içe aktardığında girmesin. */
 if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  // Alt çizgiyle başlayanlar iç yardımcı, komut değil
+  const acik = Object.keys(KOMUTLAR).filter(k => !k.startsWith('_'));
   const komut = process.argv[2];
-  if (!KOMUTLAR[komut]) {
-    console.error('Kullanım: node tools/veri.mjs <' + Object.keys(KOMUTLAR).join('|') + '>');
+  if (!acik.includes(komut)) {
+    console.error('Kullanım: node tools/veri.mjs <' + acik.join('|') + '>');
     process.exit(1);
   }
   KOMUTLAR[komut]().catch(err => { console.error('\n' + err.message + '\n'); process.exit(1); });

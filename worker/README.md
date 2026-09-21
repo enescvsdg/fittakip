@@ -259,8 +259,47 @@ hareketler eve; `barbell`, `cable`, `machine`, `ez curl bar`, `dumbbell` ve
 | Egzersiz | [free-exercise-db](https://github.com/yuhonas/free-exercise-db) | Unlicense (kamu malı) | 876 hareketi mevcut 281'le eşleştirir; talimat ve ikincil kas getirir |
 | Analiz | Gemini | — | Antrenman geçmişini yorumlar |
 | Supplement | 6 marka sitesi | — | Ürün sayfalarından besin değeri toplar |
+| Gıda | USDA FoodData Central · Open Food Facts | Kamu malı · ODbL | Temel malzeme değerleri ve paketli ürünler |
 
-Gıda ajanı henüz yazılmadı.
+### Gıda ajanı
+
+İki kaynak, iki farklı iş yapıyor.
+
+**USDA — yön tersine çevrildi.** USDA'yı tarayıp Türkçeye çevirmek yerine
+Türkçe istek listesini biz veriyoruz (`tools/veri/usda-istek.json`, 94 kalem)
+ve ajan her kalem için USDA'da karşılığını buluyor. Böylece isim çevirisi diye
+bir sorun kalmıyor — "Beef, round, top round roast, boneless, separable lean
+only, trimmed to 0" fat" çevrilecek bir şey değil — ve Türk mutfağında olmayan
+hiçbir şey listeye girmiyor. Listedeki 56 kalem mevcut gıdaları zenginleştiriyor
+(mikro besinler: lif, demir, kalsiyum, B12, sodyum, potasyum), 38'i yeni.
+
+Ek kurulum:
+
+```bash
+wrangler secret put USDA_API_KEY
+```
+
+Ücretsiz anahtar: [fdc.nal.usda.gov/api-key-signup](https://fdc.nal.usda.gov/api-key-signup.html)
+
+**Open Food Facts — Türkiye'de satılan paketli ürünler.** Adları zaten Türkçe,
+paketin üstünde ne yazıyorsa o. Anahtar gerekmiyor. Bu kayıtlar `Paketli
+Ürünler` diye ayrı bir kategoriye gidiyor: genel gıdaların arasına karışırsa
+arama kutusu kullanılamaz hale geliyor. Hepsi şüpheli işaretli geliyor çünkü
+veri gönüllü katkıya dayanıyor.
+
+**ODbL künyesi bir lisans şartı**, nezaket değil: uygulamada Beslenme
+sayfasında gösteriliyor ve testle tutuluyor. Künye yalnızca o kaynaktan
+gerçekten veri varsa çıkıyor.
+
+Doğrulama kuralı `tools/gida-dogrula.mjs`'den geliyor — Worker'a kopyalanmadı,
+aynı dosya içe aktarılıyor ki kural tek yerde kalsın. `veri-al` onaylananları
+`tools/veri/temel-gidalar.json`'a işleyip `gida-topla.mjs`'i çalıştırıyor;
+o da hem `foods.js`'i üretiyor hem kapıyı bir kez daha uyguluyor. Kayıt
+süzgeçten geçmezse `foods.js` hiç yazılmıyor.
+
+USDA'da her kalem ayrı bir istek; tur başına 25 kalem işleniyor ve nerede
+kalındığı KV'de tutuluyor. Liste bitince başa dönüyor, yani değerler
+periyodik olarak tazeleniyor.
 
 ### Supplement ajanı
 

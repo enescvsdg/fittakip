@@ -1,0 +1,475 @@
+{
+  "aciklama": "USDA'da aranacak gıdalar. Adı BİZ yazıyoruz, değerleri USDA veriyor — böylece isim çevirisi diye bir sorun kalmıyor ve Türk mutfağında olmayan hiçbir şey listeye girmiyor. 'ara' alanı USDA'ya gidecek İngilizce arama terimi; 'tercih' varsa o veri setine öncelik verilir (Foundation Foods laboratuvar ölçümü, SR Legacy daha geniş).",
+  "gidalar": [
+    {
+      "ad": "Pirinç (pişmiş)",
+      "ara": "rice, white, long-grain, regular, cooked",
+      "kategori": "Tahıllar / Karbonhidrat"
+    },
+    {
+      "ad": "Pirinç (çiğ)",
+      "ara": "rice, white, long-grain, regular, raw, unenriched",
+      "kategori": "Tahıllar / Karbonhidrat"
+    },
+    {
+      "ad": "Bulgur (pişmiş)",
+      "ara": "bulgur, cooked",
+      "kategori": "Tahıllar / Karbonhidrat"
+    },
+    {
+      "ad": "Bulgur (çiğ)",
+      "ara": "bulgur, dry",
+      "kategori": "Tahıllar / Karbonhidrat"
+    },
+    {
+      "ad": "Yulaf Ezmesi (çiğ)",
+      "ara": "oats, rolled, dry",
+      "kategori": "Tahıllar / Karbonhidrat"
+    },
+    {
+      "ad": "Makarna (pişmiş)",
+      "ara": "pasta, cooked, enriched",
+      "kategori": "Tahıllar / Karbonhidrat"
+    },
+    {
+      "ad": "Karabuğday (pişmiş)",
+      "ara": "buckwheat groats, roasted, cooked",
+      "kategori": "Tahıllar / Karbonhidrat"
+    },
+    {
+      "ad": "Kinoa (pişmiş)",
+      "ara": "quinoa, cooked",
+      "kategori": "Tahıllar / Karbonhidrat"
+    },
+    {
+      "ad": "Patates (haşlanmış)",
+      "ara": "potatoes, boiled, cooked without skin, flesh",
+      "kategori": "Tahıllar / Karbonhidrat"
+    },
+    {
+      "ad": "Tatlı Patates (haşlanmış)",
+      "ara": "sweet potato, cooked, boiled, without skin",
+      "kategori": "Tahıllar / Karbonhidrat"
+    },
+    {
+      "ad": "Buğday Unu",
+      "ara": "wheat flour, white, all-purpose, enriched",
+      "kategori": "Tahıllar / Karbonhidrat"
+    },
+    {
+      "ad": "İrmik",
+      "ara": "semolina, enriched, dry",
+      "kategori": "Tahıllar / Karbonhidrat"
+    },
+    {
+      "ad": "Mısır (haşlanmış)",
+      "ara": "corn, sweet, yellow, cooked, boiled, drained",
+      "kategori": "Tahıllar / Karbonhidrat"
+    },
+    {
+      "ad": "Tavuk Göğsü (ızgara/haşlama)",
+      "ara": "chicken, broilers or fryers, breast, meat only, cooked, roasted",
+      "kategori": "Et, Tavuk, Balık, Yumurta"
+    },
+    {
+      "ad": "Tavuk But (derisiz)",
+      "ara": "chicken, broilers or fryers, thigh, meat only, cooked, roasted",
+      "kategori": "Et, Tavuk, Balık, Yumurta"
+    },
+    {
+      "ad": "Hindi Göğsü",
+      "ara": "turkey, breast, meat only, cooked, roasted",
+      "kategori": "Et, Tavuk, Balık, Yumurta"
+    },
+    {
+      "ad": "Yağsız Kıyma (%5)",
+      "ara": "beef, ground, 95% lean meat / 5% fat, cooked",
+      "kategori": "Et, Tavuk, Balık, Yumurta"
+    },
+    {
+      "ad": "Kıyma (%15 yağlı)",
+      "ara": "beef, ground, 85% lean meat / 15% fat, cooked",
+      "kategori": "Et, Tavuk, Balık, Yumurta"
+    },
+    {
+      "ad": "Kuzu Kıyma",
+      "ara": "lamb, ground, cooked, broiled",
+      "kategori": "Et, Tavuk, Balık, Yumurta"
+    },
+    {
+      "ad": "Dana Bonfile",
+      "ara": "beef, tenderloin, separable lean only, cooked, broiled",
+      "kategori": "Et, Tavuk, Balık, Yumurta"
+    },
+    {
+      "ad": "Somon (pişmiş)",
+      "ara": "fish, salmon, atlantic, farmed, cooked, dry heat",
+      "kategori": "Et, Tavuk, Balık, Yumurta"
+    },
+    {
+      "ad": "Levrek",
+      "ara": "fish, sea bass, mixed species, cooked, dry heat",
+      "kategori": "Et, Tavuk, Balık, Yumurta"
+    },
+    {
+      "ad": "Hamsi",
+      "ara": "fish, anchovy, european, raw",
+      "kategori": "Et, Tavuk, Balık, Yumurta"
+    },
+    {
+      "ad": "Ton Balığı (suda, süzülmüş)",
+      "ara": "fish, tuna, light, canned in water, drained solids",
+      "kategori": "Et, Tavuk, Balık, Yumurta"
+    },
+    {
+      "ad": "Yumurta (tam)",
+      "ara": "egg, whole, raw, fresh",
+      "kategori": "Et, Tavuk, Balık, Yumurta"
+    },
+    {
+      "ad": "Yumurta Akı",
+      "ara": "egg, white, raw, fresh",
+      "kategori": "Et, Tavuk, Balık, Yumurta"
+    },
+    {
+      "ad": "Yumurta Sarısı",
+      "ara": "egg, yolk, raw, fresh",
+      "kategori": "Et, Tavuk, Balık, Yumurta"
+    },
+    {
+      "ad": "Süt (tam yağlı)",
+      "ara": "milk, whole, 3.25% milkfat",
+      "kategori": "Süt Ürünleri"
+    },
+    {
+      "ad": "Süt (yarım yağlı)",
+      "ara": "milk, reduced fat, fluid, 2% milkfat",
+      "kategori": "Süt Ürünleri"
+    },
+    {
+      "ad": "Yoğurt (sade, tam yağlı)",
+      "ara": "yogurt, plain, whole milk",
+      "kategori": "Süt Ürünleri"
+    },
+    {
+      "ad": "Yoğurt (light)",
+      "ara": "yogurt, plain, low fat",
+      "kategori": "Süt Ürünleri"
+    },
+    {
+      "ad": "Süzme Yoğurt",
+      "ara": "yogurt, greek, plain, nonfat",
+      "kategori": "Süt Ürünleri"
+    },
+    {
+      "ad": "Beyaz Peynir",
+      "ara": "cheese, feta",
+      "kategori": "Süt Ürünleri"
+    },
+    {
+      "ad": "Kaşar Peyniri",
+      "ara": "cheese, cheddar",
+      "kategori": "Süt Ürünleri"
+    },
+    {
+      "ad": "Lor Peyniri",
+      "ara": "cheese, cottage, lowfat, 2% milkfat",
+      "kategori": "Süt Ürünleri"
+    },
+    {
+      "ad": "Tereyağı",
+      "ara": "butter, without salt",
+      "kategori": "Süt Ürünleri"
+    },
+    {
+      "ad": "Ayran",
+      "ara": "beverages, yogurt, buttermilk, fluid, whole",
+      "kategori": "Süt Ürünleri"
+    },
+    {
+      "ad": "Kırmızı Mercimek (kuru)",
+      "ara": "lentils, red, raw",
+      "kategori": "Bakliyat"
+    },
+    {
+      "ad": "Mercimek (pişmiş)",
+      "ara": "lentils, mature seeds, cooked, boiled, without salt",
+      "kategori": "Bakliyat"
+    },
+    {
+      "ad": "Nohut (pişmiş)",
+      "ara": "chickpeas, mature seeds, cooked, boiled, without salt",
+      "kategori": "Bakliyat"
+    },
+    {
+      "ad": "Kuru Fasulye (pişmiş)",
+      "ara": "beans, white, mature seeds, cooked, boiled",
+      "kategori": "Bakliyat"
+    },
+    {
+      "ad": "Barbunya (pişmiş)",
+      "ara": "beans, pinto, mature seeds, cooked, boiled",
+      "kategori": "Bakliyat"
+    },
+    {
+      "ad": "Yeşil Mercimek (kuru)",
+      "ara": "lentils, mature seeds, raw",
+      "kategori": "Bakliyat"
+    },
+    {
+      "ad": "Domates",
+      "ara": "tomatoes, red, ripe, raw, year round average",
+      "kategori": "Sebze"
+    },
+    {
+      "ad": "Salatalık",
+      "ara": "cucumber, with peel, raw",
+      "kategori": "Sebze"
+    },
+    {
+      "ad": "Soğan",
+      "ara": "onions, raw",
+      "kategori": "Sebze"
+    },
+    {
+      "ad": "Sarımsak",
+      "ara": "garlic, raw",
+      "kategori": "Sebze"
+    },
+    {
+      "ad": "Biber (yeşil sivri)",
+      "ara": "peppers, sweet, green, raw",
+      "kategori": "Sebze"
+    },
+    {
+      "ad": "Patlıcan",
+      "ara": "eggplant, raw",
+      "kategori": "Sebze"
+    },
+    {
+      "ad": "Kabak",
+      "ara": "squash, summer, zucchini, includes skin, raw",
+      "kategori": "Sebze"
+    },
+    {
+      "ad": "Ispanak (çiğ)",
+      "ara": "spinach, raw",
+      "kategori": "Sebze"
+    },
+    {
+      "ad": "Brokoli (haşlanmış)",
+      "ara": "broccoli, cooked, boiled, drained",
+      "kategori": "Sebze"
+    },
+    {
+      "ad": "Havuç",
+      "ara": "carrots, raw",
+      "kategori": "Sebze"
+    },
+    {
+      "ad": "Marul",
+      "ara": "lettuce, cos or romaine, raw",
+      "kategori": "Sebze"
+    },
+    {
+      "ad": "Maydanoz",
+      "ara": "parsley, fresh",
+      "kategori": "Sebze"
+    },
+    {
+      "ad": "Taze Fasulye",
+      "ara": "beans, snap, green, raw",
+      "kategori": "Sebze"
+    },
+    {
+      "ad": "Karnabahar",
+      "ara": "cauliflower, raw",
+      "kategori": "Sebze"
+    },
+    {
+      "ad": "Pırasa",
+      "ara": "leeks, bulb and lower leaf portion, raw",
+      "kategori": "Sebze"
+    },
+    {
+      "ad": "Lahana (beyaz)",
+      "ara": "cabbage, raw",
+      "kategori": "Sebze"
+    },
+    {
+      "ad": "Mantar (kültür)",
+      "ara": "mushrooms, white, raw",
+      "kategori": "Sebze"
+    },
+    {
+      "ad": "Elma",
+      "ara": "apples, raw, with skin",
+      "kategori": "Meyve"
+    },
+    {
+      "ad": "Muz",
+      "ara": "bananas, raw",
+      "kategori": "Meyve"
+    },
+    {
+      "ad": "Portakal",
+      "ara": "oranges, raw, all commercial varieties",
+      "kategori": "Meyve"
+    },
+    {
+      "ad": "Üzüm",
+      "ara": "grapes, red or green, raw",
+      "kategori": "Meyve"
+    },
+    {
+      "ad": "Karpuz",
+      "ara": "watermelon, raw",
+      "kategori": "Meyve"
+    },
+    {
+      "ad": "Çilek",
+      "ara": "strawberries, raw",
+      "kategori": "Meyve"
+    },
+    {
+      "ad": "Kayısı (taze)",
+      "ara": "apricots, raw",
+      "kategori": "Meyve"
+    },
+    {
+      "ad": "Kuru Kayısı",
+      "ara": "apricots, dried, sulfured, uncooked",
+      "kategori": "Meyve"
+    },
+    {
+      "ad": "Kuru Üzüm",
+      "ara": "raisins, seedless",
+      "kategori": "Meyve"
+    },
+    {
+      "ad": "Hurma",
+      "ara": "dates, medjool",
+      "kategori": "Meyve"
+    },
+    {
+      "ad": "Şeftali",
+      "ara": "peaches, raw",
+      "kategori": "Meyve"
+    },
+    {
+      "ad": "Armut",
+      "ara": "pears, raw",
+      "kategori": "Meyve"
+    },
+    {
+      "ad": "Kivi",
+      "ara": "kiwifruit, green, raw",
+      "kategori": "Meyve"
+    },
+    {
+      "ad": "Ceviz İçi",
+      "ara": "nuts, walnuts, english",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Badem",
+      "ara": "nuts, almonds",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Fındık",
+      "ara": "nuts, hazelnuts or filberts",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Antep Fıstığı",
+      "ara": "nuts, pistachio nuts, raw",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Yer Fıstığı",
+      "ara": "peanuts, all types, raw",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Fıstık Ezmesi",
+      "ara": "peanut butter, smooth style, without salt",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Ay Çekirdeği (iç)",
+      "ara": "seeds, sunflower seed kernels, dried",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Kabak Çekirdeği (iç)",
+      "ara": "seeds, pumpkin and squash seed kernels, dried",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Susam",
+      "ara": "seeds, sesame seeds, whole, dried",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Chia Tohumu",
+      "ara": "seeds, chia seeds, dried",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Keten Tohumu",
+      "ara": "seeds, flaxseed",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Zeytinyağı",
+      "ara": "oil, olive, salad or cooking",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Ayçiçek Yağı",
+      "ara": "oil, sunflower, linoleic",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Siyah Zeytin",
+      "ara": "olives, ripe, canned, small-extra large",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Yeşil Zeytin",
+      "ara": "olives, pickled, canned or bottled, green",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Avokado",
+      "ara": "avocados, raw, all commercial varieties",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Bal",
+      "ara": "honey",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Pekmez (üzüm)",
+      "ara": "molasses",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Toz Şeker",
+      "ara": "sugars, granulated",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Domates Salçası",
+      "ara": "tomato products, canned, paste, without salt added",
+      "kategori": "Kuruyemiş / Yağlar"
+    },
+    {
+      "ad": "Tahin",
+      "ara": "seeds, sesame butter, tahini",
+      "kategori": "Kuruyemiş / Yağlar"
+    }
+  ]
+}

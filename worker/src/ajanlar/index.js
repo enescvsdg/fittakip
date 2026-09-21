@@ -7,9 +7,11 @@
 
 import * as egzersiz from './egzersiz.js';
 import * as takviye from './takviye.js';
+import * as gida from './gida.js';
 
 export const AJAN_KODU = {
   egzersiz: egzersiz.calistir,
+  gida: gida.calistir,
   takviye: takviye.calistir
 };
 

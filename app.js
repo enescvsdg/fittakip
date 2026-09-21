@@ -1809,6 +1809,34 @@ var currentFoodAdi = '';    // sepete yazılacak ad — boylu gıdalarda "Yumurt
 var sonGidaSecimi = '';     // boy penceresi iptal edilirse geri dönülecek seçim
 var gidaBirimAktif = false; // miktar alanı şu an adet mi (true) gram mı (false) sayıyor
 
+/* ── VERİ KÜNYESİ ──
+   Open Food Facts verisi ODbL lisanslı ve künye göstermek lisans şartı.
+   USDA kamu malı, künye zorunlu değil ama kaynağı belirtmek kullanıcının
+   değerin nereden geldiğini bilmesini sağlıyor.
+
+   Künye yalnızca o kaynaktan gerçekten veri varsa gösteriliyor: ajanlar
+   çalışmadan önce ortada OFF kaydı yok, boş yere satır koymanın anlamı yok. */
+function gidaKunyesiCiz() {
+  var el = document.getElementById('gidaKunye');
+  if (!el) return;
+
+  var kaynaklar = {};
+  Object.keys(TURKISH_FOODS).forEach(function(kategori) {
+    TURKISH_FOODS[kategori].forEach(function(g) {
+      if (g.kaynak) kaynaklar[g.kaynak] = true;
+    });
+  });
+
+  var parcalar = [];
+  if (kaynaklar.usda) parcalar.push('USDA FoodData Central (kamu malı)');
+  if (kaynaklar.off) {
+    parcalar.push('<a href="https://openfoodfacts.org" target="_blank" ' +
+      'rel="noopener noreferrer" style="color:var(--accent-2);">Open Food Facts</a> (ODbL)');
+  }
+  if (!parcalar.length) { el.textContent = ''; return; }
+  el.innerHTML = 'Besin değeri kaynakları: ' + parcalar.join(' · ');
+}
+
 // ── GIDA SEÇİM LİSTESİNİ DOLDUR ──────────────────
 function fillFoodSelect() {
   var html = '';
@@ -2347,6 +2375,7 @@ toggleMealBuilderBtn.addEventListener('click', function() {
 
 // ── INIT (Beslenme) ─────────────────────────────
 fillFoodSelect();
+gidaKunyesiCiz();
 sonGidaSecimi = foodSelect.value;
 renderMealCartList();
 renderMealPlanView();
