@@ -24,7 +24,15 @@ export function mekanlariSec(ekipman) {
   return ['Spor Salonunda'];
 }
 
-const tirnak = t => "'" + String(t).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
+/* Satır sonu da kaçırılıyor: kaynaktaki tek bir çok satırlı talimat,
+   kapanmamış bir metin sabiti üretip "veri-al"ın tamamını durduruyordu. */
+const tirnak = t => "'" + String(t)
+  .replace(/\\/g, '\\\\')
+  .replace(/'/g, "\\'")
+  .replace(/\r/g, '\\r')
+  .replace(/\n/g, '\\n')
+  .replace(/\u2028/g, '\\u2028')
+  .replace(/\u2029/g, '\\u2029') + "'";
 
 function hareketSatiri(h) {
   return '  { name: ' + tirnak(h.name) +
@@ -72,9 +80,7 @@ export function dosyayiUret(eskiIcerik, EXERCISES, EXERCISE_INFO) {
 export function dosyayiOku(icerik) {
   const i = icerik.indexOf('var EXERCISES');
   if (i < 0) throw new Error('egzersizler.js içinde EXERCISES bulunamadı.');
-  const j = icerik.indexOf('var EXERCISE_INFO');
-  const blok = j > i ? icerik.slice(i) : icerik.slice(i);
-  const f = new Function(blok +
+  const f = new Function(icerik.slice(i) +
     '; return { EXERCISES: EXERCISES, EXERCISE_INFO: typeof EXERCISE_INFO === "object" ? EXERCISE_INFO : {} };');
   return f();
 }

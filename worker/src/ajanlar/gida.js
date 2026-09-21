@@ -188,6 +188,9 @@ const offSayi = d => (typeof d === 'number' && Number.isFinite(d)) ? yuvarla(d, 
 export function offKaydiCoz(urun) {
   const ad = String(urun.product_name_tr || urun.product_name || '').trim();
   if (!ad) return null;
+  /* Barkodsuz kayıt id üretemiyor: hepsi "gida:off:" oluyor ve turuYaz
+     bunları tek kayda indirip gerisini kopya sayıyordu. */
+  if (!String(urun.code || '').trim()) return null;
   const n = urun.nutriments || {};
   const kcal = offSayi(n['energy-kcal_100g']);
   const protein = offSayi(n.proteins_100g);

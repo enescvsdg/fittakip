@@ -28,7 +28,14 @@ export function basicAuthCoz(request) {
   if (!bas.startsWith('Basic ')) return null;
   let cozulmus;
   try {
-    cozulmus = atob(bas.slice(6));
+    /* atob() base64'ü Latin-1 olarak çözüyor: "şifre123" karşımıza
+       "Åifre123" diye geliyor ve secretsMatch UTF-8 ile kıyasladığı için
+       Türkçe karakterli bir anahtar HİÇBİR ZAMAN eşleşmiyordu. Baytları
+       UTF-8 olarak yeniden çözüyoruz. */
+    const ikili = atob(bas.slice(6));
+    const baytlar = new Uint8Array(ikili.length);
+    for (let i = 0; i < ikili.length; i++) baytlar[i] = ikili.charCodeAt(i);
+    cozulmus = new TextDecoder('utf-8').decode(baytlar);
   } catch {
     return null;
   }

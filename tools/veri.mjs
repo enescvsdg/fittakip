@@ -70,9 +70,26 @@ export function mevcutEgzersizler(dosya = path.join(KOK, 'egzersizler.js')) {
   if (son < 0) throw new Error('EXERCISES tanımının sonu bulunamadı.');
   const blok = kaynak.slice(bas, son + 3);
   const EXERCISES = new Function(blok + '; return EXERCISES;')();
+
+  /* EXERCISE_INFO'yu da gönderiyoruz. Yoksa ajan bir hareketin talimatının
+     ZATEN İŞLENDİĞİNİ bilemiyor ve her gece aynı ~281 güncelleme kaydını
+     yeniden üretiyor — kuyruk hiç boşalmıyor. */
+  let EXERCISE_INFO = {};
+  const infoBas = kaynak.indexOf('var EXERCISE_INFO');
+  if (infoBas >= 0) {
+    EXERCISE_INFO = new Function(kaynak.slice(infoBas) + '; return EXERCISE_INFO;')();
+  }
+
   const duz = [];
   for (const mekan of Object.keys(EXERCISES)) {
-    for (const h of EXERCISES[mekan]) duz.push({ ...h, mekan });
+    for (const h of EXERCISES[mekan]) {
+      const bilgi = EXERCISE_INFO[h.name];
+      duz.push({
+        ...h, mekan,
+        secondary: (bilgi && bilgi.secondary) || [],
+        instructions: (bilgi && bilgi.instructions) || []
+      });
+    }
   }
   return duz;
 }

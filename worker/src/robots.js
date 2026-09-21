@@ -102,20 +102,22 @@ export async function kurallariGetir(kokAdres, { getir = fetch, ajan = AJAN_ADI 
     cevap = await getir(adres, { headers: { 'User-Agent': AJAN_ADI } });
   } catch (err) {
     /* Ağ hatası: siteye hiç ulaşamıyoruz. Taramaya kalkışmanın anlamı yok. */
-    return { taranabilir: false, sebep: 'robots.txt alınamadı: ' + err.message, kurallar: null };
+    return { taranabilir: false, sebep: 'robots.txt alınamadı: ' + err.message, kurallar: null, metin: null };
   }
 
   if (cevap.status === 404 || cevap.status === 410) {
-    return { taranabilir: true, sebep: 'robots.txt yok — kısıt yok sayılıyor', kurallar: null };
+    return { taranabilir: true, sebep: 'robots.txt yok — kısıt yok sayılıyor', kurallar: null, metin: null };
   }
   if (!cevap.ok) {
     return {
       taranabilir: false,
       sebep: 'robots.txt HTTP ' + cevap.status + ' döndü; sunucu zorlanıyor olabilir',
-      kurallar: null
+      kurallar: null, metin: null
     };
   }
 
   const metin = await cevap.text();
-  return { taranabilir: true, sebep: null, kurallar: kurallariCoz(metin, ajan) };
+  /* Ham metni de veriyoruz: içindeki "Sitemap:" satırlarını okumak için
+     dosyayı ikinci kez indirmeye gerek kalmasın. */
+  return { taranabilir: true, sebep: null, kurallar: kurallariCoz(metin, ajan), metin };
 }

@@ -741,9 +741,14 @@ function kasDinleyicileriniBagla(panelEl, svgWrap) {
       });
     });
 
-  svgWrap.addEventListener('click', function(e) {
-    if (e.target === svgWrap || e.target.tagName === 'svg') kasBalonuKapat(panelEl);
-  });
+  /* svgWrap her Ön/Arka geçişinde yeniden doldurulyor ama ELEMAN aynı kalıyor;
+     dinleyiciyi her seferinde eklemek onları biriktiriyordu. */
+  if (!svgWrap.dataset.bosluktaKapatBagli) {
+    svgWrap.dataset.bosluktaKapatBagli = '1';
+    svgWrap.addEventListener('click', function(e) {
+      if (e.target === svgWrap || e.target.tagName === 'svg') kasBalonuKapat(panelEl);
+    });
+  }
 
   panelEl.querySelectorAll('.kas-satiri').forEach(function(li) {
     li.addEventListener('click', function() {
@@ -923,10 +928,16 @@ function fillRegionSelect(location) {
    ekipmana göre daraltmak listeyi tekrar kullanılabilir yapıyor. */
 var TUM_EKIPMAN = '*';
 
+/* EQUIPMENT_TR'de hem 'none' hem 'other' boş metne eşleniyor (hareket adının
+   yanında gösterilmesinler diye). Süzgeçte ikisini de "Ekipmansız" yazmak iki
+   özdeş seçenek üretiyordu — üstelik "other" ekipmansız değil, sınıflanmamış
+   demek: sled, atlas taşı, denge tahtası. */
+var EKIPMAN_SUZGEC_ADI = { 'none': 'Ekipmansız', 'body only': 'Ekipmansız', 'other': 'Diğer' };
+
 function ekipmanEtiketi(kod) {
+  if (EKIPMAN_SUZGEC_ADI[kod]) return EKIPMAN_SUZGEC_ADI[kod];
   var ad = EQUIPMENT_TR[kod];
-  if (ad === '') return 'Ekipmansız';      // EQUIPMENT_TR'de boş = ekipman yok
-  return ad || kod;
+  return (ad && ad !== '') ? ad : kod;
 }
 
 function fillEquipmentSelect(location, region) {
@@ -1573,6 +1584,10 @@ function aiAnaliziYaz(v) { setJSON(AI_ANALIZ_KEY, v); }
 function aiAnalizDurum(metin, hataMi) {
   if (!aiAnalysisHint) return;
   aiAnalysisHint.textContent = metin;
+  /* Eleman .chart-empty sınıfını taşıyor; stil .ai-analysis-durum.hata için
+     yazılmıştı ve hiç uygulanmıyordu — hatalar sıradan ipucu gibi
+     görünüyordu. */
+  aiAnalysisHint.classList.add('ai-analysis-durum');
   aiAnalysisHint.classList.toggle('hata', !!hataMi);
   aiAnalysisHint.classList.remove('hidden');
 }

@@ -177,4 +177,35 @@ export default async function ({ rapor }) {
   rapor.kontrol('Mevcut hareketlerin hiçbiri kaybolmadı',
     sonOk && Object.keys(EXERCISES).every(m =>
       EXERCISES[m].every(h => sonVeri.EXERCISES[m].some(x => x.name === h.name))));
+
+  // ── SATIR SONU KAÇIRMA ─────────────────────────
+  /* Kaynakta çok satırlı bir talimat varsa, satır sonu kaçırılmazsa üretilen
+     dosyada kapanmamış bir metin sabiti oluşuyor ve "veri-al"ın tamamı
+     duruyor. */
+  rapor.baslik('çok satırlı talimat dosyayı bozmuyor');
+  const cokSatir = infoMetni({
+    'Deneme': {
+      secondary: ['glutes'],
+      instructions: ['Birinci satır.\nİkinci satır.', 'Satır\r\nsonu karışık.']
+    }
+  });
+  let satirOk = true, satirVeri = null;
+  try { satirVeri = new Function(cokSatir + '; return EXERCISE_INFO;')(); }
+  catch { satirOk = false; }
+  rapor.kontrol('Üretilen metin çalıştırılabiliyor', satirOk);
+  rapor.kontrol('Satır sonu korunuyor',
+    satirOk && satirVeri['Deneme'].instructions[0].includes('\n'),
+    satirOk ? JSON.stringify(satirVeri['Deneme'].instructions[0]) : '(çalışmadı)');
+  rapor.kontrol('Metin bozulmadan geri geliyor',
+    satirOk && satirVeri['Deneme'].instructions[0] === 'Birinci satır.\nİkinci satır.');
+
+  rapor.baslik('satır ayırıcı karakterler de kaçırılıyor');
+  /* U+2028 ve U+2029 JavaScript'te satır sonu sayılıyor ve tırnak içinde
+     bile metni bölüyor. */
+  const ayirici = exercisesMetni({
+    'Evde': [{ name: 'Tuhaf\u2028Ad', equipment: 'none', level: 'beginner', muscle: 'chest' }]
+  });
+  let ayiriciOk = true;
+  try { new Function(ayirici + '; return EXERCISES;')(); } catch { ayiriciOk = false; }
+  rapor.kontrol('U+2028 içeren ad dosyayı bozmuyor', ayiriciOk);
 }

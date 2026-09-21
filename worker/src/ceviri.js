@@ -101,9 +101,13 @@ export async function cevir(env, istekler, { getir, onbellek, enFazlaYigin } = {
     eksikler.push({ sira, anahtar, metinler });
   });
 
-  let cagri = 0, atlananToplam = 0, ertelenen = 0;
+  /* Sınır DENENEN yığını sayıyor, başarılı olanı değil. Eskiden cagri
+     yalnız başarıda artıyordu; Gemini'nin kötü bir gecesinde ajan 20 yerine
+     ~73 istek atıyordu. */
+  let denenen = 0, cagri = 0, atlananToplam = 0, ertelenen = 0;
   for (let i = 0; i < eksikler.length; i += YIGIN_BOYU) {
-    if (cagri >= yiginSiniri) { ertelenen = eksikler.length - i; break; }
+    if (denenen >= yiginSiniri) { ertelenen = eksikler.length - i; break; }
+    denenen++;
     const yigin = eksikler.slice(i, i + YIGIN_BOYU);
     let ham;
     try {

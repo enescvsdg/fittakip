@@ -222,4 +222,23 @@ export default async function ({ rapor }) {
     String(dogru.body).includes('function kacir('), 'kacir bulundu');
   rapor.kontrol('Kayıt adı kaçırılarak basılıyor',
     String(dogru.body).includes('kacir(k.ad)'), 'kacir(k.ad) bulundu');
+
+  // ── UTF-8 ANAHTAR ──────────────────────────────
+  /* atob() base64'ü Latin-1 olarak çözüyor. Türkçe karakterli bir ADMIN_KEY
+     baytları UTF-8 olarak yeniden çözülmezse HİÇBİR ZAMAN eşleşmiyor ve
+     kullanıcı kalıcı 401 alıyor — üstelik cevap charset="UTF-8" diyor. */
+  rapor.baslik('Türkçe karakterli anahtar');
+  const utf8Env = { ...env, ADMIN_KEY: 'şifre-çok-güçlü' };
+  const utf8Istek = (anahtar) => new Request('https://w.dev/admin', {
+    headers: { Authorization: 'Basic ' + Buffer.from('admin:' + anahtar, 'utf8').toString('base64') }
+  });
+  const { adminKapisi } = await import('../../worker/src/kimlik.js');
+  rapor.kontrol('Türkçe anahtar kabul ediliyor',
+    adminKapisi(utf8Istek('şifre-çok-güçlü'), utf8Env) === null);
+  rapor.kontrol('Yanlış Türkçe anahtar reddediliyor',
+    adminKapisi(utf8Istek('şifre-çok-guclu'), utf8Env) !== null);
+  rapor.kontrol('ASCII anahtar hâlâ çalışıyor',
+    adminKapisi(utf8Istek('gizli-panel-anahtari'), env) === null);
+  rapor.kontrol('Emoji bile olsa çalışıyor',
+    adminKapisi(utf8Istek('anahtar-🔑'), { ...env, ADMIN_KEY: 'anahtar-🔑' }) === null);
 }

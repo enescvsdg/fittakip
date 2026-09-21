@@ -286,4 +286,30 @@ export default async function ({ rapor }) {
   const durum = await env.REMINDERS.get('gida:durum', 'json');
   rapor.kontrol('Durum yazıldı', durum && typeof durum.usdaSira === 'number',
     JSON.stringify(durum));
+
+  // ── BARKODSUZ KAYIT ────────────────────────────
+  /* id barkoddan üretiliyor. Barkodsuz ürünlerin hepsi aynı id'yi alıyor ve
+     turuYaz bunları tek kayda indirip gerisini kopya sayıyordu — sessiz veri
+     kaybı. */
+  rapor.baslik('barkodsuz ürün eleniyor');
+  rapor.kontrol('Kodu boş ürün kayıt olmuyor',
+    offKaydiCoz(offUrun('', 'Barkodsuz', [100, 5, 10, 1])) === null);
+  rapor.kontrol('Kodu boşluklu ürün de eleniyor',
+    offKaydiCoz(offUrun('   ', 'Boşluklu', [100, 5, 10, 1])) === null);
+  rapor.kontrol('Kodu olan geçiyor',
+    offKaydiCoz(offUrun('123', 'Kodlu', [100, 5, 10, 1])) !== null);
+
+  const karisik = offAg({ 1: [
+    offUrun('', 'Barkodsuz A', [100, 5, 10, 1]),
+    offUrun('', 'Barkodsuz B', [200, 6, 20, 2]),
+    offUrun('777', 'Kodlu C', [300, 7, 30, 3])
+  ] });
+  const karisikSonuc = await offTuru(env, {
+    getir: karisik.getir, mevcutAdlar: new Set(), enFazlaSayfa: 1
+  });
+  rapor.kontrol('Yalnız kodlu ürün kayıt oldu',
+    karisikSonuc.kayitlar.length === 1 && /Kodlu C/.test(karisikSonuc.kayitlar[0].ad),
+    karisikSonuc.kayitlar.map(k => k.ad).join(', '));
+  rapor.kontrol('id benzersiz',
+    new Set(karisikSonuc.kayitlar.map(k => k.id)).size === karisikSonuc.kayitlar.length);
 }

@@ -103,4 +103,32 @@ export default async function ({ rapor }) {
     yemekler ? String(yemekler.gidalar.length) : '(yok)');
   rapor.kontrol('Yemeklerin tarifi kaydedilmiş',
     (kaynak.match(/tarif: '/g) || []).length === (yemekler ? yemekler.gidalar.length : -1));
+
+  // ── ÜRETİLEN DOSYA GÜVENLİĞİ ───────────────────
+  /* Gıda adları artık ajanlardan geliyor: Open Food Facts katkıcı girdisi ve
+     marka ürün sayfaları. Yalnız tırnağı kaçırmak yetmiyor — sonunda ters
+     bölü olan ya da satır sonu içeren tek bir ad, üretilen foods.js'i
+     çalıştırılamaz hale getirip "veri-al"ın tamamını durduruyordu. */
+  rapor.baslik('düşmanca gıda adları dosyayı bozmuyor');
+  const { metinSabiti } = await import('../../tools/gida-topla.mjs');
+
+  const zorluAdlar = [
+    ['ters bölü sonu', 'Bisküvi\\'],
+    ['satır sonu', 'Ürün\nadı'],
+    ['tırnak', "Çoban'ın Salatası"],
+    ['kod denemesi', "x\\', kcal: 0, zararli: (function(){ globalThis.GIDA_SIZDI = 1; return 0; })(), q: '"],
+    ['satır ayırıcı', 'Tuhaf\u2028Ad'],
+    ['karışık', "a\\'b\nc\\"]
+  ];
+
+  for (const [etiket, ad] of zorluAdlar) {
+    const satir = 'var K = { name: ' + metinSabiti(ad) + ', kcal: 100 };';
+    let geri = null, hata = null;
+    try { geri = new Function(satir + ' return K;')(); }
+    catch (e) { hata = e.message; }
+    rapor.kontrol(etiket + ' — dosya çalıştırılabiliyor', hata === null, String(hata).slice(0, 45));
+    rapor.kontrol(etiket + ' — ad bozulmadan geri geliyor',
+      geri && geri.name === ad, geri ? JSON.stringify(geri.name).slice(0, 50) : '(çalışmadı)');
+  }
+  rapor.kontrol('Hiçbir kod çalışmadı', globalThis.GIDA_SIZDI === undefined);
 }

@@ -120,10 +120,17 @@ function ozet(kaynak) {
 function guncellemeKaydi(bizim, aday) {
   const k = aday.kayit;
   const fark = [];
-  if ((k.secondaryMuscles || []).length) {
+
+  /* Uygulamada zaten olan veriyi tekrar teklif etmiyoruz. Bu kontrol olmadan
+     ajan her gece aynı kayıtları yeniden üretiyor ve kuyruk hiç boşalmıyor:
+     "veri-al" onaylananları işliyor, ertesi gece aynısı geri geliyor. */
+  const mevcutIkincil = (bizim.secondary || []).length;
+  const mevcutTalimat = (bizim.instructions || []).length;
+
+  if ((k.secondaryMuscles || []).length && !mevcutIkincil) {
     fark.push(['ikincil kas', '—', kaslarTr(k.secondaryMuscles), 'arti']);
   }
-  if ((k.instructions || []).length) {
+  if ((k.instructions || []).length && !mevcutTalimat) {
     fark.push(['talimat', 'yok', k.instructions.length + ' adım', 'arti']);
   }
   if (!fark.length) return null;   // eklenecek bir şey yoksa kayıt üretme
@@ -155,6 +162,9 @@ function guncellemeKaydi(bizim, aday) {
 }
 
 function eslesmeyenKaydi(bizim) {
+  /* Talimatı elle yazılmış bir hareket için "kaynakta yok" demenin anlamı
+     kalmıyor — iş bitmiş. */
+  if ((bizim.instructions || []).length) return null;
   return {
     id: 'egzersiz:eksik:' + adAnahtari(bizim.name),
     tur: 'guncelleme',
@@ -208,7 +218,11 @@ export function kayitlariUret(mevcut, kaynak) {
 
   for (const bizim of mevcut) {
     const aday = enIyiAday(bizim, kaynak);
-    if (!aday) { kayitlar.push(eslesmeyenKaydi(bizim)); continue; }
+    if (!aday) {
+      const eksik = eslesmeyenKaydi(bizim);
+      if (eksik) kayitlar.push(eksik);
+      continue;
+    }
     kullanilan.add(aday.kayit.name);
     const k = guncellemeKaydi(bizim, aday);
     if (k) kayitlar.push(k);

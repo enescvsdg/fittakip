@@ -89,8 +89,26 @@ async function main() {
 
 function sayi(x) { return Number.isInteger(x) ? String(x) : String(x); }
 
+/* Tek tırnaklı JS metin sabiti üretir.
+
+   Yalnız tırnağı kaçırmak YETMİYOR ve bu artık teorik bir kaygı değil: gıda
+   adları ajanlardan geliyor (Open Food Facts katkıcı girdisi, marka ürün
+   sayfaları). Sonunda ters bölü olan ya da satır sonu içeren tek bir ad
+   üretilen foods.js'i çalıştırılamaz hale getiriyor ve "veri-al"ın tamamını
+   durduruyor. Ters bölü, tırnak ve satır sonu karakterlerinin hepsi
+   kaçırılıyor — U+2028/U+2029 dahil, onlar da JavaScript'te satır sonu. */
+export function metinSabiti(t) {
+  return "'" + String(t)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029') + "'";
+}
+
 function kayitYaz(g) {
-  const parca = ["name: '" + g.name.replace(/'/g, "\\'") + "'",
+  const parca = ['name: ' + metinSabiti(g.name),
                  'kcal: ' + sayi(g.kcal), 'protein: ' + sayi(g.protein),
                  'carbs: ' + sayi(g.carbs), 'fat: ' + sayi(g.fat)];
   if (g.boylar) {
@@ -104,7 +122,7 @@ function kayitYaz(g) {
       .map(([k, v]) => k + ': ' + sayi(v)).join(', ');
     parca.push('mikro: { ' + alanlar + ' }');
   }
-  if (g.tarif) parca.push("tarif: '" + g.tarif.replace(/'/g, "\\'") + "'");
+  if (g.tarif) parca.push('tarif: ' + metinSabiti(g.tarif));
   return '    { ' + parca.join(', ') + ' }';
 }
 

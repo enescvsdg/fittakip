@@ -342,4 +342,41 @@ export default async function ({ rapor }) {
     }
   });
   rapor.kontrol('Gemini\'ye hiç gidilmedi', agaCikti === false);
+
+  // ── KUYRUK YAKINSIYOR ──────────────────────────
+  /* En sinsi hatalardan biriydi: uygulamanın mevcut listesi talimat bilgisini
+     taşımıyordu, ajan da bir hareketin İŞLENDİĞİNİ bilemiyordu. Her gece aynı
+     ~281 güncelleme kaydı yeniden üretiliyor, kuyruk hiç boşalmıyordu. */
+  rapor.baslik('işlenmiş kayıt tekrar teklif edilmiyor');
+  const kaynakTam = [kaynakKayit('Squat', 'barbell', 'quadriceps',
+    { secondaryMuscles: ['glutes'], instructions: ['Çömel.', 'Kalk.'] })];
+
+  const islenmemis = kayitlariUret(
+    [{ name: 'Squat', equipment: 'barbell', level: 'beginner', muscle: 'quadriceps' }],
+    kaynakTam);
+  rapor.kontrol('İşlenmemiş hareket için kayıt üretiliyor',
+    islenmemis.some(k => k.ad === 'Squat' && k.tur === 'guncelleme'),
+    islenmemis.map(k => k.ad + ':' + k.tur).join(', '));
+
+  const islenmis = kayitlariUret(
+    [{ name: 'Squat', equipment: 'barbell', level: 'beginner', muscle: 'quadriceps',
+       secondary: ['glutes'], instructions: ['Çömel.', 'Kalk.'] }],
+    kaynakTam);
+  rapor.kontrol('İşlenmiş hareket için kayıt üretilmiyor',
+    !islenmis.some(k => k.ad === 'Squat'),
+    islenmis.map(k => k.ad).join(', ') || 'hiç kayıt yok');
+
+  rapor.baslik('talimatı elle yazılmış eşleşmeyen de susuyor');
+  const elleYazilmis = kayitlariUret(
+    [{ name: 'Burpee', equipment: 'none', level: 'intermediate', muscle: 'chest',
+       instructions: ['Çömel.', 'Zıpla.'] }],
+    [kaynakKayit('Alakasız', 'barbell', 'biceps')]);
+  rapor.kontrol('"Kaynakta yok" kaydı üretilmiyor',
+    !elleYazilmis.some(k => k.ad === 'Burpee'),
+    elleYazilmis.map(k => k.ad).join(', ') || 'hiç kayıt yok');
+  const talimatsiz = kayitlariUret(
+    [{ name: 'Burpee', equipment: 'none', level: 'intermediate', muscle: 'chest' }],
+    [kaynakKayit('Alakasız', 'barbell', 'biceps')]);
+  rapor.kontrol('Talimatsızsa yine uyarılıyor',
+    talimatsiz.some(k => k.ad === 'Burpee' && k.supheli));
 }

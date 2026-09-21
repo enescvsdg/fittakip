@@ -9,7 +9,7 @@
 import { kur, cronLoglariniSustur } from './_ortam.mjs';
 import {
   SITELER, urunAdresiMi, haritadanAdresler, robotstanHarita,
-  adresleriKesfet, siteyiTara, calistir, ZIYARET_ANAHTARI
+  adresleriKesfet, siteyiTara, calistir, ayniSite, ZIYARET_ANAHTARI
 } from '../../worker/src/ajanlar/takviye.js';
 import { bekleyenleriOku } from '../../worker/src/onay.js';
 
@@ -193,4 +193,74 @@ export default async function ({ rapor }) {
   const ag10 = sahteAg();
   const ikinci = await calistir(env, { getir: ag10.getir, siteler: [SITE] });
   rapor.kontrol('İkinci tur yeni kayıt üretmiyor', ikinci.yeni === 0, JSON.stringify(ikinci.yeni));
+
+  // ── İNDEKS ÇOCUKLARI DA İZİN LİSTESİNE TABİ ────
+  /* Sitemap indeksi başka bir host'a işaret edebilir. Eskiden yalnız ürün
+     adresleri denetleniyor, indeks çocukları denetimsiz kuyruğa giriyordu —
+     ajan izin listesi dışına istek atabilirdi. */
+  rapor.baslik('sitemap indeksi izin listesini aşamıyor');
+  const kacakIndeks = `<?xml version="1.0"?><sitemapindex>
+    <sitemap><loc>${KOK}/harita-1.xml</loc></sitemap>
+    <sitemap><loc>https://kotu-site.dev/harita.xml</loc></sitemap>
+  </sitemapindex>`;
+  const indeksIstekleri = [];
+  const indeksAg = async (adres) => {
+    indeksIstekleri.push(String(adres));
+    const yaz = (m, d = 200) => ({ ok: d < 300, status: d, text: async () => m });
+    if (/robots\.txt$/.test(adres)) return yaz('User-agent: *\n');
+    if (/harita-1\.xml$/.test(adres)) return yaz(HARITA);
+    if (/sitemap\.xml$/.test(adres)) return yaz(kacakIndeks);
+    if (/kotu-site/.test(adres)) return yaz('<urlset><url><loc>https://kotu-site.dev/u/1</loc></url></urlset>');
+    return yaz(SAYFA);
+  };
+  const indeksSonuc = await adresleriKesfet(SITE, { getir: indeksAg, kurallar: null });
+  rapor.kontrol('Yabancı host\'a hiç istek gitmedi',
+    !indeksIstekleri.some(a => a.includes('kotu-site')),
+    indeksIstekleri.filter(a => a.includes('kotu-site')).join(', ') || 'gitmedi');
+  rapor.kontrol('Kendi indeks çocuğu gezildi',
+    indeksIstekleri.some(a => a.includes('harita-1.xml')));
+  rapor.kontrol('Ürünler yine bulundu', indeksSonuc.length === 2, String(indeksSonuc.length));
+
+  rapor.baslik('robots.txt site başına bir kez indiriliyor');
+  const sayacAg = sahteAg();
+  await siteyiTara(env, SITE, { getir: sayacAg.getir, gorulen: new Set(), enFazlaUrun: 1 });
+  const robotsSayisi = sayacAg.istekler.filter(a => /robots\.txt$/.test(a)).length;
+  rapor.kontrol('Tek istek', robotsSayisi === 1, String(robotsSayisi));
+
+  // ── HOST EŞLEŞMESİ ─────────────────────────────
+  /* Metin öneki kullanmak izin listesini deliyordu:
+       "https://www.ornek.dev" öneki
+         "https://www.ornek.dev.saldirgan.dev/x"  adresine de uyuyor
+         "https://www.ornek.dev@evil.dev/x"       adresine de.
+     İkisi de ajanı izin listesi dışına çıkarırdı. */
+  rapor.baslik('izin listesi host\'a bakıyor, metin önekine değil');
+  rapor.kontrol('Kendi adresi geçiyor', ayniSite(SITE, KOK + '/urun/whey') === true);
+  rapor.kontrol('Alan adı uzantısı engelleniyor',
+    ayniSite(SITE, 'https://www.ornek.dev.saldirgan.dev/urun/x') === false);
+  rapor.kontrol('Kullanıcı adı hilesi engelleniyor',
+    ayniSite(SITE, 'https://www.ornek.dev@evil.dev/urun/x') === false);
+  rapor.kontrol('Alt alan adı engelleniyor',
+    ayniSite(SITE, 'https://kotu.www.ornek.dev/urun/x') === false);
+  rapor.kontrol('http engelleniyor', ayniSite(SITE, 'http://www.ornek.dev/urun/x') === false);
+  rapor.kontrol('Bozuk adres engelleniyor', ayniSite(SITE, 'bu adres değil') === false);
+
+  rapor.baslik('kaçak sitemap indeksi durduruluyor');
+  const kacakXml = `<?xml version="1.0"?><sitemapindex>
+    <sitemap><loc>https://www.ornek.dev.saldirgan.dev/harita.xml</loc></sitemap>
+    <sitemap><loc>https://www.ornek.dev@evil.dev/harita.xml</loc></sitemap>
+  </sitemapindex>`;
+  const kacakIstekler = [];
+  const kacakSonuc = await adresleriKesfet(SITE, {
+    getir: async (adres) => {
+      kacakIstekler.push(String(adres));
+      const yaz = m => ({ ok: true, status: 200, text: async () => m });
+      if (/sitemap\.xml$/.test(adres)) return yaz(kacakXml);
+      return yaz('<urlset></urlset>');
+    },
+    kurallar: null
+  });
+  rapor.kontrol('Saldırgan host\'a istek gitmedi',
+    !kacakIstekler.some(a => /saldirgan|evil/.test(a)),
+    kacakIstekler.join(', '));
+  rapor.kontrol('Hiç adres bulunmadı', kacakSonuc.length === 0, String(kacakSonuc.length));
 }

@@ -139,6 +139,7 @@ export async function kararlariIsle(env, kararlar) {
 
   let onaylanan = 0, reddedilen = 0;
   for (const [ajan, kararHarita] of ajanaGore) {
+    let buAjanda = 0;
     const bekleyen = await bekleyenleriOku(env, ajan);
     const onayli = await onaylananlariOku(env, ajan);
     const onayliIdler = new Set(onayli.map(k => k.id));
@@ -153,14 +154,16 @@ export async function kararlariIsle(env, kararlar) {
           onayli.push({ ...kayit, onayAni: new Date().toISOString() });
           onayliIdler.add(kayit.id);
         }
-        onaylanan++;
+        onaylanan++; buAjanda++;
       } else {
         reddedilen++;
       }
     }
 
     await listeYaz(env, BEKLEYEN(ajan), kalan);
-    if (onaylanan) await listeYaz(env, ONAYLI(ajan), onayli);
+    /* Ajan bazında bakıyoruz: eskiden çapraz toplam okunuyordu ve yalnız
+       reddi olan bir ajan da değişmemiş listesini gereksiz yere yazıyordu. */
+    if (buAjanda) await listeYaz(env, ONAYLI(ajan), onayli);
   }
   return { onaylanan, reddedilen };
 }

@@ -145,10 +145,17 @@ export function tablodanOku(html) {
       if (!alan) continue;
       /* Değer ilk dolu hücrede olmayabilir: bazı tablolarda "100 g" ve
          "porsiyon" diye iki sütun var, ilkini alıyoruz. */
-      const sutun = hucreler.findIndex((h, i) => i > 0 && /\d/.test(h));
-      if (sutun < 0) continue;
-      if (degerSutunu === null) degerSutunu = sutun;
-      const deger = alan === 'kcal' ? kcalCoz(hucreler[sutun]) : sayiCoz(hucreler[sutun]);
+      /* Sütun BİR KEZ seçiliyor. Satır başına yeniden bulsaydık, değeri boş
+         bir satır sayısını sonraki sütundan (porsiyon) alır ve biz onu
+         100 g değeri sanardık — gözle fark edilmeyen bir hata. */
+      if (degerSutunu === null) {
+        const ilk = hucreler.findIndex((h, i) => i > 0 && /\d/.test(h));
+        if (ilk < 0) continue;
+        degerSutunu = ilk;
+      }
+      const hucre = hucreler[degerSutunu];
+      if (hucre === undefined || !/\d/.test(hucre)) continue;
+      const deger = alan === 'kcal' ? kcalCoz(hucre) : sayiCoz(hucre);
       if (deger === null) continue;
       if (cikti[alan] === undefined) cikti[alan] = deger;
     }

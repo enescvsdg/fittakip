@@ -72,6 +72,19 @@ export function robotstanHarita(metin) {
     .map(s => s.replace(/^\s*sitemap:\s*/i, '').trim());
 }
 
+/* Adres bu sitenin mi?
+
+   Metin öneki KULLANILMIYOR ve sebebi somut: "https://www.hardline.com.tr"
+   öneki "https://www.hardline.com.tr.saldirgan.dev/x" adresine de uyuyor,
+   "https://www.hardline.com.tr@evil.dev/x" adresine de. İkisi de izin
+   listesini delerdi. Host'u ayrıştırıp birebir karşılaştırıyoruz. */
+export function ayniSite(site, adres) {
+  let a, k;
+  try { a = new URL(adres); k = new URL(site.kok); } catch { return false; }
+  if (a.protocol !== 'https:') return false;
+  return a.host === k.host;
+}
+
 async function metinAl(adres, getir) {
   const cevap = await getir(adres, { headers: BASLIKLAR });
   if (!cevap.ok) {
@@ -83,12 +96,10 @@ async function metinAl(adres, getir) {
 }
 
 /* Bir sitenin ürün adreslerini bulur. */
-export async function adresleriKesfet(site, { getir, kurallar, enFazlaHarita = 4 }) {
-  const denenecek = [];
-  try {
-    const robots = await metinAl(site.kok.replace(/\/+$/, '') + '/robots.txt', getir);
-    denenecek.push(...robotstanHarita(robots));
-  } catch { /* robots okunamadıysa varsayılan adrese düşüyoruz */ }
+export async function adresleriKesfet(site, { getir, kurallar, enFazlaHarita = 4, robotsMetni }) {
+  /* robots.txt zaten kurallariGetir'de okundu; metni buraya taşıyoruz ki
+     site başına iki kez istek atmayalım. */
+  const denenecek = robotstanHarita(robotsMetni || '');
   if (!denenecek.length) denenecek.push(site.kok.replace(/\/+$/, '') + '/sitemap.xml');
 
   const bulunan = new Set();
@@ -103,8 +114,11 @@ export async function adresleriKesfet(site, { getir, kurallar, enFazlaHarita = 4
     try { xml = await metinAl(harita, getir); } catch { continue; }
     const { adresler, indeksMi } = haritadanAdresler(xml);
     for (const a of adresler) {
+      /* İzin listesi kontrolü İNDEKS ÇOCUKLARINA DA uygulanıyor. Eskiden
+         yalnız ürün adreslerine bakılıyordu; bir sitenin sitemap indeksi
+         başka bir host'a işaret etseydi ajan oraya istek atardı. */
+      if (!ayniSite(site, a)) continue;
       if (indeksMi) { kuyruk.push(a); continue; }
-      if (!a.startsWith(site.kok.replace(/\/+$/, ''))) continue;   // izin listesi dışına çıkma
       if (!urunAdresiMi(a)) continue;
       let yol;
       try { yol = new URL(a).pathname; } catch { continue; }
@@ -156,7 +170,9 @@ export async function siteyiTara(env, site, { getir, gorulen, enFazlaUrun = TUR_
     return { site: site.id, atlandi: true, sebep: izin.sebep, kayitlar: [] };
   }
 
-  const adresler = await adresleriKesfet(site, { getir, kurallar: izin.kurallar });
+  const adresler = await adresleriKesfet(site, {
+    getir, kurallar: izin.kurallar, robotsMetni: izin.metin
+  });
   const yeniler = adresler.filter(a => !gorulen.has(a)).slice(0, enFazlaUrun);
 
   const gecikme = izin.kurallar && izin.kurallar.gecikme

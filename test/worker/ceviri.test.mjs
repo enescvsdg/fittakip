@@ -166,4 +166,19 @@ export default async function ({ rapor }) {
     [...env.REMINDERS.store.keys()].filter(k => k.startsWith('ceviri:')).join(','));
   rapor.kontrol('Anahtar adı beklenen',
     env.REMINDERS.store.has(ONBELLEK_ANAHTARI));
+
+  // ── SINIR HATA HÂLİNDE DE GEÇERLİ ──────────────
+  /* Sayaç yalnız başarıda artıyordu: Gemini'nin kötü bir gecesinde ajan
+     20 yerine onlarca istek atıyordu. */
+  rapor.baslik('model patlasa da yığın sınırı aşılmıyor');
+  const patlak = sahteCevirici({ patlat: true });
+  const cokIstek = Array.from({ length: YIGIN_BOYU * 6 }, (_, i) => istek('P' + i, 2));
+  await cevir(env, cokIstek, { getir: patlak.getir, onbellek: {}, enFazlaYigin: 2 });
+  rapor.kontrol('En fazla iki istek atıldı', patlak.cagrilar.length === 2,
+    String(patlak.cagrilar.length));
+
+  const yarim = sahteCevirici({ bozuk: true });
+  await cevir(env, cokIstek, { getir: yarim.getir, onbellek: {}, enFazlaYigin: 3 });
+  rapor.kontrol('Yarım yanıtta da sınır geçerli', yarim.cagrilar.length === 3,
+    String(yarim.cagrilar.length));
 }

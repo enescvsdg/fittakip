@@ -163,4 +163,36 @@ export default async function ({ rapor, adres, browser }) {
   rapor.baslik('konsol temiz');
   rapor.kontrol('Sayfa hatası yok', hatalar.length === 0, hatalar.join(' | '));
   await ctx.close();
+  // ── DİNLEYİCİ BİRİKMESİ ────────────────────────
+  /* svgWrap her Ön/Arka geçişinde yeniden doldurulyor ama ELEMAN aynı kalıyor.
+     Dinleyiciyi her seferinde eklemek onları biriktiriyordu: on geçişten sonra
+     tek tıklama on kez işleniyor. */
+  const d = await sayfaAc(browser, { adres, veri: VERI });
+  await d.page.evaluate(() => {
+    EXERCISE_INFO['Barbell Bench Press'] = { secondary: ['shoulders', 'triceps'], instructions: ['x'] };
+    renderWorkoutTracking();
+  });
+  await paneliAc(d.page);
+
+  rapor.baslik('görünüm değişimi dinleyici biriktirmiyor');
+  await d.page.evaluate(() => {
+    window.__kapatmaSayaci = 0;
+    const asil = window.kasBalonuKapat;
+    window.kasBalonuKapat = function (p) { window.__kapatmaSayaci++; return asil(p); };
+  });
+  for (let i = 0; i < 4; i++) {
+    await d.page.click('.anatomy-view-btn[data-view-btn="back"]');
+    await d.page.waitForTimeout(250);
+    await d.page.click('.anatomy-view-btn[data-view-btn="front"]');
+    await d.page.waitForTimeout(250);
+  }
+  await d.page.evaluate(() => { window.__kapatmaSayaci = 0; });
+  await d.page.evaluate(() => document.querySelector('.anatomy-svg-wrap').click());
+  await d.page.waitForTimeout(200);
+  const kacKez = await d.page.evaluate(() => window.__kapatmaSayaci);
+  rapor.kontrol('Sekiz geçişten sonra tek tıklama bir kez işleniyor',
+    kacKez === 1, String(kacKez) + ' kez');
+  rapor.kontrol('Panel hâlâ çalışıyor',
+    (await d.page.locator('.muscle-overlay.birincil').count()) > 0);
+  await d.ctx.close();
 }

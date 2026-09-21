@@ -140,4 +140,38 @@ export default async function ({ rapor, adres, browser }) {
   rapor.baslik('konsol temiz');
   rapor.kontrol('Sayfa hatası yok', hatalar.length === 0, hatalar.join(' | '));
   await ctx.close();
+  // ── ETİKET ÇAKIŞMASI ───────────────────────────
+  /* EQUIPMENT_TR'de hem 'none' hem 'other' boş metne eşleniyor. İkisini de
+     "Ekipmansız" yazmak aynı listede iki özdeş seçenek üretiyordu — üstelik
+     'other' ekipmansız değil, sınıflanmamış demek (sled, atlas taşı). */
+  const { ctx: c2, page: p2, hatalar: h2 } = await sayfaAc(browser, { adres });
+  await p2.click('.bottom-nav-item[data-page="workout"]');
+  await p2.click('#toggleBuilderBtn');
+  await p2.waitForSelector('#builder-equipment');
+
+  rapor.baslik('ekipman etiketleri çakışmıyor');
+  const cakisma = await p2.evaluate(() => {
+    const sonuc = { cakisan: [], otherAdi: null, noneAdi: null };
+    const mekanlar = Object.keys(EXERCISES);
+    const bolgeler = new Set();
+    mekanlar.forEach(m => EXERCISES[m].forEach(e => bolgeler.add(m + '|' + e.muscle)));
+    for (const anahtar of bolgeler) {
+      const [mekan, kas] = anahtar.split('|');
+      const kodlar = [...new Set(EXERCISES[mekan]
+        .filter(e => e.muscle === kas).map(e => e.equipment || 'none'))];
+      const etiketler = kodlar.map(ekipmanEtiketi);
+      const tekil = new Set(etiketler);
+      if (tekil.size !== etiketler.length) sonuc.cakisan.push(anahtar + ': ' + etiketler.join(','));
+    }
+    sonuc.otherAdi = ekipmanEtiketi('other');
+    sonuc.noneAdi = ekipmanEtiketi('none');
+    return sonuc;
+  });
+  rapor.kontrol('Hiçbir bölgede özdeş iki etiket yok',
+    cakisma.cakisan.length === 0, cakisma.cakisan.slice(0, 3).join(' | ') || 'çakışma yok');
+  rapor.kontrol('"other" ayrı adlandırılıyor', cakisma.otherAdi === 'Diğer', cakisma.otherAdi);
+  rapor.kontrol('"none" Ekipmansız kalıyor', cakisma.noneAdi === 'Ekipmansız', cakisma.noneAdi);
+  rapor.kontrol('İkisi farklı', cakisma.otherAdi !== cakisma.noneAdi);
+  rapor.kontrol('Konsol temiz (ikinci sayfa)', h2.length === 0, h2.join(' | '));
+  await c2.close();
 }

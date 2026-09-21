@@ -7,7 +7,8 @@
    kaynak alanı verinin nereden geldiğini söyler:
      elle  — genel beslenme kaynaklarından girilmiş
      tarif — malzemelerinden hesaplanmış (tarif alanında yazıyor)
-     usda  — USDA FoodData Central'dan çekilmiş
+     usda  — USDA FoodData Central'dan çekilmiş (kamu malı)
+     off   — Open Food Facts'ten çekilmiş (ODbL; uygulamada künye var)
    ══════════════════════════════════════════ */
 
 var TURKISH_FOODS = {
