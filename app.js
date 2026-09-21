@@ -637,18 +637,158 @@ function loadAnatomySVG(view, callback) {
     });
 }
 
-// Belirtilen kas grubunu SVG üzerinde highlight eder, diğerlerini nötrler
-function highlightMuscleInSvg(svgWrapEl, muscle) {
+/* Bir hareketin ikincil kasları. Veri EXERCISE_INFO'da ve ajan onayıyla
+   doluyor — henüz onaylanmamış hareketlerde boş, o zaman panel eskisi gibi
+   tek kas gösteriyor. */
+function ikincilKaslar(exerciseName) {
+  if (!exerciseName || typeof EXERCISE_INFO === 'undefined') return [];
+  var bilgi = EXERCISE_INFO[exerciseName];
+  return (bilgi && Array.isArray(bilgi.secondary)) ? bilgi.secondary : [];
+}
+
+/* Kas gruplarını boyar: birincil ve ikincil farklı renkte.
+   Bench press'te sadece göğüs değil omuz ve triceps de çalışıyor; tek renk
+   bunu gizliyordu. */
+function highlightMuscleInSvg(svgWrapEl, muscle, ikincil) {
   if (!svgWrapEl) return;
-  var regions = svgWrapEl.querySelectorAll('.muscle-overlay');
-  regions.forEach(function(el) {
-    el.classList.toggle('active', el.getAttribute('data-muscle') === muscle);
+  var ikincilSet = {};
+  (ikincil || []).forEach(function(k) { ikincilSet[k] = true; });
+
+  svgWrapEl.querySelectorAll('.muscle-overlay').forEach(function(el) {
+    var kas = el.getAttribute('data-muscle');
+    el.classList.remove('active', 'birincil', 'ikincil', 'secili');
+    if (kas === muscle) el.classList.add('birincil');
+    else if (ikincilSet[kas]) el.classList.add('ikincil');
   });
 }
 
-// SVG'yi panele yerleştirir ve ilgili kası highlight eder
+var KAS_ROL_ADI = { birincil: 'Birincil', ikincil: 'İkincil' };
+
+function kasRolu(panelEl, kas) {
+  if (kas === panelEl.getAttribute('data-muscle')) return 'birincil';
+  var ikincil = (panelEl.getAttribute('data-ikincil') || '').split('|').filter(Boolean);
+  return ikincil.indexOf(kas) >= 0 ? 'ikincil' : null;
+}
+
+/* Konuşma balonu: dokunulan kasın üstünde belirir, ucu onu gösterir.
+   Bilgisayarda imleç üstüne gelince de çıkıyor. */
+function kasBalonuGoster(panelEl, hedefEl) {
+  var kas = hedefEl.getAttribute('data-muscle');
+  var rol = kasRolu(panelEl, kas);
+  if (!rol) return;
+
+  kasBalonuKapat(panelEl);
+  var sahne = panelEl.querySelector('.anatomy-svg-wrap');
+  if (!sahne) return;
+
+  sahne.querySelectorAll('[data-muscle="' + kas + '"]').forEach(function(e) {
+    e.classList.add('secili');
+  });
+  panelEl.querySelectorAll('.kas-satiri').forEach(function(li) {
+    li.classList.toggle('secili', li.getAttribute('data-kas') === kas);
+  });
+
+  var balon = document.createElement('div');
+  balon.className = 'kas-balon';
+  balon.innerHTML = '<b>' + escapeHtml(MUSCLE_TR[kas] || kas) + '</b>' +
+    '<i>' + KAS_ROL_ADI[rol] + ' kas</i>';
+  sahne.appendChild(balon);
+
+  var sr = sahne.getBoundingClientRect();
+  var er = hedefEl.getBoundingClientRect();
+  var br = balon.getBoundingClientRect();
+  var merkez = er.left + er.width / 2 - sr.left;
+  var sol = merkez - br.width / 2;
+  var enCok = sahne.clientWidth - br.width - 6;
+  if (sol < 6) sol = 6;
+  if (sol > enCok) sol = enCok > 6 ? enCok : 6;
+
+  var ust = er.top - sr.top - br.height - 11;
+  /* Figürün tepesindeki kaslarda balon yukarı sığmıyor; altına alıp kuyruğu
+     ters çeviriyoruz. */
+  if (ust < 4) { ust = er.bottom - sr.top + 11; balon.classList.add('alt'); }
+
+  balon.style.left = sol + 'px';
+  balon.style.top = ust + 'px';
+  balon.style.setProperty('--kuyruk', (merkez - sol) + 'px');
+}
+
+function kasBalonuKapat(panelEl) {
+  var balon = panelEl.querySelector('.kas-balon');
+  if (balon) balon.remove();
+  panelEl.querySelectorAll('.muscle-overlay.secili').forEach(function(e) {
+    e.classList.remove('secili');
+  });
+  panelEl.querySelectorAll('.kas-satiri.secili').forEach(function(e) {
+    e.classList.remove('secili');
+  });
+}
+
+/* Boyalı kaslara dokunma/imleç dinleyicileri. SVG her görünüm değişiminde
+   yeniden yazıldığı için burada bağlanıyor. */
+function kasDinleyicileriniBagla(panelEl, svgWrap) {
+  svgWrap.querySelectorAll('.muscle-overlay.birincil, .muscle-overlay.ikincil')
+    .forEach(function(el) {
+      el.addEventListener('pointerenter', function(e) {
+        if (e.pointerType === 'mouse') kasBalonuGoster(panelEl, el);
+      });
+      el.addEventListener('pointerleave', function(e) {
+        if (e.pointerType === 'mouse') kasBalonuKapat(panelEl);
+      });
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        kasBalonuGoster(panelEl, el);
+      });
+    });
+
+  svgWrap.addEventListener('click', function(e) {
+    if (e.target === svgWrap || e.target.tagName === 'svg') kasBalonuKapat(panelEl);
+  });
+
+  panelEl.querySelectorAll('.kas-satiri').forEach(function(li) {
+    li.addEventListener('click', function() {
+      var el = svgWrap.querySelector('[data-muscle="' + li.getAttribute('data-kas') + '"]');
+      if (el) kasBalonuGoster(panelEl, el);
+    });
+  });
+}
+
+/* Figürün altındaki kalıcı liste: hangi kasların çalıştığı dokunmaya gerek
+   kalmadan görünüyor. Yalnız bu görünümde (ön/arka) olan kaslar listeleniyor. */
+function kasListesiCiz(panelEl, svgWrap) {
+  var liste = panelEl.querySelector('.kas-listesi');
+  if (!liste) return;
+
+  var gorunen = [];
+  svgWrap.querySelectorAll('.muscle-overlay').forEach(function(el) {
+    var kas = el.getAttribute('data-muscle');
+    var rol = kasRolu(panelEl, kas);
+    if (rol && !gorunen.some(function(g) { return g.kas === kas; })) {
+      gorunen.push({ kas: kas, rol: rol });
+    }
+  });
+
+  gorunen.sort(function(a, b) {
+    if (a.rol !== b.rol) return a.rol === 'birincil' ? -1 : 1;
+    return (MUSCLE_TR[a.kas] || a.kas).localeCompare(MUSCLE_TR[b.kas] || b.kas, 'tr');
+  });
+
+  if (!gorunen.length) {
+    liste.innerHTML = '<li class="kas-bos">Bu görünümde çalışan kas yok</li>';
+    return;
+  }
+  liste.innerHTML = gorunen.map(function(g) {
+    return '<li class="kas-satiri" data-kas="' + escapeHtml(g.kas) + '">' +
+      '<i class="kas-nokta ' + g.rol + '"></i>' +
+      '<span class="kas-ad">' + escapeHtml(MUSCLE_TR[g.kas] || g.kas) + '</span>' +
+      '<span class="kas-rol">' + KAS_ROL_ADI[g.rol] + '</span></li>';
+  }).join('');
+}
+
+// SVG'yi panele yerleştirir ve ilgili kasları boyar
 function populateAnatomyPanel(panelEl) {
   var muscle = panelEl.getAttribute('data-muscle');
+  var ikincil = (panelEl.getAttribute('data-ikincil') || '').split('|').filter(Boolean);
   var view = panelEl.getAttribute('data-current-view');
   var svgWrap = panelEl.querySelector('.anatomy-svg-wrap');
 
@@ -658,24 +798,30 @@ function populateAnatomyPanel(panelEl) {
       return;
     }
     svgWrap.innerHTML = svgText;
-    highlightMuscleInSvg(svgWrap, muscle);
+    highlightMuscleInSvg(svgWrap, muscle, ikincil);
+    kasListesiCiz(panelEl, svgWrap);
+    kasDinleyicileriniBagla(panelEl, svgWrap);
   });
 }
 
 // Ön/Arka anatomi panelinin HTML iskeletini üretir (sepette ve takip
 // kartlarında ortak kullanılır). SVG içeriği ayrıca populateAnatomyPanel
 // ile (tembel) doldurulur.
-function buildAnatomyPanelHTML(muscle) {
+function buildAnatomyPanelHTML(muscle, exerciseName) {
   var defaultView = MUSCLE_VIEW[muscle] || 'front';
   var muscleLabel = MUSCLE_TR[muscle] || muscle;
+  var ikincil = ikincilKaslar(exerciseName);
   return (
-    '<div class="anatomy-panel" data-current-view="' + defaultView + '" data-muscle="' + escapeHtml(muscle) + '">' +
+    '<div class="anatomy-panel" data-current-view="' + defaultView + '"' +
+      ' data-muscle="' + escapeHtml(muscle) + '"' +
+      ' data-ikincil="' + escapeHtml(ikincil.join('|')) + '">' +
       '<div class="anatomy-view-toggle">' +
         '<button type="button" class="anatomy-view-btn' + (defaultView === 'front' ? ' active' : '') + '" data-view-btn="front">Ön</button>' +
         '<button type="button" class="anatomy-view-btn' + (defaultView === 'back' ? ' active' : '') + '" data-view-btn="back">Arka</button>' +
       '</div>' +
       '<p class="muscle-region-label">' + escapeHtml(muscleLabel) + '</p>' +
       '<div class="anatomy-svg-wrap"><p class="anatomy-loading">Yükleniyor…</p></div>' +
+      '<ul class="kas-listesi"></ul>' +
       '<p class="anatomy-credit">Kas illüstrasyonu: wger.de (CC BY-SA 4.0)</p>' +
     '</div>'
   );
@@ -732,6 +878,7 @@ var builderDayTitleInput  = document.getElementById('builder-day-title');
 var builderLocationSelect = document.getElementById('builder-location');
 var builderRegionSelect   = document.getElementById('builder-region');
 var builderExerciseSelect = document.getElementById('builder-exercise');
+var builderEquipmentSelect = document.getElementById('builder-equipment');
 var builderSetsSelect     = document.getElementById('builder-sets');
 var builderRepsSelect     = document.getElementById('builder-reps');
 var builderNoteInput      = document.getElementById('builder-note');
@@ -771,26 +918,87 @@ function fillRegionSelect(location) {
 }
 
 // Hareket dropdown'ını, seçili mekan + seçili bölgeye (kas grubu) göre doldurur
-function fillExerciseSelect(location, region) {
+/* Ekipman süzgeci. Hareket listesi ajanla birlikte 281'den binlere çıkabiliyor;
+   "Göğüs" seçince 18 çeşit bench press arasından seçmek zorlaşıyor. Elindeki
+   ekipmana göre daraltmak listeyi tekrar kullanılabilir yapıyor. */
+var TUM_EKIPMAN = '*';
+
+function ekipmanEtiketi(kod) {
+  var ad = EQUIPMENT_TR[kod];
+  if (ad === '') return 'Ekipmansız';      // EQUIPMENT_TR'de boş = ekipman yok
+  return ad || kod;
+}
+
+function fillEquipmentSelect(location, region) {
+  if (!builderEquipmentSelect) return;
   var list = EXERCISES[location] || [];
+  var sayim = {};
+  list.forEach(function(ex) {
+    if (ex.muscle !== region) return;
+    var kod = ex.equipment || 'none';
+    sayim[kod] = (sayim[kod] || 0) + 1;
+  });
+
+  var toplam = Object.keys(sayim).reduce(function(n, k) { return n + sayim[k]; }, 0);
+  var kodlar = Object.keys(sayim).sort(function(a, b) {
+    if (sayim[b] !== sayim[a]) return sayim[b] - sayim[a];
+    return ekipmanEtiketi(a).localeCompare(ekipmanEtiketi(b), 'tr');
+  });
+
+  var onceki = builderEquipmentSelect.value;
+  var html = '<option value="' + TUM_EKIPMAN + '">Hepsi (' + toplam + ')</option>';
+  kodlar.forEach(function(kod) {
+    html += '<option value="' + escapeHtml(kod) + '">' +
+      escapeHtml(ekipmanEtiketi(kod)) + ' (' + sayim[kod] + ')</option>';
+  });
+  builderEquipmentSelect.innerHTML = html;
+
+  /* Bölge değişince önceki ekipman seçimi hâlâ geçerliyse koruyoruz —
+     dumbbell'la çalışan biri her bölgede baştan seçmesin. */
+  builderEquipmentSelect.value = (onceki && sayim[onceki]) ? onceki : TUM_EKIPMAN;
+}
+
+function fillExerciseSelect(location, region, equipment) {
+  var list = EXERCISES[location] || [];
+  var secilenEkipman = equipment || TUM_EKIPMAN;
   var html = '';
+  var sayi = 0;
 
   list.forEach(function(ex) {
     if (ex.muscle !== region) return;
+    if (secilenEkipman !== TUM_EKIPMAN && (ex.equipment || 'none') !== secilenEkipman) return;
     html += '<option value="' + escapeHtml(ex.name) + '">' + escapeHtml(ex.name) + '</option>';
+    sayi++;
   });
 
   builderExerciseSelect.innerHTML = html;
+
+  var sayac = document.getElementById('builderExerciseCount');
+  if (sayac) {
+    sayac.textContent = sayi ? sayi + ' hareket listeleniyor'
+      : 'Bu bölge ve ekipmanla hareket yok.';
+  }
+}
+
+function secicileriTazele() {
+  fillEquipmentSelect(builderLocationSelect.value, builderRegionSelect.value);
+  fillExerciseSelect(builderLocationSelect.value, builderRegionSelect.value,
+    builderEquipmentSelect ? builderEquipmentSelect.value : TUM_EKIPMAN);
 }
 
 builderLocationSelect.addEventListener('change', function() {
   fillRegionSelect(builderLocationSelect.value);
-  fillExerciseSelect(builderLocationSelect.value, builderRegionSelect.value);
+  secicileriTazele();
 });
 
-builderRegionSelect.addEventListener('change', function() {
-  fillExerciseSelect(builderLocationSelect.value, builderRegionSelect.value);
-});
+builderRegionSelect.addEventListener('change', secicileriTazele);
+
+if (builderEquipmentSelect) {
+  builderEquipmentSelect.addEventListener('change', function() {
+    fillExerciseSelect(builderLocationSelect.value, builderRegionSelect.value,
+      builderEquipmentSelect.value);
+  });
+}
 
 /* ══════════════════════════════════════════
    SEPET (CART) MANTIĞI
@@ -819,7 +1027,7 @@ function buildCartItemHTML(item, index) {
         '<button type="button" class="cart-item-remove" data-cart-id="' + escapeHtml(item.cartId) + '" title="Sil">✕</button>' +
       '</div>' +
       noteHtml +
-      '<div class="cart-item-anatomy-wrap hidden">' + buildAnatomyPanelHTML(escapeHtml(item.muscle)) + '</div>' +
+      '<div class="cart-item-anatomy-wrap hidden">' + buildAnatomyPanelHTML(item.muscle, item.name) + '</div>' +
     '</div>'
   );
 }
@@ -1120,7 +1328,7 @@ function buildExerciseCardHTML(weekday, ex, isPost) {
       lastPerfHTML +
       '<div class="exercise-card-sets">' + setsHTML + '</div>' +
       noteHtml +
-      '<div class="exercise-anatomy-wrap hidden">' + buildAnatomyPanelHTML(escapeHtml(ex.muscle)) + '</div>' +
+      '<div class="exercise-anatomy-wrap hidden">' + buildAnatomyPanelHTML(ex.muscle, ex.name) + '</div>' +
     '</div>'
   );
 }
@@ -1763,7 +1971,7 @@ updateDashboard();
 fillNumberRange(builderSetsSelect, 1, 10);
 fillNumberRange(builderRepsSelect, 1, 20);
 fillRegionSelect(builderLocationSelect.value);
-fillExerciseSelect(builderLocationSelect.value, builderRegionSelect.value);
+secicileriTazele();
 builderDaySelect.value = activeWeekday;
 
 overallProgressCard.classList.remove('hidden');

@@ -408,3 +408,39 @@ ile bak. Tarayıcıda kayıtlı yanlış bir giriş varsa gizli pencerede dene.
 
 **Ajan turu hata veriyor** — `wrangler tail` ile bak; ajan hataları
 `[ajan]` önekiyle yazılıyor ve yutulmuyor.
+
+---
+
+# Uygulama tarafı
+
+Ajanların getirdiği veri uygulamada şu iki yerde kullanılıyor.
+
+## Kas haritası
+
+Hareket kartındaki anatomi panelinde birincil ve ikincil kaslar **farklı
+renkte** boyanıyor: bench press yapınca sadece göğüs çalışmıyor, omuz ve
+triceps de çalışıyor — tek renkli harita bunu gizliyordu.
+
+Turuncu/mavi çifti seçildi çünkü renk körlüğünde de ayrılıyor; aynı rengin
+koyu/açık tonu ayrılmıyor.
+
+Figürün altında kalıcı bir liste var (hangi kaslar, hangi rolde) ve boyalı bir
+kasa dokununca üstünde konuşma balonu açılıyor. Bilgisayarda imleç üstüne
+gelince de çıkıyor.
+
+İkincil kas verisi `EXERCISE_INFO`'dan geliyor ve ajan onayıyla doluyor. Veri
+gelmeden önce panel eskisi gibi tek kas gösteriyor — özellik veri beklemeden de
+çalışıyor.
+
+## Ekipman filtresi
+
+Antrenman planı oluştururken bölge seçiminin altında ekipman süzgeci var. Ajan
+hareket listesini 281'den binlere çıkarabiliyor; "Göğüs" seçince 18 çeşit bench
+press arasından seçmek zorlaşıyor.
+
+Seçenekler o bölgede gerçekten var olan ekipmanlardan üretiliyor ve yanlarında
+kaç hareket olduğu yazıyor. Bölge değiştiğinde seçim hâlâ geçerliyse
+korunuyor — dumbbell'la çalışan biri her bölgede baştan seçmesin.
+
+"Hepsi" seçiliyken listenin filtresiz hâliyle birebir aynı olduğu testle
+tutuluyor: süzgeç hiçbir hareketi kaybetmemeli.

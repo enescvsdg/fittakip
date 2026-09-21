@@ -666,6 +666,7 @@ select.form-input {
 }
 
 .anatomy-svg-wrap {
+  position: relative;   /* kas balonu buna göre konumlanıyor */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -690,14 +691,114 @@ select.form-input {
 
 /* wger.de kas illüstrasyonu: gerçek highlight katmanı,
    varsayılan olarak görünmez, seçili kas opak turuncu olur */
+/* Birincil ve ikincil kas AYRI RENKTE. Aynı rengin koyu/açık tonu yerine iki
+   ayrı renk seçildi: turuncu/mavi çifti renk körlüğünde de ayrılıyor, ton
+   farkı ayrılmıyor. İkisi de açık anatomi zemininde okunuyor. */
 .muscle-overlay {
-  fill: var(--danger);
+  fill: var(--accent);
   opacity: 0;
-  transition: opacity 0.35s ease;
+  transition: opacity 0.3s ease;
 }
 
-.muscle-overlay.active {
-  opacity: 0.75;
+.muscle-overlay.birincil { opacity: 0.82; cursor: pointer; }
+.muscle-overlay.ikincil  { fill: var(--cat-analiz); opacity: 0.66; cursor: pointer; }
+.muscle-overlay.secili   { opacity: 1; }
+
+/* Eski çağrı yolu: ikincil kas verisi gelmeden önce yazılmış kod */
+.muscle-overlay.active { opacity: 0.82; }
+
+@media (prefers-reduced-motion: reduce) {
+  .muscle-overlay { transition: none; }
+}
+
+/* ── KAS BALONU ──
+   Dokunulan kasın üstünde belirir, ucu onu gösterir. Bilgisayarda imleç
+   üstüne gelince de çıkar. */
+.kas-balon {
+  position: absolute;
+  z-index: 5;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--hairline-3);
+  border-radius: 12px;
+  padding: 7px 11px;
+  font-size: 12px;
+  line-height: 1.35;
+  pointer-events: none;
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.3);
+  max-width: 150px;
+  text-align: center;
+}
+
+.kas-balon::after {
+  content: "";
+  position: absolute;
+  left: var(--kuyruk, 50%);
+  bottom: -8px;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-bottom: 0;
+  border-top-color: var(--surface);
+}
+
+/* Figürün tepesindeki kaslarda balon alta geçiyor; kuyruk da ters dönüyor */
+.kas-balon.alt::after {
+  bottom: auto;
+  top: -8px;
+  border-top: 0;
+  border-bottom: 8px solid var(--surface);
+}
+
+.kas-balon b { display: block; font-size: 13px; font-weight: 700; }
+.kas-balon i { font-style: normal; font-size: 11px; color: var(--text-muted); }
+
+/* ── KAS LİSTESİ ──
+   Figürün altında kalıcı: hangi kasların çalıştığı dokunmaya gerek kalmadan
+   görünüyor. */
+.kas-listesi {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+}
+
+.kas-satiri {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.kas-satiri.secili { background: var(--surface-2); }
+.kas-satiri .kas-ad { flex: 1; font-weight: 600; color: var(--text); }
+
+.kas-satiri .kas-rol {
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.kas-nokta {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  flex: none;
+}
+
+.kas-nokta.birincil { background: var(--accent); }
+.kas-nokta.ikincil  { background: var(--cat-analiz); }
+
+.kas-bos {
+  list-style: none;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  padding: 5px 8px;
 }
 
 .anatomy-credit {
