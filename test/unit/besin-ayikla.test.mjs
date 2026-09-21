@@ -9,7 +9,8 @@
    kalori hesabını bozar. */
 import {
   sayiCoz, alanTani, kcalCoz, jsonLdUrun, tablodanOku,
-  porsiyonOku, degerleriDenetle, sayfadanCikar
+  porsiyonOku, degerleriDenetle, sayfadanCikar,
+  jsonLdBesin, listedenOku, taniCikar
 } from '../../worker/src/besin-ayikla.js';
 
 export default async function ({ rapor }) {
@@ -170,4 +171,86 @@ export default async function ({ rapor }) {
   rapor.kontrol('Kayıt yine üretiliyor', tablosuz.ad === 'Shaker');
   rapor.kontrol('Besin null', tablosuz.besin === null);
   rapor.kontrol('Sorun listesi boş', tablosuz.sorunlar.length === 0);
+
+  // ── ÜÇ ÇIKARIM YOLU ────────────────────────────
+  /* Tek bir yapıya bel bağlamak riskli: Türk e-ticaret temaları besin
+     değerlerini tabloya, tanım listesine ya da yan yana iki kutuya koyuyor.
+     Bir de schema.org/NutritionInformation var — varsa en temizi. */
+  rapor.baslik('JSON-LD besin bilgisi');
+  const ldBesin = jsonLdBesin({
+    '@type': 'Product', name: 'X',
+    nutrition: {
+      '@type': 'NutritionInformation',
+      calories: '380 kcal', proteinContent: '78 g',
+      carbohydrateContent: '8 g', fatContent: '5 g', servingSize: '100 g'
+    }
+  });
+  rapor.kontrol('Değerler okunuyor',
+    ldBesin.degerler.kcal === 380 && ldBesin.degerler.protein === 78,
+    JSON.stringify(ldBesin.degerler));
+  rapor.kontrol('Taban servingSize\'dan geliyor', ldBesin.temel.gram === 100,
+    JSON.stringify(ldBesin.temel));
+  rapor.kontrol('nutrition yoksa null', jsonLdBesin({ name: 'X' }) === null);
+  rapor.kontrol('Tek alanlı nutrition yetersiz',
+    jsonLdBesin({ nutrition: { calories: '100 kcal' } }) === null);
+
+  rapor.baslik('tanım listesi');
+  const dl = listedenOku(`<dl>
+    <dt>Enerji</dt><dd>450 kcal</dd>
+    <dt>Protein</dt><dd>24,5 g</dd>
+    <dt>Karbonhidrat</dt><dd>60 g</dd>
+    <dt>Menşei</dt><dd>Türkiye</dd>
+  </dl>`);
+  rapor.kontrol('Değerler okunuyor',
+    dl.degerler.kcal === 450 && dl.degerler.protein === 24.5, JSON.stringify(dl.degerler));
+  rapor.kontrol('İlgisiz satır atlanıyor', dl.degerler.mensei === undefined);
+
+  rapor.baslik('yan yana kutular');
+  const kutu = listedenOku(`
+    <li><span>Protein</span><span>24 g</span></li>
+    <li><span>Enerji</span><span>380 kcal</span></li>
+    <li><span>Kargo</span><span>Ücretsiz</span></li>`);
+  rapor.kontrol('İki kutulu satır okunuyor',
+    kutu.degerler.protein === 24 && kutu.degerler.kcal === 380,
+    JSON.stringify(kutu.degerler));
+  rapor.kontrol('Sayısız satır atlanıyor', kutu.degerler.kargo === undefined);
+  rapor.kontrol('Hiçbiri yoksa null', listedenOku('<div>Lezzetli</div>') === null);
+
+  rapor.baslik('yöntem sırası');
+  /* JSON-LD varsa o kazanmalı: en az tahmin içeren yol. */
+  const ucuBirden = `<html><head>
+    <script type="application/ld+json">
+     {"@type":"Product","name":"Çoklu","nutrition":{"calories":"111 kcal","proteinContent":"11 g"}}
+    </script></head><body>
+    <table><tr><td>Enerji</td><td>222 kcal</td></tr><tr><td>Protein</td><td>22 g</td></tr></table>
+    </body></html>`;
+  const secilen = sayfadanCikar(ucuBirden, 'https://x.dev/u');
+  rapor.kontrol('JSON-LD tabloyu yeniyor', secilen.besin.kcal === 111,
+    String(secilen.besin.kcal));
+  rapor.kontrol('Hangi yöntemin kullanıldığı raporlanıyor',
+    secilen.yontem === 'json-ld', String(secilen.yontem));
+
+  // ── TEŞHİS ─────────────────────────────────────
+  /* Gerçek sayfalara erişimimiz yok. Çıkarım tutmazsa NEDEN tutmadığını
+     bilmek, ilk turdan sonra neyi düzelteceğimizi söyleyen tek şey. */
+  rapor.baslik('teşhis raporu');
+  const tani = taniCikar('<html><table></table><dl></dl>' +
+    '<script type="application/ld+json">{}</script>' +
+    '<p>Besin Değerleri: Enerji, Protein</p></html>', ['tablo:yok']);
+  rapor.kontrol('Tablo sayılıyor', tani.tabloSayisi === 1, String(tani.tabloSayisi));
+  rapor.kontrol('Tanım listesi sayılıyor', tani.tanimListesi === 1);
+  rapor.kontrol('JSON-LD bloğu sayılıyor', tani.jsonLdBlogu === 1);
+  rapor.kontrol('Besin sözcüğü aranıyor', tani.besinKelimesi === true);
+  rapor.kontrol('Protein sözcüğü aranıyor', tani.proteinKelimesi === true);
+  rapor.kontrol('Denenen yollar taşınıyor', tani.denenen.join(',') === 'tablo:yok');
+  rapor.kontrol('Sayfa önizlemesi var', tani.onizleme.includes('Besin Değerleri'),
+    tani.onizleme.slice(0, 40));
+
+  rapor.baslik('değer bulunamayınca teşhis üretiliyor');
+  const bulunamadi = sayfadanCikar('<h1>Shaker</h1><p>' + 'x'.repeat(3000) + '</p>',
+    'https://x.dev/shaker');
+  rapor.kontrol('Kayıt yine üretiliyor', bulunamadi.ad === 'Shaker');
+  rapor.kontrol('Teşhis dolduruluyor', bulunamadi.tani !== null && bulunamadi.tani.uzunluk > 3000);
+  rapor.kontrol('Üç yolun da denendiği yazıyor',
+    bulunamadi.tani.denenen.length === 3, bulunamadi.tani.denenen.join(', '));
 }

@@ -9,7 +9,7 @@
 import { kur, cronLoglariniSustur } from './_ortam.mjs';
 import {
   SITELER, urunAdresiMi, haritadanAdresler, robotstanHarita,
-  adresleriKesfet, siteyiTara, calistir, ayniSite, ZIYARET_ANAHTARI
+  adresleriKesfet, siteyiTara, calistir, ayniSite, taniOzeti, ZIYARET_ANAHTARI
 } from '../../worker/src/ajanlar/takviye.js';
 import { bekleyenleriOku } from '../../worker/src/onay.js';
 
@@ -56,7 +56,7 @@ function sahteAg({ robots = 'User-agent: *\nDisallow: /sepet\n', harita = HARITA
 }
 
 export default async function ({ rapor }) {
-  const { env } = await kur();
+  const { env, adminCagir } = await kur();
 
   rapor.baslik('izin listesi');
   rapor.kontrol('Altı site tanımlı', SITELER.length === 6, String(SITELER.length));
@@ -263,4 +263,63 @@ export default async function ({ rapor }) {
     !kacakIstekler.some(a => /saldirgan|evil/.test(a)),
     kacakIstekler.join(', '));
   rapor.kontrol('Hiç adres bulunmadı', kacakSonuc.length === 0, String(kacakSonuc.length));
+
+  // ── TEŞHİS ÖZETİ ───────────────────────────────
+  /* Panelde okunacak tek cümle. İlk gerçek turdan sonra neyi düzelteceğimizi
+     bu cümle söyleyecek, o yüzden ayrımları net olmalı. */
+  rapor.baslik('teşhis özeti doğru ayrımı yapıyor');
+  rapor.kontrol('Kısa sayfa bot engeli olarak okunuyor',
+    /bot engeli/.test(taniOzeti({ uzunluk: 400 })),
+    taniOzeti({ uzunluk: 400 }));
+  rapor.kontrol('Besin sözcüğü yoksa "tablosu olmayabilir" diyor',
+    /tablosu\s*olmayabilir/.test(taniOzeti({
+      uzunluk: 50000, proteinKelimesi: false, enerjiKelimesi: false })),
+    taniOzeti({ uzunluk: 50000, proteinKelimesi: false, enerjiKelimesi: false }));
+  rapor.kontrol('Yapı yoksa adaptör isteniyor',
+    /adaptör gerekiyor/.test(taniOzeti({
+      uzunluk: 50000, proteinKelimesi: true, tabloSayisi: 0,
+      tanimListesi: 0, jsonLdBlogu: 0 })),
+    taniOzeti({ uzunluk: 50000, proteinKelimesi: true, tabloSayisi: 0,
+      tanimListesi: 0, jsonLdBlogu: 0 }));
+  rapor.kontrol('Yapı varsa etiket sorunu deniyor',
+    /etiketler beklediğimizden/.test(taniOzeti({
+      uzunluk: 50000, proteinKelimesi: true, tabloSayisi: 2,
+      tanimListesi: 0, jsonLdBlogu: 1 })),
+    taniOzeti({ uzunluk: 50000, proteinKelimesi: true, tabloSayisi: 2,
+      tanimListesi: 0, jsonLdBlogu: 1 }));
+
+  rapor.baslik('değersiz kayıt teşhisi taşıyor');
+  const tanisiz = sahteAg({ sayfa: '<h1>Shaker 700 ml</h1><p>' + 'x'.repeat(3000) + '</p>' });
+  const tanili = await siteyiTara(env, SITE, { getir: tanisiz.getir, gorulen: new Set() });
+  rapor.kontrol('Uyarıda teşhis var',
+    /tablosu\s*olmayabilir|adaptör|bot engeli|etiketler/.test(tanili.kayitlar[0].uyari),
+    tanili.kayitlar[0].uyari);
+  rapor.kontrol('Ham teşhis kayıtta saklanıyor',
+    tanili.kayitlar[0].veri.tani !== null);
+
+  rapor.baslik('değeri olan kayıtta teşhis saklanmıyor');
+  const doluAg = sahteAg();
+  const dolu = await siteyiTara(env, SITE, { getir: doluAg.getir, gorulen: new Set() });
+  rapor.kontrol('Teşhis null — KV boşuna şişmiyor',
+    dolu.kayitlar[0].veri.tani === null);
+  rapor.kontrol('Hangi yöntemle okunduğu kayıtta',
+    dolu.kayitlar[0].veri.yontem === 'tablo', String(dolu.kayitlar[0].veri.yontem));
+  rapor.kontrol('Açıklamada da yazıyor',
+    /besin tablosundan/.test(dolu.kayitlar[0].aciklama),
+    dolu.kayitlar[0].aciklama.slice(0, 60));
+
+  // ── DENEME UCU İZİN LİSTESİNE TABİ ─────────────
+  rapor.baslik('/admin/dene izin listesi dışına çıkmıyor');
+  const disari = await adminCagir('/admin/dene?adres=' +
+    encodeURIComponent('https://rastgele-site.dev/urun/x'));
+  rapor.kontrol('İzinsiz adres 400 dönüyor', disari.status === 400, String(disari.status));
+  rapor.kontrol('İzinli listesi gösteriliyor',
+    Array.isArray(disari.body.izinli) && disari.body.izinli.length === 6,
+    String(disari.body.izinli && disari.body.izinli.length));
+  const adressiz = await adminCagir('/admin/dene');
+  rapor.kontrol('Adressiz istek 400 dönüyor', adressiz.status === 400, String(adressiz.status));
+  const anahtarsizDene = await adminCagir('/admin/dene?adres=https://www.hardline.com.tr/x',
+    'GET', null, null);
+  rapor.kontrol('Anahtarsız erişilemiyor', anahtarsizDene.status === 401,
+    String(anahtarsizDene.status));
 }

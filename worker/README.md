@@ -352,6 +352,43 @@ saniye bekleniyor.
 Tur başına site başına en fazla 40 ürün okunuyor. Görülen adresler KV'de
 tutuluyor, her gece kalanlardan devam ediyor.
 
+Besin değeri üç yoldan okunuyor, sırayla:
+
+1. **JSON-LD** — sayfanın kendi yapısal verisi (`schema.org/NutritionInformation`).
+   Varsa en temizi, hiç tahmin içermiyor.
+2. **Tablo** — en yaygın yapı.
+3. **Etiketli liste** — tanım listesi (`<dl>`) ya da yan yana iki kutu.
+   Türk e-ticaret temaları sık sık böyle yapıyor.
+
+Hangi yolla okunduğu kayıtta yazıyor.
+
+### Tek sayfa sınama
+
+```bash
+npm run veri-dene https://www.hardline.com.tr/urun/kreatin
+```
+
+Bir ürün sayfasını çeker, ne çıkardığımızı gösterir. Çıkaramazsa **neden**
+çıkaramadığını söyler:
+
+```
+ürün    : Hardline Kreatin
+marka   : Hardline
+yöntem  : bulunamadı
+değerler: YOK
+teşhis  : Sayfada 3 tablo, 0 tanım listesi, 1 JSON-LD bloğu var ama
+          satırları tanıyamadık — etiketler beklediğimizden farklı yazılmış
+          olabilir.
+```
+
+Bu çıktıyı bana yapıştırman yeterli; o siteye özel adaptörü yazarım. Adres
+yine izin listesiyle sınırlı — listede olmayan bir siteyi sınayamıyorsun.
+
+Teşhis dört durumu ayırıyor, çünkü dördü farklı düzeltme gerektiriyor:
+sayfa çok kısa (bot engeli), besin sözcükleri hiç geçmiyor (ürünün tablosu
+yok), tanıdık yapı yok (adaptör gerek), yapı var ama satırlar tanınmıyor
+(etiket sözlüğü eksik).
+
 **Bu ajanın çıktısı her koşulda "şüpheli" işaretli geliyor** ve bunun somut bir
 sebebi var: besin tablosu okuma mantığı gerçek sayfalara karşı ayarlanamadı,
 çünkü yazıldığı ortamdan o sitelere ağ çıkışı yoktu. Mantık yaygın kalıplara

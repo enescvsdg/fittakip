@@ -125,6 +125,64 @@ export function temelCoz(baslik) {
   return null;
 }
 
+/* schema.org/NutritionInformation — ürün sayfalarının en temiz kaynağı,
+   varsa HTML ayrıştırmaya hiç gerek kalmıyor. Değerler "24 g" gibi birimli
+   metin olarak geliyor. */
+const LD_ALAN = {
+  calories: 'kcal', proteinContent: 'protein', carbohydrateContent: 'carbs',
+  fatContent: 'fat', fiberContent: 'lif', sugarContent: 'seker', sodiumContent: 'tuz'
+};
+
+export function jsonLdBesin(urun) {
+  const n = urun && (urun.nutrition || urun.nutritionInformation);
+  if (!n || typeof n !== 'object') return null;
+  const cikti = {};
+  for (const [ldAd, alan] of Object.entries(LD_ALAN)) {
+    if (n[ldAd] === undefined || n[ldAd] === null) continue;
+    const deger = alan === 'kcal' ? kcalCoz(n[ldAd]) : sayiCoz(n[ldAd]);
+    if (deger !== null) cikti[alan] = deger;
+  }
+  if (Object.keys(cikti).length < 2) return null;
+  const temel = temelCoz(String(n.servingSize || ''));
+  return { degerler: cikti, temel: temel || { tur: 'porsiyon', gram: null } };
+}
+
+/* Tanım listesi (<dl><dt>Protein</dt><dd>24 g</dd>) ve etiketli kutular.
+   Türk e-ticaret temaları besin değerlerini sık sık tabloya değil bu
+   yapılara koyuyor. */
+export function listedenOku(html) {
+  const metin = String(html || '');
+  const ciftler = [];
+
+  const dl = metin.match(/<dl[\s\S]*?<\/dl>/gi) || [];
+  for (const blok of dl) {
+    const dt = blok.match(/<dt[\s\S]*?<\/dt>/gi) || [];
+    const dd = blok.match(/<dd[\s\S]*?<\/dd>/gi) || [];
+    for (let i = 0; i < Math.min(dt.length, dd.length); i++) {
+      ciftler.push([etiketleriSil(dt[i]), etiketleriSil(dd[i])]);
+    }
+  }
+
+  /* "<span>Protein</span><span>24 g</span>" gibi yan yana iki kutu */
+  const satirlar = metin.match(/<(li|div|p)[^>]*>(?:\s*<(?:span|strong|b)[^>]*>[\s\S]*?<\/(?:span|strong|b)>\s*){2}\s*<\/\1>/gi) || [];
+  for (const satir of satirlar) {
+    const kutular = (satir.match(/<(?:span|strong|b)[^>]*>[\s\S]*?<\/(?:span|strong|b)>/gi) || [])
+      .map(etiketleriSil);
+    if (kutular.length >= 2) ciftler.push([kutular[0], kutular[1]]);
+  }
+
+  const cikti = {};
+  for (const [etiket, deger] of ciftler) {
+    const alan = alanTani(etiket);
+    if (!alan || cikti[alan] !== undefined) continue;
+    if (!/\d/.test(deger)) continue;
+    const d = alan === 'kcal' ? kcalCoz(deger) : sayiCoz(deger);
+    if (d !== null) cikti[alan] = d;
+  }
+  if (Object.keys(cikti).length < 2) return null;
+  return { degerler: cikti, temel: { tur: '100g', gram: 100 } };
+}
+
 /* Besin tablosunu satır satır okur. Tablo bulunamazsa null. */
 export function tablodanOku(html) {
   const tablolar = String(html || '').match(/<table[\s\S]*?<\/table>/gi) || [];
@@ -233,11 +291,45 @@ export function degerleriDenetle(besin, temelGram) {
   return sorunlar;
 }
 
+/* Çıkarım başarısız olduğunda ne bulduğumuzu raporlar. Gerçek sayfalara
+   erişimimiz olmadığı için ilk turun teşhis değeri yüksek olmalı. */
+export function taniCikar(html, denenen) {
+  const metin = String(html || '');
+  const duz = etiketleriSil(metin);
+  return {
+    denenen,
+    uzunluk: metin.length,
+    tabloSayisi: (metin.match(/<table/gi) || []).length,
+    tanimListesi: (metin.match(/<dl/gi) || []).length,
+    jsonLdBlogu: (metin.match(/application\/ld\+json/gi) || []).length,
+    besinKelimesi: /besin de[ğg]er|nutrition facts|nutrition information/i.test(duz),
+    enerjiKelimesi: /enerji|kalori|kcal/i.test(duz),
+    proteinKelimesi: /protein/i.test(duz),
+    /* Sayfanın ilk 300 karakteri: bot engeli ya da çerez duvarı yakaladıysak
+       burada görünür. */
+    onizleme: duz.slice(0, 300)
+  };
+}
+
 /* Bir ürün sayfasından çıkarılabilen her şey. */
 export function sayfadanCikar(html, adres) {
   const urun = jsonLdUrun(html);
-  const tablo = tablodanOku(html);
   const porsiyon = porsiyonOku(html);
+
+  /* Üç yol sırayla: JSON-LD en temiz, tablo en yaygın, liste son çare. */
+  const denemeler = [
+    ['json-ld', () => jsonLdBesin(urun)],
+    ['tablo', () => tablodanOku(html)],
+    ['liste', () => listedenOku(html)]
+  ];
+  let tablo = null, yontem = null;
+  const denenen = [];
+  for (const [ad, dene] of denemeler) {
+    let sonuc = null;
+    try { sonuc = dene(); } catch { sonuc = null; }
+    denenen.push(ad + (sonuc ? ':buldu' : ':yok'));
+    if (sonuc && !tablo) { tablo = sonuc; yontem = ad; }
+  }
   const besin = tablo ? tablo.degerler : null;
   /* Tablo "porsiyon başına" diyorsa ama kaç gram olduğunu yazmıyorsa, sayfa
      metninden okunan porsiyona düşüyoruz. */
@@ -260,8 +352,14 @@ export function sayfadanCikar(html, adres) {
     marka: marka || null,
     adres,
     besin: besin || null,
+    yontem,
     temel: tablo ? { ...tablo.temel, gram: temelGram } : null,
     porsiyon: porsiyon || null,
-    sorunlar: degerleriDenetle(besin, temelGram)
+    sorunlar: degerleriDenetle(besin, temelGram),
+    /* Çıkarım tutmazsa NEDEN tutmadığını da söylüyoruz. Bu ortamdan gerçek
+       sayfalara bakamadığımız için ilk turun bize ne anlattığı kritik:
+       "tablo yok" ile "tablo var ama satırları tanımadım" çok farklı iki
+       sorun ve farklı düzeltme gerektiriyor. */
+    tani: taniCikar(html, denenen)
   };
 }

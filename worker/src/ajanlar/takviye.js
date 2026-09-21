@@ -129,6 +129,34 @@ export async function adresleriKesfet(site, { getir, kurallar, enFazlaHarita = 4
   return [...bulunan];
 }
 
+const YONTEM_ADI = {
+  'json-ld': 'sayfanın kendi yapısal verisinden (JSON-LD)',
+  'tablo': 'besin tablosundan',
+  'liste': 'etiketli listeden'
+};
+
+/* Çıkarım tutmadığında teşhisi tek cümleye indirger — panelde okunabilsin.
+   Gerçek sayfalara erişimimiz olmadığı için bu cümle, ilk turdan sonra neyi
+   düzelteceğimizi söyleyen şey. */
+export function taniOzeti(tani) {
+  if (!tani) return '';
+  if (tani.uzunluk < 2000) {
+    return 'Sayfa beklenenden çok kısa (' + tani.uzunluk +
+      ' karakter) — bot engeli ya da çerez duvarı olabilir.';
+  }
+  if (!tani.proteinKelimesi && !tani.enerjiKelimesi) {
+    return 'Sayfada besin değeri sözcükleri hiç geçmiyor; bu ürünün tablosu ' +
+      'olmayabilir (shaker, kıyafet gibi).';
+  }
+  if (tani.tabloSayisi === 0 && tani.tanimListesi === 0 && tani.jsonLdBlogu === 0) {
+    return 'Değerler sayfada var ama tanıdığımız hiçbir yapıda değil ' +
+      '(tablo/liste/JSON-LD yok) — bu siteye özel adaptör gerekiyor.';
+  }
+  return 'Sayfada ' + tani.tabloSayisi + ' tablo, ' + tani.tanimListesi +
+    ' tanım listesi, ' + tani.jsonLdBlogu + ' JSON-LD bloğu var ama ' +
+    'satırları tanıyamadık — etiketler beklediğimizden farklı yazılmış olabilir.';
+}
+
 function kayitUret(site, cikan) {
   const besin = cikan.besin || {};
   const parcalar = [];
@@ -148,18 +176,23 @@ function kayitUret(site, cikan) {
     grup: site.ad,
     ad: cikan.ad,
     deger: veriYok ? 'Besin tablosu bulunamadı' : (parcalar.join(' · ') + ' (' + taban + ')' + porsiyon),
-    aciklama: (cikan.marka ? cikan.marka + ' · ' : '') + 'Ürün sayfasından okundu. ' +
+    aciklama: (cikan.marka ? cikan.marka + ' · ' : '') +
+      (cikan.yontem ? 'Değerler ' + YONTEM_ADI[cikan.yontem] + ' okundu. ' : '') +
       'Çıkarım mantığı gerçek sayfalara karşı henüz ayarlanmadı — değerleri ' +
       'sayfayla karşılaştırmadan onaylama.',
     /* Bu ajanın çıktısı her koşulda şüpheli: okuma mantığı doğrulanmadı. */
     supheli: true,
     uyari: cikan.sorunlar.length ? cikan.sorunlar.join(' ')
-      : (veriYok ? 'Sayfada besin tablosu bulunamadı; yalnız ürün adı alındı.' : null),
+      : (veriYok ? 'Besin değeri bulunamadı. ' + taniOzeti(cikan.tani) : null),
     fark: null,
     kaynakBag: cikan.adres,
     veri: {
       name: cikan.ad, marka: cikan.marka, site: site.id, adres: cikan.adres,
-      besin: cikan.besin, temel: cikan.temel, porsiyon: cikan.porsiyon
+      besin: cikan.besin, temel: cikan.temel, porsiyon: cikan.porsiyon,
+      yontem: cikan.yontem,
+      /* Teşhis yalnız BULUNAMAYAN kayıtlarda saklanıyor: başarılı kayıtlarda
+         şişirmenin anlamı yok, KV blob'u zaten büyük. */
+      tani: veriYok ? cikan.tani : null
     }
   };
 }

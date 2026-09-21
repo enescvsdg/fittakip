@@ -11,6 +11,8 @@ import { panelVerisi, kararlariIsle, onaylananlariOku, onaylananlariTemizle, ger
 import { hepsiniCalistir, AJAN_KODU } from './ajanlar/index.js';
 import { MEVCUT_ANAHTAR } from './ajanlar/egzersiz.js';
 import { MEVCUT_ANAHTAR as GIDA_ANAHTARI, ISTEK_ANAHTARI } from './ajanlar/gida.js';
+import { SITELER, ayniSite, taniOzeti } from './ajanlar/takviye.js';
+import { sayfadanCikar } from './besin-ayikla.js';
 
 const GIZLI_BASLIK = {
   'Cache-Control': 'no-store',
@@ -99,6 +101,45 @@ export async function adminIstegi(request, env, url) {
   if (yol === '/admin/mevcut' && request.method === 'GET') {
     const liste = await env.REMINDERS.get(MEVCUT_ANAHTAR, 'json');
     return panelJson({ egzersiz: Array.isArray(liste) ? liste : [] });
+  }
+
+  /* Tek bir ürün sayfasını dene.
+
+     Supplement ajanının çıkarım mantığı gerçek sayfalara karşı ayarlanamadı
+     (yazıldığı ortamdan o sitelere ağ çıkışı yoktu). Bu uç, bir sayfayı tek
+     komutla sınayıp ne çıkardığımızı ve tutmadıysa NEDEN tutmadığını
+     gösteriyor. Adres yine izin listesiyle sınırlı. */
+  if (yol === '/admin/dene' && request.method === 'GET') {
+    const adres = url.searchParams.get('adres');
+    if (!adres) return panelJson({ error: 'adres parametresi gerekiyor.' }, 400);
+
+    const site = SITELER.find(s => ayniSite(s, adres));
+    if (!site) {
+      return panelJson({
+        error: 'Bu adres izin listesinde değil.',
+        izinli: SITELER.map(s => s.kok)
+      }, 400);
+    }
+
+    let html;
+    try {
+      const cevap = await fetch(adres, {
+        headers: { 'User-Agent': 'FitTakipBot (deneme)', Accept: 'text/html' }
+      });
+      if (!cevap.ok) return panelJson({ error: 'Sayfa HTTP ' + cevap.status + ' döndü.' }, 502);
+      html = await cevap.text();
+    } catch (err) {
+      return panelJson({ error: 'Sayfa alınamadı: ' + err.message }, 502);
+    }
+
+    const cikan = sayfadanCikar(html, adres);
+    if (!cikan) {
+      return panelJson({ ok: false, sebep: 'Sayfada ürün adı bulunamadı.', adres });
+    }
+    return panelJson({
+      ok: true, site: site.id, ...cikan,
+      ozet: cikan.besin ? null : taniOzeti(cikan.tani)
+    });
   }
 
   /* Ajanı elle çalıştır. Cron gece 03:00'te kendiliğinden dönüyor; bu uç

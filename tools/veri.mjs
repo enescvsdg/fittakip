@@ -6,6 +6,7 @@
      node tools/veri.mjs calistir → ajanları elle çalıştır
      node tools/veri.mjs bekleyen → onay kuyruğunda ne var, özetle
      node tools/veri.mjs al       → ONAYLADIKLARINI dosyalara işle
+     node tools/veri.mjs dene <adres> → tek ürün sayfasını sına
 
    Worker adresi ve panel anahtarı ortam değişkeninden okunuyor; repoda
    durmuyorlar:
@@ -267,6 +268,40 @@ const KOMUTLAR = {
         egzersiz: mevcutEgzersizler(), gida: mevcutGidalar(), usdaIstek
       })
     });
+  },
+
+  /* Tek bir ürün sayfasını sınar. Supplement ajanının çıkarımı gerçek
+     sayfalara karşı ayarlanamadı; bu komut bir sayfayı deneyip ne
+     çıkardığımızı ve tutmadıysa neden tutmadığını gösteriyor. */
+  async dene() {
+    const adres = process.argv[3];
+    if (!adres) {
+      console.error('Kullanım: node tools/veri.mjs dene https://site/urun/x');
+      process.exit(1);
+    }
+    const s = await cagir('/admin/dene?adres=' + encodeURIComponent(adres));
+    if (!s.ok) {
+      console.log('\nÇıkarılamadı: ' + (s.sebep || s.error));
+      return;
+    }
+    console.log('\nürün    : ' + s.ad);
+    console.log('marka   : ' + (s.marka || '—'));
+    console.log('yöntem  : ' + (s.yontem || 'bulunamadı'));
+    if (s.besin) {
+      const taban = s.temel && s.temel.gram ? s.temel.gram + ' g başına' : 'taban belirsiz';
+      console.log('değerler: ' + Object.entries(s.besin)
+        .map(([k, v]) => k + ' ' + v).join(' · ') + '  (' + taban + ')');
+    } else {
+      console.log('değerler: YOK');
+      console.log('teşhis  : ' + s.ozet);
+      console.log('\nayrıntı : ' + JSON.stringify(s.tani, null, 1));
+    }
+    if (s.porsiyon) console.log('porsiyon: ' + s.porsiyon.metin);
+    if (s.sorunlar && s.sorunlar.length) {
+      console.log('\nuyarılar:');
+      s.sorunlar.forEach(u => console.log('  · ' + u));
+    }
+    console.log();
   },
 
   async bekleyen() {
