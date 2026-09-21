@@ -24,3 +24,6 @@ ALLOWED_ORIGIN = "https://enescvsdg.github.io"
 #   VAPID_PUBLIC_KEY   — generate-vapid-keys.mjs çıktısındaki açık anahtar
 #   VAPID_PRIVATE_JWK  — aynı çıktıdaki özel anahtar (JWK, JSON metni)
 #   DEVICE_KEY         — uygulamaya gireceğin cihaz anahtarı
+#   ADMIN_KEY          — yönetim paneli parolası (/admin)
+#                        Panel tarayıcının kendi giriş penceresiyle korunuyor;
+#                        kullanıcı adı önemsiz, parola bu anahtarla eşleşmeli.

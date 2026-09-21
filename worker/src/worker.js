@@ -7,6 +7,8 @@
    ══════════════════════════════════════════ */
 
 import { sendPush } from './push.js';
+import { secretsMatch } from './kimlik.js';
+import { adminYolu, adminIstegi } from './admin.js';
 
 const GRACE_MINUTES = 60;   // kaçırılan hatırlatma bu süre içinde hâlâ gönderilir
 // Cron dakikada bir uyandığı için saatinde gönderilen bildirim hedef dakikayı
@@ -36,16 +38,6 @@ function json(data, env, status = 200) {
   });
 }
 
-// Uzunluktan bağımsız, sabit süreli karşılaştırma
-function secretsMatch(a, b) {
-  if (typeof a !== 'string' || typeof b !== 'string') return false;
-  const ab = new TextEncoder().encode(a);
-  const bb = new TextEncoder().encode(b);
-  let diff = ab.length ^ bb.length;
-  const len = Math.max(ab.length, bb.length);
-  for (let i = 0; i < len; i++) diff |= (ab[i] || 0) ^ (bb[i] || 0);
-  return diff === 0;
-}
 
 /* ── ABONELİK DİZİNİ ──
    Cron her dakika çalışıyor. Eskiden her turda KV list() yapıyordu: günde 1440
@@ -175,6 +167,13 @@ async function handleRequest(request, env) {
 
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: cors(env) });
+  }
+
+  /* Yönetim paneli uygulamanın uçlarından ayrı: cihaz anahtarı değil,
+     tarayıcının kendi giriş penceresi (HTTP Basic + ADMIN_KEY) koruyor.
+     Bu yüzden DEVICE_KEY kontrolünün önünde duruyor. */
+  if (adminYolu(url.pathname)) {
+    return adminIstegi(request, env, url);
   }
 
   if (!env.DEVICE_KEY) {

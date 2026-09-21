@@ -93,6 +93,7 @@ export async function kur({ an = SABIT_AN } = {}) {
   const env = {
     REMINDERS: sahteKV(),
     DEVICE_KEY: 'gizli-cihaz-anahtari',
+    ADMIN_KEY: 'gizli-panel-anahtari',
     VAPID_PUBLIC_KEY: vapidPublic,
     VAPID_PRIVATE_JWK: JSON.stringify(vapidPrivateJwk),
     VAPID_SUBJECT: 'mailto:test@example.com',
@@ -109,6 +110,24 @@ export async function kur({ an = SABIT_AN } = {}) {
   const cagir = async (...a) => {
     const res = await worker.fetch(istek(...a), env);
     return { status: res.status, body: await res.json().catch(() => null) };
+  };
+
+  /* Panel HTTP Basic ile korunuyor: tarayıcının kendi giriş penceresi.
+     Kullanıcı adı önemsiz, parola ADMIN_KEY ile karşılaştırılıyor. */
+  const adminCagir = async (yol, method = 'GET', govde, anahtar = env.ADMIN_KEY) => {
+    const baslik = { 'Content-Type': 'application/json' };
+    if (anahtar !== null) {
+      baslik.Authorization = 'Basic ' + Buffer.from('admin:' + anahtar).toString('base64');
+    }
+    const res = await worker.fetch(new Request('https://w.dev' + yol, {
+      method, headers: baslik, body: govde ? JSON.stringify(govde) : undefined
+    }), env);
+    const tur = res.headers.get('Content-Type') || '';
+    return {
+      status: res.status,
+      basliklar: res.headers,
+      body: tur.includes('json') ? await res.json().catch(() => null) : await res.text()
+    };
   };
 
   const cron = async () => {
@@ -128,7 +147,7 @@ export async function kur({ an = SABIT_AN } = {}) {
 
   const bugun = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul' }).format(new Date());
 
-  return { worker, env, vapidPublic, subscription, gonderimler, durum, cagir, cron, saat, bugun, zamaniCoz };
+  return { worker, env, vapidPublic, subscription, gonderimler, durum, cagir, adminCagir, cron, saat, bugun, zamaniCoz };
 }
 
 // Cron kayıtlarını test çıktısından uzak tut
