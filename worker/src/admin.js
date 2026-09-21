@@ -8,6 +8,8 @@
 import { adminKapisi } from './kimlik.js';
 import { PANEL_HTML } from './panel.js';
 import { panelVerisi, kararlariIsle, onaylananlariOku, onaylananlariTemizle, geriAl, AJANLAR } from './onay.js';
+import { hepsiniCalistir, AJAN_KODU } from './ajanlar/index.js';
+import { MEVCUT_ANAHTAR } from './ajanlar/egzersiz.js';
 
 const GIZLI_BASLIK = {
   'Cache-Control': 'no-store',
@@ -58,6 +60,39 @@ export async function adminIstegi(request, env, url) {
     }
     const oldu = await geriAl(env, govde.ajan, govde.id);
     return panelJson({ ok: oldu }, oldu ? 200 : 404);
+  }
+
+  /* Uygulamanın şu anki egzersiz listesi. Ajan buna bakarak "bu kayıt bizde
+     var mı" sorusunu yanıtlıyor; olmadan 281 hareketin hepsini yeni sanar.
+     "npm run veri-gonder" burayı besliyor. */
+  if (yol === '/admin/mevcut' && request.method === 'POST') {
+    const govde = await request.json().catch(() => null);
+    const liste = govde && govde.egzersiz;
+    if (!Array.isArray(liste) || !liste.length) {
+      return panelJson({ error: 'egzersiz listesi bekleniyordu.' }, 400);
+    }
+    const bozuk = liste.find(k => !k || typeof k.name !== 'string' || !k.name);
+    if (bozuk) {
+      return panelJson({ error: 'Adı olmayan kayıt var.', ornek: bozuk }, 400);
+    }
+    await env.REMINDERS.put(MEVCUT_ANAHTAR, JSON.stringify(liste));
+    return panelJson({ ok: true, kayit: liste.length });
+  }
+
+  if (yol === '/admin/mevcut' && request.method === 'GET') {
+    const liste = await env.REMINDERS.get(MEVCUT_ANAHTAR, 'json');
+    return panelJson({ egzersiz: Array.isArray(liste) ? liste : [] });
+  }
+
+  /* Ajanı elle çalıştır. Cron gece 03:00'te kendiliğinden dönüyor; bu uç
+     "şimdi bak" demek için — ve Analiz ajanı zaten yalnızca böyle çalışacak. */
+  if (yol === '/admin/calistir' && request.method === 'POST') {
+    const govde = await request.json().catch(() => null);
+    const secilen = govde && Array.isArray(govde.ajanlar) ? govde.ajanlar : null;
+    if (secilen && secilen.some(a => !AJAN_KODU[a])) {
+      return panelJson({ error: 'Tanımsız ajan.', taninan: Object.keys(AJAN_KODU) }, 400);
+    }
+    return panelJson(await hepsiniCalistir(env, secilen));
   }
 
   /* "npm run veri-al" bu iki ucu kullanır — aynı ADMIN_KEY ile. */

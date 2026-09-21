@@ -125,3 +125,130 @@ wrangler tail
 
 Uygulamada **Bağlantıyı Kes** butonu aboneliği hem telefondan hem sunucudan siler.
 Worker'ı tamamen kaldırmak için: `wrangler delete`
+
+---
+
+# Yönetim Paneli ve Veri Ajanları
+
+Ajanlar veriyi toplar, sen onaylarsın, onaylananlar repoya işlenir. Hiçbir
+kayıt onaydan geçmeden uygulamaya girmez.
+
+## Kurulum (bir kez)
+
+### 1. Panel anahtarını belirle
+
+Uzun ve rastgele bir parola üret:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"
+```
+
+Çıkan metni bir yere kaydet, sonra secret olarak yükle:
+
+```bash
+cd worker
+wrangler secret put ADMIN_KEY
+```
+
+Bu anahtar **repoya girmez.** Cihaz anahtarından (`DEVICE_KEY`) ayrıdır ve
+biri diğerinin yerine geçmez.
+
+### 2. Worker'ı dağıt
+
+```bash
+wrangler deploy
+```
+
+Artık iki zamanlayıcı var: dakikalık hatırlatma taraması ve gece 03:00'teki
+veri ajanı turu.
+
+### 3. Paneli aç
+
+```
+https://fittakip-push.<hesap-alt-adın>.workers.dev/admin
+```
+
+Tarayıcı kendi giriş penceresini açar. Kullanıcı adı önemsiz (`admin` yaz),
+parola az önce ürettiğin `ADMIN_KEY`. Telefondan da aynı adres çalışır.
+
+## Kullanım
+
+Betikler Worker adresini ve panel anahtarını ortam değişkeninden okur:
+
+```bash
+export FITTAKIP_WORKER=https://fittakip-push.<hesap-alt-adın>.workers.dev
+export FITTAKIP_ADMIN_KEY=<ADMIN_KEY ile aynı>
+```
+
+Windows PowerShell'de:
+
+```powershell
+$env:FITTAKIP_WORKER="https://fittakip-push.<hesap-alt-adın>.workers.dev"
+$env:FITTAKIP_ADMIN_KEY="<ADMIN_KEY ile aynı>"
+```
+
+### Uygulamanın mevcut listesini gönder (ilk kullanımda şart)
+
+```bash
+npm run veri-gonder
+```
+
+Ajan "bu hareket bizde var mı" sorusunu buna bakarak yanıtlıyor. Göndermeden
+çalıştırırsan ajan hata verip durur — 281 hareketin hepsini "yeni" sanıp onay
+ekranını kullanılamaz hale getirmesin diye kasıtlı.
+
+### Ajanları çalıştır
+
+```bash
+npm run veri-calistir
+```
+
+Gece 03:00'te zaten kendiliğinden çalışıyor; bu komut "şimdi bak" demek.
+
+### Kuyruğu terminalden özetle
+
+```bash
+npm run veri-bekleyen
+```
+
+## Ajanlar
+
+| Ajan | Kaynak | Lisans | Ne yapar |
+|---|---|---|---|
+| Egzersiz | [free-exercise-db](https://github.com/yuhonas/free-exercise-db) | Unlicense (kamu malı) | 876 hareketi mevcut 281'le eşleştirir; talimat ve ikincil kas getirir |
+
+Diğer üç ajan (Gıda, Analiz, Supplement) henüz yazılmadı.
+
+### Egzersiz ajanı neden "eşleştirme" yapıyor?
+
+Uygulamadaki 281 hareket zaten bu veri setinden derlenmiş ama sadeleştirilmiş
+adlarla. Kaynakta `Barbell Bench Press` diye bir kayıt **yok** — yalnızca
+`Barbell Bench Press - Medium Grip` var. 21 çeşit bench press kaydı arasından
+doğrusunu bulmak gerekiyor.
+
+Eşleştirme kasıtlı olarak muhafazakâr: ekipman ya da birincil kas tutmuyorsa
+aday elenir, ve yalnızca **sona** eklenen niteleme kabul edilir.
+
+```
+"Barbell Bench Press"  ⊂  "Barbell Bench Press - Medium Grip"   kabul
+"Lat Pulldown"         ⊂  "One Arm Lat Pulldown"                ret
+"Preacher Curl"        ⊂  "Reverse Barbell Preacher Curls"      ret
+```
+
+Son ikisi gerçek veride çıktı: başa eklenen kelime hareketi değiştiriyor ve
+kullanıcıya başka bir hareketin talimatı gösteriliyordu. Yanlış eşleşme,
+eşleşmemekten kötü — eşleşmeyen kayıt panelde ayrı bir grupta, şüpheli
+işaretiyle duruyor.
+
+## Sorun giderme
+
+**Panel 401 dönüyor** — `ADMIN_KEY` secret'ı yüklü mü? `wrangler secret list`
+ile bak. Tarayıcıda kayıtlı yanlış bir giriş varsa gizli pencerede dene.
+
+**Panel 500 dönüyor, "ADMIN_KEY secret eksik"** — 1. adım atlanmış.
+
+**`npm run veri-calistir` "mevcut egzersiz listesi KV'de yok" diyor** — önce
+`npm run veri-gonder` çalıştır.
+
+**Ajan turu hata veriyor** — `wrangler tail` ile bak; ajan hataları
+`[ajan]` önekiyle yazılıyor ve yutulmuyor.

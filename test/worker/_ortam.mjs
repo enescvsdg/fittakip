@@ -135,6 +135,12 @@ export async function kur({ an = SABIT_AN } = {}) {
     await new Promise(r => setTimeout(r, 250));
   };
 
+  // Veri ajanlarının günlük zamanlayıcısı — hatırlatma turundan ayrı
+  const gunlukCron = async () => {
+    await worker.scheduled({ cron: '0 0 * * *' }, env, { waitUntil: p => p });
+    await new Promise(r => setTimeout(r, 250));
+  };
+
   // Şu ana göre kaydırılmış "SS:DD" üretir — testler saatten bağımsız olsun
   const saat = (dakikaFarki) => {
     const d = new Date(Date.now() + dakikaFarki * 60000);
@@ -147,12 +153,17 @@ export async function kur({ an = SABIT_AN } = {}) {
 
   const bugun = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul' }).format(new Date());
 
-  return { worker, env, vapidPublic, subscription, gonderimler, durum, cagir, adminCagir, cron, saat, bugun, zamaniCoz };
+  return { worker, env, vapidPublic, subscription, gonderimler, durum, cagir, adminCagir, cron, gunlukCron, saat, bugun, zamaniCoz };
 }
 
-// Cron kayıtlarını test çıktısından uzak tut
+/* Cron ve ajan kayıtlarını test çıktısından uzak tut.
+   Ajan hataları kasıtlı olarak console.error'a yazılıyor ("wrangler tail" ile
+   görülebilsin diye) ve testler o hatayı bilerek tetikliyor — yığın izi
+   sonuçların arasına karışmasın. */
 const eskiLog = console.log, eskiErr = console.error;
+const SUSTURULAN = ['[cron]', '[ajan]'];
+const susturulsun = a => SUSTURULAN.some(on => String(a ?? '').startsWith(on));
 export function cronLoglariniSustur() {
-  console.log = (...a) => { if (!String(a[0] ?? '').startsWith('[cron]')) eskiLog(...a); };
-  console.error = (...a) => { if (!String(a[0] ?? '').startsWith('[cron]')) eskiErr(...a); };
+  console.log = (...a) => { if (!susturulsun(a[0])) eskiLog(...a); };
+  console.error = (...a) => { if (!susturulsun(a[0])) eskiErr(...a); };
 }

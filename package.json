@@ -8,7 +8,10 @@
     "test:unit": "node test/run.mjs unit worker",
     "test:ui": "node test/run.mjs ui",
     "check": "node test/syntax.mjs && node tools/gida-topla.mjs --denetle",
-    "serve": "node test/server.mjs 8080"
+    "serve": "node test/server.mjs 8080",
+    "veri-gonder": "node tools/veri.mjs gonder",
+    "veri-calistir": "node tools/veri.mjs calistir",
+    "veri-bekleyen": "node tools/veri.mjs bekleyen"
   },
   "devDependencies": {
     "playwright": "^1.49.0"

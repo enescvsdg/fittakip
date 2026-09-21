@@ -2,9 +2,12 @@ name = "fittakip-push"
 main = "src/worker.js"
 compatibility_date = "2025-09-01"
 
-# Her dakika uyanıp saati gelen hatırlatmaları gönderir
+# İki zamanlayıcı:
+#   "* * * * *" → hatırlatma taraması, dakikada bir
+#   "0 0 * * *" → veri ajanları, UTC gece yarısı = İstanbul'da 03:00
+# Ajanları dakikalık tura koymak günde 1440 tur ederdi; KV yazma sınırı 1000.
 [triggers]
-crons = ["* * * * *"]
+crons = ["* * * * *", "0 0 * * *"]
 
 # "wrangler kv namespace create REMINDERS" komutunun verdiği id.
 # Bu bir parola değil, yalnızca veritabanının adı: erişmek için yine hesaba ait

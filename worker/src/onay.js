@@ -64,22 +64,34 @@ export async function turuYaz(env, ajan, kayitlar) {
   const onayliIdler = new Set(onayli.map(k => k.id));
 
   const eski = await bekleyenleriOku(env, ajan);
+  const haritaOnce = new Set(eski.map(k => k.id));
   const harita = new Map(eski.map(k => [k.id, k]));
-  let yeni = 0, guncel = 0, atlanan = 0;
+  const buTurda = new Set();
+  let yeni = 0, guncel = 0, atlanan = 0, kopya = 0;
 
   for (const kayit of kayitlar) {
     if (!kayit || !kayit.id) throw new Error('Kayıt id taşımıyor: ' + JSON.stringify(kayit).slice(0, 120));
     if (onayliIdler.has(kayit.id)) { atlanan++; continue; }
-    if (harita.has(kayit.id)) guncel++; else yeni++;
+
+    /* Aynı turda aynı id iki kez gelebiliyor ve bu bir hata değil: uygulamada
+       11 hareket hem "Evde" hem "Spor Salonunda" listesinde duruyor (evde de
+       salonda da yapılabilen kettlebell hareketleri), alanları birebir aynı.
+       Tek kayda indiriyoruz — ama bunu "güncelleme" diye saymak paneli
+       yanıltıyordu: güncellenen bir şey yok. */
+    if (buTurda.has(kayit.id)) kopya++;
+    else if (haritaOnce.has(kayit.id)) guncel++;
+    else yeni++;
+
+    buTurda.add(kayit.id);
     harita.set(kayit.id, { ...kayit, ajan });
   }
 
   const liste = [...harita.values()];
   await listeYaz(env, BEKLEYEN(ajan), liste);
   await env.REMINDERS.put(CALISMA(ajan), JSON.stringify({
-    an: new Date().toISOString(), yeni, guncel, atlanan, toplam: liste.length
+    an: new Date().toISOString(), yeni, guncel, atlanan, kopya, toplam: liste.length
   }));
-  return { yeni, guncel, atlanan, toplam: liste.length };
+  return { yeni, guncel, atlanan, kopya, toplam: liste.length };
 }
 
 export async function calismaBilgisi(env, ajan) {

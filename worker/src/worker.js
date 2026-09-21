@@ -9,12 +9,15 @@
 import { sendPush } from './push.js';
 import { secretsMatch } from './kimlik.js';
 import { adminYolu, adminIstegi } from './admin.js';
+import { hepsiniCalistir } from './ajanlar/index.js';
 
 const GRACE_MINUTES = 60;   // kaçırılan hatırlatma bu süre içinde hâlâ gönderilir
 // Cron dakikada bir uyandığı için saatinde gönderilen bildirim hedef dakikayı
 // kaçırıyordu. Bir dakika önceden göndermeye başlayınca bildirim ekrana tam
 // saatinde düşüyor — hatırlatma için erken gelmek geç gelmekten iyidir.
 const LEAD_MINUTES = 1;
+// Veri ajanlarının zamanlayıcısı — wrangler.toml'daki ifadenin aynısı olmalı
+const GUNLUK_CRON = '0 0 * * *';
 // İşaretlenmeyen hatırlatma bu aralıkla tekrarlanır. GRACE_MINUTES penceresi
 // dolunca kendiliğinden susar — 08:00'lik bir hatırlatma en fazla 08:00, 08:15,
 // 08:30, 08:45 ve 09:00'da çalar.
@@ -401,6 +404,21 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
+    /* İki ayrı zamanlayıcı var ve hangisinin çaldığı event.cron'da geliyor:
+         "* * * * *"  → hatırlatma taraması, dakikada bir
+         "0 0 * * *"  → veri ajanları, UTC gece yarısı = İstanbul'da 03:00
+       Ajanları dakikalık tura koymak günde 1440 tur ederdi; KV yazma sınırı
+       1000. Ayrı zamanlayıcı bu yüzden. */
+    if (event && event.cron === GUNLUK_CRON) {
+      ctx.waitUntil(
+        hepsiniCalistir(env).then(
+          function(rapor) { console.log('[cron] ajan turu bitti:', JSON.stringify(rapor)); },
+          function(err) { console.error('[cron] ajan HATASI:', (err && err.stack) || err); }
+        )
+      );
+      return;
+    }
+
     // Hataları yutma — "wrangler tail" ile görülebilsin
     ctx.waitUntil(
       runReminders(env).then(
