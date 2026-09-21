@@ -211,6 +211,47 @@ Gece 03:00'te zaten kendiliğinden çalışıyor; bu komut "şimdi bak" demek.
 npm run veri-bekleyen
 ```
 
+### Onayladıklarını uygulamaya işle
+
+Panelde onay verdikten sonra:
+
+```bash
+npm run veri-al
+npm test
+git add -A && git commit -m "Egzersiz verisi güncellendi" && git push
+```
+
+`veri-al` şunları yapıyor:
+
+1. Onaylanmış kayıtları Worker'dan çeker
+2. `egzersizler.js`'in **üretilen bölümünü** baştan yazar (üst yarıdaki Türkçe
+   sözlüklere dokunmaz)
+3. Yazmadan önce ürettiği dosyayı çalıştırılabilir mi diye dener — bozuksa
+   hiç yazmaz
+4. `sw.js`'teki önbellek sürümünü artırır (yoksa telefondaki uygulama eski
+   listeyi göstermeye devam ederdi)
+5. İşlenen kayıtları kuyruktan düşürür ve Worker'a yeni listeyi gönderir
+
+Commit ve deploy senin elinde — betik repoya yazmıyor, git'e dokunmuyor.
+
+### Veri nerede duruyor
+
+```
+egzersizler.js
+  ├─ üst yarı   → elle bakımlı: Türkçe kas ve ekipman sözlükleri
+  └─ alt yarı   → veri-al üretiyor:
+       EXERCISES      hareket listesi, mekâna göre
+       EXERCISE_INFO  ikincil kaslar + adım adım talimat, hareket adına göre
+```
+
+İkisi ayrı duruyor çünkü 11 hareket hem "Evde" hem "Spor Salonunda" listesinde;
+talimatı iki kez saklamanın anlamı yok.
+
+Yeni hareketin hangi mekâna gideceği mevcut 281 kaydın gerçek dağılımından
+çıkarıldı: `bands`, `medicine ball`, `exercise ball`, `foam roll` ve ekipmansız
+hareketler eve; `barbell`, `cable`, `machine`, `ez curl bar`, `dumbbell` ve
+`other` salona; `kettlebell` ikisine birden (mevcut veride tam 10/10 böyle).
+
 ## Ajanlar
 
 | Ajan | Kaynak | Lisans | Ne yapar |

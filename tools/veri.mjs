@@ -3,8 +3,9 @@
    VERİ KÖPRÜSÜ — uygulama ↔ Worker
 
      node tools/veri.mjs gonder   → uygulamanın mevcut listesini Worker'a yolla
-     node tools/veri.mjs bekleyen → onay kuyruğunda ne var, özetle
      node tools/veri.mjs calistir → ajanları elle çalıştır
+     node tools/veri.mjs bekleyen → onay kuyruğunda ne var, özetle
+     node tools/veri.mjs al       → ONAYLADIKLARINI dosyalara işle
 
    Worker adresi ve panel anahtarı ortam değişkeninden okunuyor; repoda
    durmuyorlar:
@@ -14,6 +15,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { dosyayiOku, dosyayiUret, birlestir } from './egzersiz-yaz.mjs';
 
 const KOK = path.dirname(fileURLToPath(new URL('.', import.meta.url)));
 
@@ -56,12 +58,12 @@ async function cagir(yol, secenek = {}) {
   return govde;
 }
 
-/* app.js'teki EXERCISES tanımını olduğu yerden okur. Dosyayı çalıştırmıyoruz;
+/* egzersizler.js'teki EXERCISES tanımını okur. Dosyayı çalıştırmıyoruz;
    yalnız o bloğu ayıklayıp değerlendiriyoruz. */
-export function mevcutEgzersizler(appYolu = path.join(KOK, 'app.js')) {
-  const kaynak = fs.readFileSync(appYolu, 'utf8');
+export function mevcutEgzersizler(dosya = path.join(KOK, 'egzersizler.js')) {
+  const kaynak = fs.readFileSync(dosya, 'utf8');
   const bas = kaynak.indexOf('var EXERCISES');
-  if (bas < 0) throw new Error('app.js içinde EXERCISES bulunamadı.');
+  if (bas < 0) throw new Error('egzersizler.js içinde EXERCISES bulunamadı.');
   const son = kaynak.indexOf('\n};', bas);
   if (son < 0) throw new Error('EXERCISES tanımının sonu bulunamadı.');
   const blok = kaynak.slice(bas, son + 3);
@@ -73,10 +75,23 @@ export function mevcutEgzersizler(appYolu = path.join(KOK, 'app.js')) {
   return duz;
 }
 
+/* Service worker önbelleğini tazele. Dosyanın içeriği değişti ama CACHE_NAME
+   aynı kalırsa telefondaki uygulama eski listeyi göstermeye devam eder —
+   bunu elle hatırlamak yerine betik yapsın. */
+function onbellegiTazele() {
+  const yol = path.join(KOK, 'sw.js');
+  const icerik = fs.readFileSync(yol, 'utf8');
+  const m = icerik.match(/var CACHE_NAME = 'fit-takip-v(\d+)';/);
+  if (!m) throw new Error('sw.js içinde CACHE_NAME bulunamadı.');
+  const yeni = Number(m[1]) + 1;
+  fs.writeFileSync(yol, icerik.replace(m[0], "var CACHE_NAME = 'fit-takip-v" + yeni + "';"));
+  return { eski: Number(m[1]), yeni };
+}
+
 const KOMUTLAR = {
   async gonder() {
     const liste = mevcutEgzersizler();
-    console.log('app.js\'ten okundu: ' + liste.length + ' hareket');
+    console.log('egzersizler.js\'ten okundu: ' + liste.length + ' hareket');
     const sonuc = await cagir('/admin/mevcut', {
       method: 'POST', body: JSON.stringify({ egzersiz: liste })
     });
@@ -95,6 +110,59 @@ const KOMUTLAR = {
         s.atlanan + ' atlandı, kuyrukta ' + s.toplam);
     }
     console.log('\nPanelde incele:  ' + (process.env.FITTAKIP_WORKER || '').replace(/\/+$/, '') + '/admin');
+  },
+
+  async al() {
+    const kutu = await cagir('/admin/onaylananlar?ajan=egzersiz');
+    const kayitlar = kutu.egzersiz || [];
+    if (!kayitlar.length) {
+      console.log('Onaylanmış egzersiz kaydı yok. Panelde onayladıktan sonra tekrar çalıştır.');
+      return;
+    }
+    console.log(kayitlar.length + ' onaylı kayıt alındı.');
+
+    const yol = path.join(KOK, 'egzersizler.js');
+    const once = fs.readFileSync(yol, 'utf8');
+    const { EXERCISES, EXERCISE_INFO } = dosyayiOku(once);
+    const oncekiSayi = Object.values(EXERCISES).reduce((n, v) => n + v.length, 0);
+
+    const sonuc = birlestir(EXERCISES, EXERCISE_INFO, kayitlar);
+    const metin = dosyayiUret(once, sonuc.EXERCISES, sonuc.EXERCISE_INFO);
+
+    // Yazmadan önce çalıştırılabilir mi diye bak — bozuk dosya yazmayalım
+    try {
+      new Function(metin.slice(metin.indexOf('var EXERCISES')));
+    } catch (err) {
+      throw new Error('Üretilen egzersizler.js çalıştırılamıyor, yazılmadı: ' + err.message);
+    }
+
+    fs.writeFileSync(yol, metin);
+    const sonrakiSayi = Object.values(sonuc.EXERCISES).reduce((n, v) => n + v.length, 0);
+
+    console.log('\negzersizler.js güncellendi:');
+    console.log('  hareket      : ' + oncekiSayi + ' → ' + sonrakiSayi +
+      '  (' + sonuc.rapor.hareketEklendi + ' yeni)');
+    console.log('  talimat/kas  : ' + Object.keys(sonuc.EXERCISE_INFO).length +
+      ' harekette  (' + sonuc.rapor.bilgiEklendi + ' işlendi)');
+    if (sonuc.rapor.atlanan) {
+      console.log('  atlanan      : ' + sonuc.rapor.atlanan);
+      for (const a of sonuc.rapor.atlananlar.slice(0, 8)) console.log('     · ' + a);
+      if (sonuc.rapor.atlananlar.length > 8) {
+        console.log('     · … ve ' + (sonuc.rapor.atlananlar.length - 8) + ' tane daha');
+      }
+    }
+
+    const onbellek = onbellegiTazele();
+    console.log('  önbellek     : v' + onbellek.eski + ' → v' + onbellek.yeni);
+
+    // İşlenen kayıtları kuyruktan düş ve ajanın yeni duruma bakmasını sağla
+    await cagir('/admin/isaretle', {
+      method: 'POST',
+      body: JSON.stringify({ ajan: 'egzersiz', idler: kayitlar.map(k => k.id) })
+    });
+    const liste = mevcutEgzersizler();
+    await cagir('/admin/mevcut', { method: 'POST', body: JSON.stringify({ egzersiz: liste }) });
+    console.log('\nWorker güncellendi. Şimdi: npm test && git add -A && git commit');
   },
 
   async bekleyen() {

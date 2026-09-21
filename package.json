@@ -11,7 +11,8 @@
     "serve": "node test/server.mjs 8080",
     "veri-gonder": "node tools/veri.mjs gonder",
     "veri-calistir": "node tools/veri.mjs calistir",
-    "veri-bekleyen": "node tools/veri.mjs bekleyen"
+    "veri-bekleyen": "node tools/veri.mjs bekleyen",
+    "veri-al": "node tools/veri.mjs al"
   },
   "devDependencies": {
     "playwright": "^1.49.0"

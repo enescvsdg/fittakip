@@ -4,7 +4,7 @@
    fit-takip-v1 → v2 → v3 → v4 → ...
    ══════════════════════════════════════════ */
 
-var CACHE_NAME = 'fit-takip-v52';
+var CACHE_NAME = 'fit-takip-v53';
 
 var STATIC_ASSETS = [
   './',
@@ -13,6 +13,7 @@ var STATIC_ASSETS = [
   './storage.js',
   './utils.js',
   './foods.js',
+  './egzersizler.js',
   './app.js',
   './manifest.json',
   './icons/icon-192.png',
