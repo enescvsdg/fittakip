@@ -1,0 +1,187 @@
+:root{
+  --bg:#f1efec; --surface:#ffffff; --surface-2:#f5f3f0; --surface-3:#e8e4df;
+  --text:#17191c; --text-muted:#5f656d; --text-dim:#8b929b;
+  --border:rgba(0,0,0,0.11); --hairline:rgba(0,0,0,0.09);
+  --accent:#b23b0a; --accent-2:#98330a; --accent-wash:rgba(178,59,10,0.10);
+  --iyi:#2c7a36; --iyi-wash:rgba(44,122,54,0.11); --iyi-edge:rgba(44,122,54,0.30);
+  --uyari:#9a5b00; --uyari-wash:rgba(154,91,0,0.11); --uyari-edge:rgba(154,91,0,0.32);
+  --mavi:#006eb8; --mavi-wash:rgba(0,110,184,0.10);
+  --kirmizi:#b3261e;
+  --radius-sm:9px; --radius-md:14px; --radius-lg:18px;
+  --app:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;
+  --disp:'Archivo',-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --bg:#0c121b; --surface:#151d29; --surface-2:#1f2937; --surface-3:#2a3646;
+  --text:#f0f0f0; --text-muted:#93a0b0; --text-dim:#5b6676;
+  --border:rgba(255,255,255,0.10); --hairline:rgba(255,255,255,0.07);
+  --accent:#ff5c2b; --accent-2:#ff8c42; --accent-wash:rgba(255,92,43,0.15);
+  --iyi:#5ec463; --iyi-wash:rgba(76,175,80,0.13); --iyi-edge:rgba(76,175,80,0.32);
+  --uyari:#ffab2e; --uyari-wash:rgba(255,152,0,0.14); --uyari-edge:rgba(255,152,0,0.34);
+  --mavi:#5aa9ee; --mavi-wash:rgba(63,143,214,0.14);
+  --kirmizi:#ef5350;
+}}
+:root[data-theme="dark"]{
+  --bg:#0c121b; --surface:#151d29; --surface-2:#1f2937; --surface-3:#2a3646;
+  --text:#f0f0f0; --text-muted:#93a0b0; --text-dim:#5b6676;
+  --border:rgba(255,255,255,0.10); --hairline:rgba(255,255,255,0.07);
+  --accent:#ff5c2b; --accent-2:#ff8c42; --accent-wash:rgba(255,92,43,0.15);
+  --iyi:#5ec463; --iyi-wash:rgba(76,175,80,0.13); --iyi-edge:rgba(76,175,80,0.32);
+  --uyari:#ffab2e; --uyari-wash:rgba(255,152,0,0.14); --uyari-edge:rgba(255,152,0,0.34);
+  --mavi:#5aa9ee; --mavi-wash:rgba(63,143,214,0.14);
+  --kirmizi:#ef5350;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--app);line-height:1.5;}
+.kabuk{max-width:960px;margin:0 auto;padding-inline:16px;padding-block:0 64px;}
+
+/* ── üst çubuk ── */
+.cubuk{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;
+  background:var(--bg);border-bottom:1px solid var(--hairline);
+  padding-block:13px;margin-bottom:18px;}
+.cubuk .kabuk{padding-block:0;}
+.cubuk-ic{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;}
+.marka{display:flex;flex-direction:column;gap:1px;}
+.marka b{font-family:var(--disp);font-size:16px;font-weight:700;letter-spacing:-.01em;}
+.marka span{font-size:11.5px;color:var(--text-dim);}
+.eylem{display:flex;gap:8px;align-items:center;}
+.sayac{font-size:12.5px;color:var(--text-muted);font-variant-numeric:tabular-nums;}
+button{font:inherit;cursor:pointer;}
+.dugme{font-size:13px;font-weight:600;border-radius:999px;padding:7px 15px;
+  border:1px solid var(--border);background:var(--surface-2);color:var(--text-muted);
+  transition:.16s;}
+.dugme:hover:not(:disabled){color:var(--text);}
+.dugme:disabled{opacity:.42;cursor:not-allowed;}
+.dugme.ana{background:var(--accent);border-color:var(--accent);color:#fff;}
+.dugme.ana:hover:not(:disabled){filter:brightness(1.08);}
+.dugme.ret{color:var(--kirmizi);}
+.dugme:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+/* ── ajan sekmeleri ── */
+.sekmeler{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px;}
+.sekme{font-size:12.5px;font-weight:600;border-radius:999px;padding:6px 13px;
+  border:1px solid var(--border);background:var(--surface-2);color:var(--text-muted);}
+.sekme[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff;}
+.sekme .n{font-variant-numeric:tabular-nums;opacity:.72;margin-left:5px;}
+
+.bilgi{font-size:12.5px;color:var(--text-dim);margin-bottom:12px;
+  padding:9px 12px;background:var(--surface-2);border-radius:var(--radius-sm);
+  border:1px solid var(--hairline);}
+
+/* ── grup ── */
+.grup{margin-bottom:24px;}
+.grup-bas{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;
+  padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid var(--hairline);}
+.grup-bas h2{font-family:var(--disp);font-size:13px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--text);}
+.grup-bas .kac{font-size:12px;color:var(--text-dim);font-variant-numeric:tabular-nums;}
+.tumu{margin-left:auto;font-size:12px;font-weight:600;color:var(--accent);
+  background:none;border:0;padding:4px 2px;}
+.tumu:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+/* ── kayıt ── */
+.kayitlar{display:flex;flex-direction:column;gap:9px;}
+.kayit{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-md);padding:12px 13px;display:flex;gap:11px;
+  transition:border-color .15s,background .15s;}
+.kayit.secili{border-color:var(--accent);background:var(--accent-wash);}
+.kayit.supheli{border-left:3px solid var(--uyari);}
+.kayit input[type=checkbox]{width:17px;height:17px;margin-top:2px;flex:none;
+  accent-color:var(--accent);cursor:pointer;}
+.govde{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px;}
+.bas{display:flex;flex-wrap:wrap;gap:7px;align-items:center;}
+.bas .ad{font-size:14.5px;font-weight:700;flex:1;min-width:140px;}
+.etiket{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:2.5px 7px;border-radius:5px;white-space:nowrap;}
+.etiket.yeni{background:var(--iyi-wash);color:var(--iyi);border:1px solid var(--iyi-edge);}
+.etiket.gun{background:var(--mavi-wash);color:var(--mavi);border:1px solid var(--mavi);}
+.etiket.sup{background:var(--uyari-wash);color:var(--uyari);border:1px solid var(--uyari-edge);}
+
+.deger{font-size:13px;color:var(--text-muted);font-variant-numeric:tabular-nums;}
+.aciklama{font-size:12.5px;color:var(--text-dim);}
+.aciklama b{color:var(--text-muted);font-weight:600;}
+
+.fark{display:grid;grid-template-columns:auto auto auto auto;gap:3px 10px;
+  font-size:12.5px;font-variant-numeric:tabular-nums;align-items:baseline;
+  background:var(--surface-2);border-radius:var(--radius-sm);padding:8px 10px;
+  width:fit-content;max-width:100%;overflow-x:auto;}
+.fark .k{color:var(--text-dim);}
+.fark .e{color:var(--text-muted);text-decoration:line-through;text-decoration-thickness:1px;}
+.fark .ok{color:var(--text-dim);}
+.fark .y{color:var(--text);font-weight:700;}
+.fark .y.arti{color:var(--iyi);} .fark .y.eksi{color:var(--kirmizi);}
+
+.uyari-kutu{font-size:12.5px;background:var(--uyari-wash);color:var(--uyari);
+  border:1px solid var(--uyari-edge);border-radius:var(--radius-sm);padding:7px 10px;}
+.uyari-kutu b{font-weight:700;}
+
+details.talimat{font-size:12.5px;}
+details.talimat summary{cursor:pointer;color:var(--accent);font-weight:600;
+  list-style:none;width:fit-content;}
+details.talimat summary::-webkit-details-marker{display:none;}
+details.talimat summary::before{content:"▸ ";font-size:10px;}
+details.talimat[open] summary::before{content:"▾ ";}
+details.talimat ol{margin:7px 0 0 17px;color:var(--text-muted);display:flex;
+  flex-direction:column;gap:4px;}
+.kaynak-bag{font-size:11.5px;color:var(--text-dim);word-break:break-all;}
+
+/* ── onaylananlar ── */
+.onayli{margin-top:30px;border-top:1px solid var(--hairline);padding-top:16px;}
+.onayli h2{font-family:var(--disp);font-size:13px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--iyi);margin-bottom:10px;}
+.onayli ul{display:flex;flex-direction:column;gap:5px;list-style:none;}
+.onayli li{display:flex;gap:9px;align-items:center;font-size:13px;
+  background:var(--iyi-wash);border:1px solid var(--iyi-edge);
+  border-radius:var(--radius-sm);padding:7px 11px;}
+.onayli li .ad{flex:1;min-width:0;}
+.onayli li .kim{font-size:11px;color:var(--text-dim);}
+.geri{background:none;border:0;color:var(--accent);font-size:12px;font-weight:600;padding:2px;}
+.adim{margin-top:14px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-md);padding:13px;}
+.adim h3{font-family:var(--disp);font-size:13px;font-weight:700;margin-bottom:6px;}
+.adim p{font-size:13px;color:var(--text-muted);margin-bottom:9px;}
+.adim code{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:12.5px;background:var(--surface-3);color:var(--text);
+  border-radius:var(--radius-sm);padding:9px 11px;overflow-x:auto;}
+
+.bos{text-align:center;color:var(--text-dim);font-size:13.5px;padding:40px 10px;}
+@media (max-width:460px){ .fark{grid-template-columns:auto auto auto;} .fark .k{grid-column:1/-1;} }
+
+/* ── SÜZGEÇ ──
+   Ajanlar bin kayda kadar getirebiliyor; hepsini tek tek gözden geçirmek
+   gerçekçi değil. Arama ve süzgeç listeyi yönetilebilir tutuyor. */
+.suzgec{display:flex;flex-direction:column;gap:9px;margin-bottom:20px;}
+
+.ara{font:inherit;font-size:14px;background:var(--surface);color:var(--text);
+  border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;
+  width:100%;}
+.ara::placeholder{color:var(--text-dim);}
+.ara:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+
+.suzgec-cipler{display:flex;flex-wrap:wrap;gap:6px;}
+.scip{font:inherit;font-size:12px;font-weight:600;border-radius:999px;padding:5px 11px;
+  border:1px solid var(--border);background:var(--surface-2);color:var(--text-muted);
+  cursor:pointer;transition:.15s;}
+.scip:hover{color:var(--text);}
+.scip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff;}
+.scip:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.scip .n{opacity:.7;margin-left:4px;font-variant-numeric:tabular-nums;}
+.scip[disabled]{opacity:.4;cursor:not-allowed;}
+
+/* Grup başlığındaki toplu eylem */
+.grup-eylem{display:flex;gap:6px;margin-left:auto;align-items:center;}
+.grup-eylem button{font-size:12px;font-weight:600;background:none;border:0;padding:4px 2px;
+  cursor:pointer;}
+.grup-eylem .tumu{color:var(--accent);}
+.grup-eylem .grubu-onayla{color:var(--iyi);}
+.grup-eylem button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.grup-eylem button[disabled]{opacity:.45;cursor:not-allowed;}
+
+/* Çizim sınırı: bin kaydı birden basmak telefonu kilitliyor */
+.daha{display:block;width:100%;margin-top:10px;font:inherit;font-size:13px;
+  font-weight:600;background:var(--surface-2);color:var(--text-muted);
+  border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px;
+  cursor:pointer;}
+.daha:hover{color:var(--text);}
+.daha:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+.sonuc-yok{text-align:center;color:var(--text-dim);font-size:13.5px;padding:30px 10px;}

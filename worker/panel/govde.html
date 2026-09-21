@@ -1,0 +1,36 @@
+<div class="cubuk">
+  <div class="kabuk cubuk-ic">
+    <div class="marka">
+      <b>FitTakip · Veri Onayı</b>
+      <span id="ozet">—</span>
+    </div>
+    <div class="eylem">
+      <span class="sayac" id="sayac">0 seçili</span>
+      <button type="button" class="dugme ret" id="redBtn" disabled>Reddet</button>
+      <button type="button" class="dugme ana" id="onayBtn" disabled>Onayla</button>
+    </div>
+  </div>
+</div>
+
+<div class="kabuk">
+  <div class="sekmeler" id="sekmeler"></div>
+  <p class="bilgi" id="calisma">—</p>
+
+  <div class="suzgec">
+    <input type="search" class="ara" id="ara" placeholder="Ada göre ara…"
+           autocomplete="off" aria-label="Kayıtlarda ara">
+    <div class="suzgec-cipler" id="suzgecCipler"></div>
+  </div>
+  <div id="icerik"></div>
+  <div class="onayli" id="onayliBolum" hidden>
+    <h2>Onaylandı</h2>
+    <ul id="onayliListe"></ul>
+    <div class="adim">
+      <h3>Son adım</h3>
+      <p>Onayladıkların Cloudflare'de bekliyor. Bilgisayarında şunu çalıştır — kayıtlar
+         doğrulama kapısından geçer, <code style="display:inline;padding:1px 5px">foods.js</code>
+         ve <code style="display:inline;padding:1px 5px">app.js</code> dosyalarına işlenir.</p>
+      <code>npm run veri-al</code>
+    </div>
+  </div>
+</div>

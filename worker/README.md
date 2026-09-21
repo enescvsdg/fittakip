@@ -171,6 +171,38 @@ https://fittakip-push.<hesap-alt-adın>.workers.dev/admin
 Tarayıcı kendi giriş penceresini açar. Kullanıcı adı önemsiz (`admin` yaz),
 parola az önce ürettiğin `ADMIN_KEY`. Telefondan da aynı adres çalışır.
 
+## Panelde çalışmak
+
+İlk turda yaklaşık **1.000 kayıt** düşüyor. Panel bunun için kuruldu:
+
+**Süzgeçler** — Tümü / Şüpheli / Temiz / Yeni / Güncelleme. Yanlarında kaç
+kayıt olduğu yazıyor, boş olanlar kilitli.
+
+**Arama** — hareket ya da grup adında arar.
+
+**Grubu onayla** — bir grubun tamamını tek düğmeyle. Grupta şüpheli kayıt
+varsa onay penceresi kaçını olduğunu söylüyor: şüpheli işareti "gözle bak"
+demek, sessizce geçmemeli.
+
+**Çizim sınırı** — bir seferde 60 kayıt basılıyor, gerisi "Daha fazla göster"
+ile geliyor. Bin kaydı birden çizmek telefonu kilitliyor.
+
+Önerilen akış: önce **Temiz** süzgecini seçip grupları toplu onayla, sonra
+**Şüpheli** süzgecine geçip onları tek tek gözden geçir.
+
+### Panelin kaynağı
+
+Panel Worker koduna gömülü tek bir metin (`worker/src/panel.js`) ama o dosya
+ÜRETİLİYOR — elle düzenleme. Kaynak `worker/panel/` altında:
+
+```
+stil.css       görünüm
+govde.html     iskelet
+uygulama.js    davranış
+```
+
+Değişiklikten sonra `npm run panel-uret` çalıştır, sonra `wrangler deploy`.
+
 ## Kullanım
 
 Betikler Worker adresini ve panel anahtarını ortam değişkeninden okur:
