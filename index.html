@@ -284,6 +284,15 @@
         </div>
         <div class="calendar-day-detail hidden" id="calendarDayDetail"></div>
       </div>
+
+      <!-- AI DEĞERLENDİRMESİ -->
+      <div class="chart-card" id="ai-analysis-card">
+        <p class="info-title" style="color: var(--cat-antrenman);">AI Değerlendirmesi</p>
+        <p class="food-source-note">Antrenman geçmişini yorumlar: hacim, durgunluk, ihmal edilen kas grupları. Sayılar senin kayıtlarından hesaplanır, yorum yapay zekâdan gelir.</p>
+        <button class="btn-secondary" id="aiAnalysisBtn" type="button" style="margin-top:12px;">Analiz Et</button>
+        <p class="chart-empty" id="aiAnalysisHint">Bunun için Worker bağlantısı gerekiyor. Kişisel Bilgiler sayfasından bildirimleri bağladıysan hazırsın.</p>
+        <div class="ai-analysis-result hidden" id="aiAnalysisResult"></div>
+      </div>
     </section>
 
     <!-- PAGE: PROFILE -->

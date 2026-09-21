@@ -44,6 +44,7 @@ function showPage(pageId, sessiz) {
     renderConsistency();
     renderStrengthSection();
     renderCalendar();
+    aiAnaliziHazirla();
   }
 }
 
@@ -1340,6 +1341,119 @@ function saveSessionToHistory(weekday) {
     exercises: recorded
   });
   saveWorkoutHistory(history);
+}
+
+/* ══════════════════════════════════════════
+   AI DEĞERLENDİRMESİ
+
+   Geçmiş telefonda duruyor; Worker'a gönderiliyor, orada özetlenip modele
+   veriliyor ve yorum geri geliyor. Worker geçmişi saklamıyor.
+
+   Sonuç localStorage'da tutuluyor: her açılışta yeniden istemenin anlamı yok,
+   antrenman kaydı değişmediği sürece sonuç da değişmez.
+   ══════════════════════════════════════════ */
+
+var AI_ANALIZ_KEY = 'ft_ai_analiz';
+
+var aiAnalysisBtn = document.getElementById('aiAnalysisBtn');
+var aiAnalysisHint = document.getElementById('aiAnalysisHint');
+var aiAnalysisResult = document.getElementById('aiAnalysisResult');
+
+function aiAnaliziOku() { return getJSON(AI_ANALIZ_KEY, null); }
+function aiAnaliziYaz(v) { setJSON(AI_ANALIZ_KEY, v); }
+
+function aiAnalizDurum(metin, hataMi) {
+  if (!aiAnalysisHint) return;
+  aiAnalysisHint.textContent = metin;
+  aiAnalysisHint.classList.toggle('hata', !!hataMi);
+  aiAnalysisHint.classList.remove('hidden');
+}
+
+function aiAnaliziCiz() {
+  if (!aiAnalysisResult) return;
+  var kayit = aiAnaliziOku();
+  if (!kayit || !kayit.analiz) {
+    aiAnalysisResult.classList.add('hidden');
+    return;
+  }
+
+  var a = kayit.analiz;
+  var parcalar = [];
+  parcalar.push('<p class="ai-baslik">' + escapeHtml(a.baslik || 'Değerlendirme') + '</p>');
+  if (kayit.ozet) {
+    parcalar.push('<p class="ai-donem">' + escapeHtml(kayit.ozet.ilkTarih) + ' → ' +
+      escapeHtml(kayit.ozet.sonTarih) + ' · ' + kayit.ozet.seansSayisi + ' seans · ' +
+      kayit.ozet.toplamSet + ' set</p>');
+  }
+  (a.bulgular || []).forEach(function(b) {
+    parcalar.push('<div class="ai-bulgu"><span class="konu">' + escapeHtml(b.konu || 'Genel') +
+      '</span><span class="metin">' + escapeHtml(b.metin || '') + '</span></div>');
+  });
+  if ((a.oneriler || []).length) {
+    parcalar.push('<div class="ai-oneriler"><span class="baslik">Öneriler</span><ul>' +
+      a.oneriler.map(function(o) { return '<li>' + escapeHtml(o) + '</li>'; }).join('') +
+      '</ul></div>');
+  }
+  aiAnalysisResult.innerHTML = parcalar.join('');
+  aiAnalysisResult.classList.remove('hidden');
+}
+
+function aiAnaliziHazirla() {
+  if (!aiAnalysisBtn) return;
+  aiAnaliziCiz();
+  var kayit = aiAnaliziOku();
+  if (kayit && kayit.an) {
+    aiAnalizDurum('Son değerlendirme: ' + new Date(kayit.an).toLocaleDateString('tr-TR') +
+      '. Yeni antrenmanlar eklendiyse tekrar çalıştır.');
+  } else if (!getPushServerUrl()) {
+    aiAnalizDurum('Bunun için Worker bağlantısı gerekiyor. Kişisel Bilgiler sayfasından ' +
+      'bildirimleri bağladıysan hazırsın.');
+  } else if (getWorkoutHistory().length < 3) {
+    aiAnalizDurum('En az 3 tamamlanmış antrenman gerekiyor; şu an ' +
+      getWorkoutHistory().length + ' var.');
+  } else {
+    aiAnalizDurum('Hazır — geçmişindeki ' + getWorkoutHistory().length +
+      ' antrenmanı değerlendirebilir.');
+  }
+}
+
+if (aiAnalysisBtn) {
+  aiAnalysisBtn.addEventListener('click', function() {
+    if (!getPushServerUrl()) {
+      aiAnalizDurum('Worker adresi girilmemiş. Kişisel Bilgiler sayfasından bağlan.', true);
+      return;
+    }
+    var gecmis = getWorkoutHistory();
+    if (gecmis.length < 3) {
+      aiAnalizDurum('En az 3 tamamlanmış antrenman gerekiyor; şu an ' + gecmis.length + ' var.', true);
+      return;
+    }
+
+    aiAnalysisBtn.disabled = true;
+    aiAnalizDurum('Değerlendiriliyor, bu 10-20 saniye sürebilir…');
+
+    pushFetch('/analiz', {
+      method: 'POST',
+      body: JSON.stringify({
+        gecmis: gecmis,
+        profil: {
+          cinsiyet: localStorage.getItem(KEYS.gender) || '',
+          yas:      localStorage.getItem(KEYS.age) || '',
+          kilo:     localStorage.getItem(KEYS.weight) || '',
+          hedef:    localStorage.getItem(KEYS.goalType) || ''
+        }
+      })
+    }).then(function(cevap) {
+      if (!cevap || !cevap.analiz) throw new Error('Sunucudan değerlendirme gelmedi.');
+      aiAnaliziYaz({ an: new Date().toISOString(), analiz: cevap.analiz, ozet: cevap.ozet });
+      aiAnaliziCiz();
+      aiAnalizDurum('Değerlendirme hazır.');
+    }).catch(function(err) {
+      aiAnalizDurum(err && err.message ? err.message : 'Değerlendirme alınamadı.', true);
+    }).finally(function() {
+      aiAnalysisBtn.disabled = false;
+    });
+  });
 }
 
 /* ══════════════════════════════════════════
@@ -4828,3 +4942,13 @@ document.addEventListener('touchcancel', function() {
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(function(ad) {
   document.addEventListener(ad, function(e) { e.preventDefault(); }, { passive: false });
 });
+
+/* ── AI DEĞERLENDİRMESİ: İLK DURUM ──
+   Ana sayfa açılışta zaten görünür durumda, showPage('home') çağrılmıyor —
+   kartın ilk halini burada kuruyoruz.
+
+   Bu çağrı dosyanın EN SONUNDA olmak zorunda: getPushServerUrl, PUSH_KEYS
+   nesnesini okuyor ve o nesne çok aşağıda "var" ile atanıyor. Yukarıdan
+   çağırınca PUSH_KEYS henüz undefined oluyor, atılan hata app.js'in geri
+   kalanını hiç çalıştırmıyor ve uygulama açılmıyor. */
+aiAnaliziHazirla();

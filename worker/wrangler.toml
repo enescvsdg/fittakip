@@ -30,3 +30,5 @@ ALLOWED_ORIGIN = "https://enescvsdg.github.io"
 #   ADMIN_KEY          — yönetim paneli parolası (/admin)
 #                        Panel tarayıcının kendi giriş penceresiyle korunuyor;
 #                        kullanıcı adı önemsiz, parola bu anahtarla eşleşmeli.
+#   GEMINI_API_KEY     — antrenman analizi ve Türkçe çeviri için
+#                        (uygulamadaki anahtarın aynısı olabilir)

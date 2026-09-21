@@ -1748,3 +1748,57 @@ html, body { touch-action: pan-x pan-y; overflow-x: clip; }
   cursor: pointer;
   caret-color: transparent;
 }
+
+/* ── AI DEĞERLENDİRMESİ ── */
+.ai-analysis-result { margin-top: 14px; display: flex; flex-direction: column; gap: 12px; }
+
+.ai-analysis-result .ai-baslik {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.ai-analysis-result .ai-donem {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.ai-bulgu {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  background: var(--tint-antrenman);
+  border: 1px solid var(--edge-antrenman);
+  border-radius: var(--radius-sm);
+}
+
+.ai-bulgu .konu {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cat-antrenman);
+}
+
+.ai-bulgu .metin { font-size: 13.5px; color: var(--text); line-height: 1.5; }
+
+.ai-oneriler { display: flex; flex-direction: column; gap: 6px; }
+
+.ai-oneriler .baslik {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ai-oneriler li {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-left: 18px;
+}
+
+.ai-analysis-durum { font-size: 13px; color: var(--text-muted); margin-top: 10px; }
+.ai-analysis-durum.hata { color: var(--danger); }

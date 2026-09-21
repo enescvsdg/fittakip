@@ -10,6 +10,7 @@ import { sendPush } from './push.js';
 import { secretsMatch } from './kimlik.js';
 import { adminYolu, adminIstegi } from './admin.js';
 import { hepsiniCalistir } from './ajanlar/index.js';
+import { calistir as analizCalistir } from './ajanlar/analiz.js';
 
 const GRACE_MINUTES = 60;   // kaçırılan hatırlatma bu süre içinde hâlâ gönderilir
 // Cron dakikada bir uyandığı için saatinde gönderilen bildirim hedef dakikayı
@@ -245,6 +246,26 @@ async function handleRequest(request, env) {
   }
 
   // Sunucunun kayıtlı hatırlatmalar hakkında ne gördüğünü gösterir (teşhis)
+  /* Antrenman analizi. Geçmiş telefonda duruyor, Worker'da değil — uygulama
+     "Analiz Et"e basınca buraya yolluyor. Worker geçmişi SAKLAMIYOR: özetleyip
+     modele veriyor, çıkan yorumu onay kuyruğuna yazıyor, gerisini unutuyor. */
+  if (url.pathname === '/analiz' && request.method === 'POST') {
+    const body = await request.json().catch(function() { return null; });
+    if (!body || !Array.isArray(body.gecmis)) {
+      return json({ error: 'gecmis listesi bekleniyordu.' }, env, 400);
+    }
+    try {
+      const sonuc = await analizCalistir(env, {
+        gecmis: body.gecmis,
+        profil: body.profil && typeof body.profil === 'object' ? body.profil : {}
+      });
+      return json({ ok: true, ...sonuc }, env);
+    } catch (err) {
+      /* Kullanıcı bu hatayı ekranda görecek — ne yapması gerektiğini söylesin */
+      return json({ error: err.message }, env, 422);
+    }
+  }
+
   if (url.pathname === '/debug' && request.method === 'GET') {
     const adlar = await ensureIndex(env);
     const subs = [];

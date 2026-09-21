@@ -257,8 +257,32 @@ hareketler eve; `barbell`, `cable`, `machine`, `ez curl bar`, `dumbbell` ve
 | Ajan | Kaynak | Lisans | Ne yapar |
 |---|---|---|---|
 | Egzersiz | [free-exercise-db](https://github.com/yuhonas/free-exercise-db) | Unlicense (kamu malı) | 876 hareketi mevcut 281'le eşleştirir; talimat ve ikincil kas getirir |
+| Analiz | Gemini | — | Antrenman geçmişini yorumlar |
 
-Diğer üç ajan (Gıda, Analiz, Supplement) henüz yazılmadı.
+Gıda ve Supplement ajanları henüz yazılmadı.
+
+### Analiz ajanı için ek kurulum
+
+```bash
+wrangler secret put GEMINI_API_KEY
+```
+
+Uygulamada zaten kullandığın Gemini anahtarının aynısı olabilir.
+
+Bu ajan cron'la çalışmıyor: uygulamadaki **Analiz Et** düğmesi tetikliyor.
+Sebebi veri: antrenman geçmişi telefonda (`localStorage`) duruyor, Worker'da
+değil. Düğmeye basınca uygulama geçmişi Worker'a yolluyor, Worker özetleyip
+modele veriyor, yorumu geri gönderiyor. **Worker geçmişi saklamıyor.**
+
+Bir iş bölümü var ve kasıtlı: **sayıları kod hesaplıyor, model yalnız
+yorumluyor.** Modele "haftalık hacmimi hesapla" dersen makul görünen ama yanlış
+sayılar üretir ve gözle ayırt edemezsin. Haftalık tonaj, kas grubu dağılımı ve
+durgunluk tespiti Worker'da hesaplanıyor; modelin işi "şu kas 3 haftadır ihmal
+edilmiş" demek.
+
+Analiz sonucu onay beklemiyor — analiz veri değil **rapor**, kullanıcının kendi
+antrenmanı hakkında kendisi için üretiliyor. Panelde yine de bir kayıt
+bırakıyor: eski değerlendirmelere bakılabilsin diye.
 
 ### Egzersiz ajanı neden "eşleştirme" yapıyor?
 
