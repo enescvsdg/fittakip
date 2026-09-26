@@ -7,7 +7,7 @@
 
 import { adminKapisi } from './kimlik.js';
 import { PANEL_HTML } from './panel.js';
-import { panelVerisi, kararlariIsle, onaylananlariOku, onaylananlariTemizle, geriAl, AJANLAR } from './onay.js';
+import { panelVerisi, kararlariIsle, onaylananlariOku, onaylananlariTemizle, bekleyenleriTemizle, geriAl, AJANLAR } from './onay.js';
 import { hepsiniCalistir, AJAN_KODU } from './ajanlar/index.js';
 import { MEVCUT_ANAHTAR } from './ajanlar/egzersiz.js';
 import { MEVCUT_ANAHTAR as GIDA_ANAHTARI, ISTEK_ANAHTARI } from './ajanlar/gida.js';
@@ -151,6 +151,19 @@ export async function adminIstegi(request, env, url) {
       return panelJson({ error: 'Tanımsız ajan.', taninan: Object.keys(AJAN_KODU) }, 400);
     }
     return panelJson(await hepsiniCalistir(env, secilen));
+  }
+
+  /* Bir ajanın bekleyen kuyruğunu boşalt. Onaylananlara dokunmaz.
+     Eşleştirme mantığı değişip tur yeniden atılacağı zaman gerekiyor:
+     eski kayıtlar kuyrukta kalırsa artık yanlış olan bir kaydı da
+     onaylayabiliyorsun. */
+  if (yol === '/admin/temizle' && request.method === 'POST') {
+    const govde = await request.json().catch(() => null);
+    const ajan = govde && govde.ajan;
+    if (!ajan || !AJANLAR.includes(ajan)) {
+      return panelJson({ error: 'Hangi ajan temizlenecek belirtilmedi.', taninan: AJANLAR }, 400);
+    }
+    return panelJson(await bekleyenleriTemizle(env, ajan));
   }
 
   /* "npm run veri-al" bu iki ucu kullanır — aynı ADMIN_KEY ile. */

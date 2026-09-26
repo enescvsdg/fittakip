@@ -243,6 +243,17 @@ Gece 03:00'te zaten kendiliğinden çalışıyor; bu komut "şimdi bak" demek.
 npm run veri-bekleyen
 ```
 
+### Kuyruğu boşalt
+
+```bash
+npm run veri-temizle egzersiz
+```
+
+Yalnız **bekleyen** kayıtları siler, onayladıklarına dokunmaz. Eşleştirme
+mantığı değişip turu yeniden atacağın zaman gerekiyor: kuyruk birikimli, eski
+kayıtlar kalırsa artık yanlış olan bir kaydı da onaylayabilirsin. Ajan adı
+zorunlu — yanlışlıkla hepsini silmek mümkün olmasın.
+
 ### Onayladıklarını uygulamaya işle
 
 Panelde onay verdikten sonra:

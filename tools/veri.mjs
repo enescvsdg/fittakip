@@ -359,6 +359,22 @@ const KOMUTLAR = {
     console.log();
   },
 
+  /* Bir ajanın bekleyen kuyruğunu boşaltır — onaylananlara dokunmaz.
+     Eşleştirme mantığı değişip turu yeniden atacağımız zaman lazım:
+     eski kayıtlar kalırsa artık yanlış olan bir kaydı da onaylayabiliyorsun. */
+  async temizle() {
+    const ajan = process.argv[3];
+    if (!ajan) {
+      console.error('Kullanım: node tools/veri.mjs temizle <egzersiz|gida|analiz|takviye>');
+      process.exit(1);
+    }
+    const s = await cagir('/admin/temizle', {
+      method: 'POST', body: JSON.stringify({ ajan })
+    });
+    console.log(ajan + ' kuyruğundan ' + s.silinen + ' kayıt silindi. ' +
+      'Onaylananlara dokunulmadı.');
+  },
+
   async bekleyen() {
     const veri = await cagir('/admin/veri');
     for (const a of veri.ajanlar) {

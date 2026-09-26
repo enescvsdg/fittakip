@@ -14,7 +14,8 @@
     "veri-bekleyen": "node tools/veri.mjs bekleyen",
     "veri-al": "node tools/veri.mjs al",
     "panel-uret": "node worker/panel-uret.mjs",
-    "veri-dene": "node tools/veri.mjs dene"
+    "veri-dene": "node tools/veri.mjs dene",
+    "veri-temizle": "node tools/veri.mjs temizle"
   },
   "devDependencies": {
     "playwright": "^1.49.0"

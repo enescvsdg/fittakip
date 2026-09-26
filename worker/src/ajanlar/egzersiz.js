@@ -57,17 +57,41 @@ export function adAnahtari(ad) {
    Puanlama kasıtlı olarak muhafazakâr: ekipman ya da kas grubu tutmuyorsa
    aday elenir. Yanlış eşleşme, eşleşmemekten kötü — kullanıcıya "bu hareketin
    talimatı budur" diye başka bir hareketin anlatımını göstermiş oluruz. */
+/* Adı birebir tutan ama künyesi tutmayan eşleşmenin puanı. 70'in altında,
+   yani kayıt şüpheli işaretiyle geliyor ve gözle bakılması gerekiyor. */
+export const AD_TUTUYOR_KUNYE_TUTMUYOR = 60;
+
+/* İki kaydın künyesi (ekipman + birincil kas) aynı şeyi mi söylüyor? */
+export function kunyeUyuyor(bizim, kaynak) {
+  if (ekipmaniNormallestir(bizim.equipment) !== ekipmaniNormallestir(kaynak.equipment)) return false;
+  return ((kaynak.primaryMuscles || [])[0]) === bizim.muscle;
+}
+
 export function adayPuani(bizim, kaynak) {
-  const bizimEkipman = ekipmaniNormallestir(bizim.equipment);
-  const kaynakEkipman = ekipmaniNormallestir(kaynak.equipment);
-  if (bizimEkipman !== kaynakEkipman) return 0;
-
-  const birincil = (kaynak.primaryMuscles || [])[0];
-  if (birincil !== bizim.muscle) return 0;
-
   const a = adAnahtari(bizim.name);
   const b = adAnahtari(kaynak.name);
-  if (a === b) return 100;
+  const kunye = kunyeUyuyor(bizim, kaynak);
+
+  /* Ad birebir aynıysa künye tutmasa da eşleştiriyoruz.
+
+     İlk gerçek turda dört hareket yalnız ekipman etiketi yüzünden elendi;
+     dördü de kaynaktaki AYNI hareket:
+
+       Farmer's Walk        bizde kettlebell   kaynakta other
+       Goblet Squat         bizde dumbbell     kaynakta kettlebells
+       Band Assisted Pull-Up bizde bands       kaynakta other
+       Inverted Row         bizde lats         kaynakta middle back
+
+     İki veri setinin künyesi de gürültülü — goblet squat gerçekten hem
+     dumbbell hem kettlebell ile yapılıyor, inverted row'un hangi sırt
+     kasını saydığı görüş meselesi. Adın birebir tutması bu gürültüden
+     çok daha güçlü bir kanıt. Yine de otomatik kabul etmiyoruz: kayıt
+     şüpheli işaretiyle, farkın ne olduğu yazılı olarak geliyor. */
+  if (a === b) return kunye ? 100 : AD_TUTUYOR_KUNYE_TUTMUYOR;
+
+  /* Ad birebir tutmuyorsa künye kapısı yerinde duruyor: burada adın
+     kendisi kanıt olmadığı için künyenin tutması şart. */
+  if (!kunye) return 0;
 
   /* Yalnızca SONA eklenen niteleme kabul ediliyor:
        "Barbell Bench Press"  ⊂  "Barbell Bench Press - Medium Grip"   ✓
@@ -117,6 +141,22 @@ function ozet(kaynak) {
 
 /* ── KAYIT ÜRETİMİ ──────────────────────────────── */
 
+/* "bizde Dumbbell, kaynakta Kettlebell" gibi okunur bir fark metni. */
+function kunyeFarki(bizim, kaynak) {
+  const parca = [];
+  const be = ekipmaniNormallestir(bizim.equipment);
+  const ke = ekipmaniNormallestir(kaynak.equipment);
+  if (be !== ke) {
+    parca.push('ekipman bizde ' + (EKIPMAN_TR[be] || be) +
+      ', kaynakta ' + (EKIPMAN_TR[ke] || ke));
+  }
+  const kk = (kaynak.primaryMuscles || [])[0];
+  if (kk !== bizim.muscle) {
+    parca.push('birincil kas bizde ' + kasTr(bizim.muscle) + ', kaynakta ' + kasTr(kk));
+  }
+  return parca.join('; ');
+}
+
 function guncellemeKaydi(bizim, aday) {
   const k = aday.kayit;
   const fark = [];
@@ -136,20 +176,33 @@ function guncellemeKaydi(bizim, aday) {
   if (!fark.length) return null;   // eklenecek bir şey yoksa kayıt üretme
 
   const birebir = aday.puan === 100;
+  const adTutuyorKunyeYok = aday.puan === AD_TUTUYOR_KUNYE_TUTMUYOR;
+
+  /* Üç ayrı durum, üç ayrı açıklama. Hepsine "ad benzerliği zayıf" demek
+     yanlış oluyordu: künye farkında ad zaten birebir tutuyor. */
+  let aciklama, uyari = null;
+  if (birebir) {
+    aciklama = 'Kaynakta aynı adla bulundu, eşleme gerekmedi.';
+  } else if (adTutuyorKunyeYok) {
+    aciklama = 'Kaynakta aynı adla bulundu ama künye tutmuyor: ' +
+      kunyeFarki(bizim, k) + '.';
+    uyari = 'Ad birebir aynı, künye farklı. İki veri setinin etiketlemesi ' +
+      'farklı olabilir (aynı hareket) ya da gerçekten başka bir varyant ' +
+      'olabilir. Talimata bakıp karar ver.';
+  } else {
+    aciklama = 'Kaynaktaki "' + k.name + '" kaydıyla eşleştirildi (eşleşme puanı ' +
+      aday.puan + '/100). Ekipman ve birincil kas tutuyor.';
+  }
+
   return {
     id: 'egzersiz:guncelleme:' + adAnahtari(bizim.name),
     tur: 'guncelleme',
     grup: 'Mevcut hareketlere talimat + ikincil kas',
     ad: bizim.name,
     deger: ozet(k),
-    aciklama: birebir
-      ? 'Kaynakta aynı adla bulundu, eşleme gerekmedi.'
-      : 'Kaynaktaki "' + k.name + '" kaydıyla eşleştirildi (eşleşme puanı ' +
-        aday.puan + '/100). Ekipman ve birincil kas tutuyor.',
+    aciklama,
     supheli: aday.puan < 70,
-    uyari: aday.puan < 70
-      ? 'Ad benzerliği zayıf. Talimatın gerçekten bu harekete ait olduğunu doğrula.'
-      : null,
+    uyari,
     fark,
     talimat: k.instructions || null,
     veri: {

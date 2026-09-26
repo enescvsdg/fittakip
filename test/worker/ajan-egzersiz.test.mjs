@@ -12,7 +12,7 @@
    talimatını gösteriyor. */
 import { kur, cronLoglariniSustur } from './_ortam.mjs';
 import {
-  ekipmaniNormallestir, adAnahtari, adayPuani, enIyiAday,
+  ekipmaniNormallestir, adAnahtari, adayPuani, enIyiAday, AD_TUTUYOR_KUNYE_TUTMUYOR,
   kayitlariUret, calistir, MEVCUT_ANAHTAR
 } from '../../worker/src/ajanlar/egzersiz.js';
 import { bekleyenleriOku, turuYaz } from '../../worker/src/onay.js';
@@ -71,9 +71,45 @@ export default async function ({ rapor }) {
   rapor.kontrol('Ekipman tutmuyorsa eşleşme yok',
     adayPuani({ name: 'Hip Thrust', equipment: 'none', muscle: 'glutes' },
               kaynakKayit('Barbell Hip Thrust', 'barbell', 'glutes')) === 0);
-  rapor.kontrol('Birincil kas tutmuyorsa eşleşme yok',
+  rapor.kontrol('Ad farklıyken birincil kas tutmuyorsa eşleşme yok',
     adayPuani({ name: 'Row', equipment: 'barbell', muscle: 'lats' },
-              kaynakKayit('Row', 'barbell', 'biceps')) === 0);
+              kaynakKayit('Barbell Row', 'barbell', 'biceps')) === 0);
+
+  /* Ad birebir tutuyorsa künye kapısı devreye girmiyor. İlk gerçek turda
+     dört hareket yalnız ekipman etiketi yüzünden elenmişti; ikisi burada. */
+  rapor.kontrol('Ad birebir tutuyorsa ekipman farkı eşleşmeyi bozmuyor',
+    adayPuani({ name: 'Goblet Squat', equipment: 'dumbbell', muscle: 'quadriceps' },
+              kaynakKayit('Goblet Squat', 'kettlebells', 'quadriceps'))
+      === AD_TUTUYOR_KUNYE_TUTMUYOR);
+  rapor.kontrol('Ad birebir tutuyorsa kas farkı eşleşmeyi bozmuyor',
+    adayPuani({ name: 'Inverted Row', equipment: 'pull-up bar', muscle: 'lats' },
+              kaynakKayit('Inverted Row', null, 'middle back'))
+      === AD_TUTUYOR_KUNYE_TUTMUYOR);
+  rapor.kontrol('Künye farklı eşleşme şüpheli sayılıyor',
+    AD_TUTUYOR_KUNYE_TUTMUYOR < 70, AD_TUTUYOR_KUNYE_TUTMUYOR + '/100');
+  rapor.kontrol('Künye de tutuyorsa tam puan',
+    adayPuani({ name: 'Goblet Squat', equipment: 'kettlebell', muscle: 'quadriceps' },
+              kaynakKayit('Goblet Squat', 'kettlebells', 'quadriceps')) === 100);
+
+  /* Gevşetme yalnız BİREBİR ada özel: önek/sonek farkı varken künye hâlâ
+     şart, yoksa "Hip Thrust" barbell varyantının talimatını yer. */
+  rapor.kontrol('Ad birebir değilken gevşetme yok',
+    adayPuani({ name: 'Hip Thrust', equipment: 'none', muscle: 'glutes' },
+              kaynakKayit('Barbell Hip Thrust', 'barbell', 'glutes')) === 0);
+
+  /* Künye farkı kayda yazılıyor mu — "ad benzerliği zayıf" demek yanlıştı. */
+  const kunyeKaydi = kayitlariUret(
+    [{ name: 'Goblet Squat', equipment: 'dumbbell', muscle: 'quadriceps', level: 'beginner' }],
+    [kaynakKayit('Goblet Squat', 'kettlebells', 'quadriceps',
+      { secondaryMuscles: ['glutes'], instructions: ['Adım bir.'] })]
+  ).find(k => k.ad === 'Goblet Squat');
+  rapor.kontrol('Künye farkı açıklamada yazıyor',
+    !!kunyeKaydi && /künye tutmuyor/.test(kunyeKaydi.aciklama),
+    kunyeKaydi ? kunyeKaydi.aciklama : 'kayıt yok');
+  rapor.kontrol('Hangi alanın farklı olduğu yazıyor',
+    !!kunyeKaydi && /Dumbbell/.test(kunyeKaydi.aciklama) && /Kettlebell/.test(kunyeKaydi.aciklama),
+    kunyeKaydi ? kunyeKaydi.aciklama : '');
+  rapor.kontrol('Künye farkı şüpheli işaretli geliyor', !!kunyeKaydi && kunyeKaydi.supheli === true);
   rapor.kontrol('pull-up bar ile body only eşleşebiliyor',
     adayPuani({ name: 'Pull-Up', equipment: 'pull-up bar', muscle: 'lats' },
               kaynakKayit('Pullups', 'body only', 'lats')) === 100);

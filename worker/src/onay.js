@@ -185,6 +185,25 @@ export async function geriAl(env, ajan, id) {
   return true;
 }
 
+/* Bir ajanın BEKLEYEN kuyruğunu boşaltır. Onaylananlara dokunmuyor.
+
+   Kuyruk birikimli: turuYaz eski kayıtları koruyor, çünkü gıda ve supplement
+   ajanları her turda listenin yalnız bir dilimini işliyor — eskiyi silmek
+   önceki turların emeğini çöpe atardı. Ama eşleştirme mantığı değişince
+   birikim zararlı oluyor: ilk turda "kaynakta bulunamadı" diye düşen bir
+   hareket, kural gevşeyince "talimat geldi" diye yeniden düşüyor ve ikisi
+   yan yana duruyor — biri artık yanlış.
+
+   Bu yüzden temizlik elle isteniyor ve ajan adı zorunlu: yanlışlıkla hepsini
+   silmek mümkün olmasın. */
+export async function bekleyenleriTemizle(env, ajan) {
+  ajanDogrula(ajan);
+  const eski = await bekleyenleriOku(env, ajan);
+  await listeYaz(env, BEKLEYEN(ajan), []);
+  await env.REMINDERS.delete(CALISMA(ajan));
+  return { silinen: eski.length };
+}
+
 /* "npm run veri-al" kayıtları alıp dosyalara işledikten sonra çağırır.
    Silmeden önce betik dosyaları yazmış olmalı — bu yüzden ayrı bir adım. */
 export async function onaylananlariTemizle(env, ajan, idler) {

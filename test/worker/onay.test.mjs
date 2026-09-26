@@ -7,7 +7,7 @@
 import { kur, cronLoglariniSustur } from './_ortam.mjs';
 import {
   turuYaz, bekleyenleriOku, onaylananlariOku, kararlariIsle,
-  geriAl, onaylananlariTemizle, panelVerisi, AJANLAR
+  geriAl, onaylananlariTemizle, bekleyenleriTemizle, panelVerisi, AJANLAR
 } from '../../worker/src/onay.js';
 
 cronLoglariniSustur();
@@ -241,4 +241,36 @@ export default async function ({ rapor }) {
     adminKapisi(utf8Istek('gizli-panel-anahtari'), env) === null);
   rapor.kontrol('Emoji bile olsa çalışıyor',
     adminKapisi(utf8Istek('anahtar-🔑'), { ...env, ADMIN_KEY: 'anahtar-🔑' }) === null);
+
+  // ── KUYRUK TEMİZLİĞİ ───────────────────────────
+  /* Eşleştirme mantığı değişince turu yeniden atmak gerekiyor. Kuyruk
+     birikimli olduğu için eski kayıtlar kalıyor ve artık yanlış olan bir
+     kaydı da onaylayabiliyorsun. Temizlik onaylananlara dokunmamalı. */
+  rapor.baslik('bekleyen kuyruğu temizleme');
+  const tEnv = (await kur()).env;
+  await turuYaz(tEnv, 'egzersiz', [
+    { id: 'e:1', tur: 'guncelleme', ad: 'Bir' },
+    { id: 'e:2', tur: 'yeni', ad: 'İki' }
+  ]);
+  await turuYaz(tEnv, 'gida', [{ id: 'g:1', tur: 'yeni', ad: 'Elma' }]);
+  await kararlariIsle(tEnv, [{ ajan: 'egzersiz', id: 'e:1', karar: 'onay' }]);
+
+  const tSonuc = await bekleyenleriTemizle(tEnv, 'egzersiz');
+  rapor.kontrol('Silinen sayısı bildiriliyor', tSonuc.silinen === 1, JSON.stringify(tSonuc));
+  rapor.kontrol('Kuyruk boşaldı',
+    (await bekleyenleriOku(tEnv, 'egzersiz')).length === 0);
+  rapor.kontrol('Onaylananlar duruyor',
+    (await onaylananlariOku(tEnv, 'egzersiz')).length === 1);
+  rapor.kontrol('Başka ajanın kuyruğuna dokunulmuyor',
+    (await bekleyenleriOku(tEnv, 'gida')).length === 1);
+
+  /* Temizlikten sonra aynı kayıt yeniden düşerse "yeni" sayılmalı; eski
+     çalışma bilgisi kalırsa panel hâlâ silinmiş kuyruğu anlatıyor. */
+  const tTekrar = await turuYaz(tEnv, 'egzersiz', [{ id: 'e:2', tur: 'yeni', ad: 'İki' }]);
+  rapor.kontrol('Temizlikten sonra kayıt yeniden "yeni" sayılıyor',
+    tTekrar.yeni === 1 && tTekrar.guncel === 0, JSON.stringify(tTekrar));
+
+  let tHata = null;
+  try { await bekleyenleriTemizle(tEnv, 'olmayan'); } catch (e) { tHata = e.message; }
+  rapor.kontrol('Tanımsız ajan reddediliyor', !!tHata, tHata || 'hata çıkmadı');
 }
