@@ -1,7 +1,6 @@
 /* Worker'ı gerçek ağa çıkmadan denemek için sahte ortam:
    bellek içi KV, gerçek VAPID anahtarları ve gönderimi yakalayan sahte fetch.
    Şifreleme ve imzalama gerçekten çalışır; yalnızca push servisi taklittir. */
-import { fileURLToPath } from 'node:url';
 
 /* Testler saatten bağımsız olmalı.
 
@@ -63,7 +62,11 @@ function sahteKV() {
 
 export async function kur({ an = SABIT_AN } = {}) {
   const zamaniCoz = zamaniDondur(an);
-  const worker = (await import(fileURLToPath(new URL('../../worker/src/worker.js', import.meta.url)))).default;
+  /* Dinamik import'a URL veriyoruz, işletim sistemi yolu DEĞİL.
+     fileURLToPath Windows'ta "C:\...\worker.js" üretiyor; Node bunu
+     import ederken "C:" kısmını protokol sanıp ERR_UNSUPPORTED_ESM_URL_SCHEME
+     atıyor ve worker'a dokunan on takım birden çöküyor. */
+  const worker = (await import(new URL('../../worker/src/worker.js', import.meta.url).href)).default;
 
   const vk = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
   const vapidPublic = b64u(new Uint8Array(await crypto.subtle.exportKey('raw', vk.publicKey)));
