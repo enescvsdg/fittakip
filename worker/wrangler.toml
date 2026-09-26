@@ -17,6 +17,15 @@ crons = ["* * * * *", "0 0 * * *"]
 binding = "REMINDERS"
 id = "3e3b82ac91764577b04402d21cd266fd"
 
+# Worker loglarını Cloudflare panelinde görünür yapar
+# (dash.cloudflare.com → Workers & Pages → fittakip-push → Observability).
+# Burada duruyor çünkü panelden açılan ayarı sonraki "wrangler deploy"
+# kapatabiliyor: yapılandırma dosyası üstün geliyor.
+# Ajan hataları "[ajan] ... HATA" önekiyle buraya düşüyor.
+[observability]
+enabled = true
+head_sampling_rate = 1
+
 [vars]
 # Push servisleri sorun olursa iletişim için bu adresi kullanır
 VAPID_SUBJECT = "mailto:enescvsdg@gmail.com"
