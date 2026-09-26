@@ -191,8 +191,16 @@ const KOMUTLAR = {
     });
     for (const [ad, s] of Object.entries(rapor)) {
       if (!s.ok) { console.log('  ' + ad + ': HATA — ' + s.hata); continue; }
-      console.log('  ' + ad + ': ' + s.yeni + ' yeni, ' + s.guncel + ' güncelleme, ' +
-        s.atlanan + ' atlandı, kuyrukta ' + s.toplam);
+      /* Bu sayılar KUYRUĞUN durumunu anlatıyor, kaydın türünü değil:
+         "kuyruğa yeni" ilk kez düşen, "üzerine yazıldı" önceki turdan
+         kalıp tazelenen kayıt. Kaydın kendisi "yeni hareket" mi yoksa
+         "mevcut harekete talimat" mı — o panelde grup adında yazıyor.
+         Eski metin ("986 yeni, 0 güncelleme") ikisini karıştırıyordu. */
+      console.log('  ' + ad + ': kuyruğa ' + s.yeni + ' yeni kayıt' +
+        (s.guncel ? ', ' + s.guncel + ' kaydın üzerine yazıldı' : '') +
+        (s.atlanan ? ', ' + s.atlanan + ' onaylı olduğu için atlandı' : '') +
+        (s.kopya ? ', ' + s.kopya + ' kopya birleştirildi' : '') +
+        ' — kuyrukta toplam ' + s.toplam);
     }
     console.log('\nPanelde incele:  ' + (process.env.FITTAKIP_WORKER || '').replace(/\/+$/, '') + '/admin');
   },
