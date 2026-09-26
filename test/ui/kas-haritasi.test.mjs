@@ -39,6 +39,16 @@ async function paneliAc(page) {
 export default async function ({ rapor, adres, browser }) {
   // ── VERİ YOKKEN ────────────────────────────────
   const bos = await sayfaAc(browser, { adres, veri: VERI });
+  /* İkincil kası AÇIKÇA boşaltıyoruz.
+
+     Önce egzersizler.js'in boş olmasına güveniyorduk; ajan verisi işlenince
+     "Barbell Bench Press" gerçekten ikincil kas kazandı ve bu blok kırıldı.
+     Test uygulamanın davranışını ölçmeli, deponun o anki veri durumunu
+     değil — veri geldikçe kırılan bir test, veriyi işlemeyi cezalandırıyor. */
+  await bos.page.evaluate(() => {
+    delete EXERCISE_INFO['Barbell Bench Press'];
+    renderWorkoutTracking();
+  });
   await paneliAc(bos.page);
 
   rapor.baslik('ikincil kas verisi yokken');
