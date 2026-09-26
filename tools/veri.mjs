@@ -19,6 +19,7 @@ import { fileURLToPath } from 'node:url';
 import { dosyayiOku, dosyayiUret, birlestir } from './egzersiz-yaz.mjs';
 import { birlestir as gidalariBirlestir } from './gida-birlestir.mjs';
 import { execFileSync } from 'node:child_process';
+import https from 'node:https';
 
 const KOK = path.dirname(fileURLToPath(new URL('.', import.meta.url)));
 
@@ -37,25 +38,61 @@ function ayar() {
   return { adres, anahtar };
 }
 
+/* İsteği node:https ile atıyoruz, fetch ile değil.
+
+   Node'un fetch'i başlık gelmesi için 5 dakika bekliyor (undici
+   headersTimeout) ve süre dolunca yalnızca "fetch failed" diyor. Ajan turu
+   bundan uzun sürüyor: supplement ajanı altı siteyi 1,2 saniye aralıkla
+   geziyor, tek başına beş dakikayı aşıyor. Worker turu bitirip yanıtı
+   yazıyor ama bu tarafta kimse dinlemiyor oluyor — tur boşa gitmiş gibi
+   görünüyor, oysa kayıtlar KV'ye yazılmış oluyor.
+
+   node:https'te böyle bir başlık zaman aşımı yok; bağlantı kopmadıkça
+   bekliyor. Yine de sessiz kalmasın diye boşta kalma süresi ölçülüyor. */
+function istek(tamAdres, secenek, anahtar) {
+  return new Promise((coz, red) => {
+    const u = new URL(tamAdres);
+    const govde = secenek.body || null;
+    const r = https.request({
+      hostname: u.hostname,
+      port: u.port || 443,
+      path: u.pathname + u.search,
+      method: secenek.method || 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Basic ' + Buffer.from('admin:' + anahtar).toString('base64'),
+        ...(govde ? { 'Content-Length': Buffer.byteLength(govde) } : {}),
+        ...(secenek.headers || {})
+      }
+    }, res => {
+      let metin = '';
+      res.setEncoding('utf8');
+      res.on('data', p => { metin += p; });
+      res.on('end', () => coz({ durum: res.statusCode, metin }));
+    });
+    /* Yanıt beklerken bağlantı 20 dakika boyunca hiç kıpırdamazsa gerçekten
+       kopmuştur; sonsuza kadar asılı kalmayalım. */
+    r.setTimeout(20 * 60 * 1000, () => {
+      r.destroy(new Error('Worker 20 dakikadır yanıt vermedi. Ajanları tek tek ' +
+        'çalıştırmayı dene: npm run veri-calistir egzersiz'));
+    });
+    r.on('error', red);
+    if (govde) r.write(govde);
+    r.end();
+  });
+}
+
 async function cagir(yol, secenek = {}) {
   const { adres, anahtar } = ayar();
-  const res = await fetch(adres + yol, {
-    ...secenek,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Basic ' + Buffer.from('admin:' + anahtar).toString('base64'),
-      ...(secenek.headers || {})
-    }
-  });
-  if (res.status === 401) {
+  const { durum, metin } = await istek(adres + yol, secenek, anahtar);
+  if (durum === 401) {
     throw new Error('Panel anahtarı kabul edilmedi. FITTAKIP_ADMIN_KEY, Worker\'daki ' +
       'ADMIN_KEY secret\'ıyla birebir aynı olmalı.');
   }
-  const metin = await res.text();
   let govde = null;
   try { govde = JSON.parse(metin); } catch { /* JSON değilse ham metin kalsın */ }
-  if (!res.ok) {
-    throw new Error('Worker ' + res.status + ' döndü: ' +
+  if (durum < 200 || durum >= 300) {
+    throw new Error('Worker ' + durum + ' döndü: ' +
       (govde && govde.error ? govde.error : metin.slice(0, 200)));
   }
   return govde;
@@ -137,10 +174,20 @@ const KOMUTLAR = {
     console.log('Artık ajanlar çalışabilir:  node tools/veri.mjs calistir');
   },
 
+  /* Ad verilmezse hepsi, verilirse yalnız o ajanlar:
+       node tools/veri.mjs calistir              → egzersiz, gida, takviye
+       node tools/veri.mjs calistir egzersiz     → yalnız egzersiz
+     Supplement ajanı altı siteyi 1,2 saniye aralıkla geziyor ve turun
+     büyük kısmını o yiyor; biri patlarsa ya da uzarsa diğerlerini tek
+     tek çalıştırabilmek gerekiyor. */
   async calistir() {
-    console.log('Ajanlar çalıştırılıyor, bu biraz sürebilir…');
+    const secilen = process.argv.slice(3).filter(Boolean);
+    console.log(secilen.length
+      ? 'Çalıştırılıyor: ' + secilen.join(', ') + ' — bu biraz sürebilir…'
+      : 'Ajanlar çalıştırılıyor, bu biraz sürebilir…');
     const rapor = await cagir('/admin/calistir', {
-      method: 'POST', body: JSON.stringify({})
+      method: 'POST',
+      body: JSON.stringify(secilen.length ? { ajanlar: secilen } : {})
     });
     for (const [ad, s] of Object.entries(rapor)) {
       if (!s.ok) { console.log('  ' + ad + ': HATA — ' + s.hata); continue; }
