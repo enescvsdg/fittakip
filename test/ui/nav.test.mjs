@@ -85,8 +85,27 @@ export default async function ({ rapor, adres, browser }) {
   await p2.evaluate(() => showPage('profile'));
   await p2.waitForTimeout(300);
 
-  const kayiyor = await p2.evaluate(() => document.documentElement.scrollHeight - window.innerHeight > 80);
-  rapor.kontrol('Sayfa gerçekten kaymıyor', !kayiyor, kayiyor ? 'kayıyor — test anlamsız' : 'sığıyor');
+  /* 1600px sabit bir tahmindi ve yazı tipi ölçüleri işletim sistemine göre
+     değişiyor: aynı sayfa Windows'ta daha çok satıra sarıp ekranı aşıyor,
+     ön koşul düşüyor ve test anlamsızlaşıyordu. Artık içeriği ölçüp ekranı
+     ona göre büyütüyoruz — sığana kadar, en fazla üç deneme. */
+  const olc = () => p2.evaluate(() => ({
+    icerik: document.documentElement.scrollHeight,
+    ekran: window.innerHeight
+  }));
+  let o2 = await olc();
+  for (let deneme = 0; deneme < 3 && o2.icerik - o2.ekran > 80; deneme++) {
+    const yeni = Math.min(o2.icerik + 200, 6000);
+    if (yeni <= o2.ekran) break;
+    await p2.setViewportSize({ width: 390, height: yeni });
+    await p2.waitForTimeout(200);
+    o2 = await olc();
+  }
+
+  const kayiyor = o2.icerik - o2.ekran > 80;
+  rapor.kontrol('Sayfa gerçekten kaymıyor', !kayiyor,
+    kayiyor ? 'kayıyor — test anlamsız (' + o2.icerik + 'px içerik / ' + o2.ekran + 'px ekran)'
+            : 'sığıyor — ' + o2.ekran + 'px ekran');
   await p2.evaluate(() => { window.dispatchEvent(new Event('scroll')); });
   await p2.waitForTimeout(300);
   rapor.kontrol('Kaymayan sayfada kapsül toplanmıyor',
