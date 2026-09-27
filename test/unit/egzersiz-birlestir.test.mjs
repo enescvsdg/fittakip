@@ -169,9 +169,16 @@ export default async function ({ rapor }) {
   rapor.kontrol('Yeni hareket salona gitti',
     sonOk && sonVeri.EXERCISES['Spor Salonunda'].some(h => h.name === 'Zercher Squat'));
   const bilgiOnce = Object.keys(EXERCISE_INFO).length;
-  rapor.kontrol('Bilgi kaydı tam iki arttı',
-    sonOk && Object.keys(sonVeri.EXERCISE_INFO).length === bilgiOnce + 2,
-    sonOk ? bilgiOnce + ' → ' + Object.keys(sonVeri.EXERCISE_INFO).length : '(okunamadı)');
+  /* "Tam iki arttı" demek, EXERCISE_INFO'nun bu iki adı HİÇ tanımadığını
+     varsayıyordu. Ajan verisi işlenince "Push-Up" gerçekten bilgi kazandı ve
+     artış bire düştü — üstelik birleştirme doğru çalışıyordu. Beklenen artışı
+     dosyanın o anki hâlinden hesaplıyoruz; asıl kontrol zaten bir altta:
+     iki kaydın ikisi de yerinde mi. */
+  const yeniAnahtar = ['Push-Up', 'Zercher Squat'].filter(a => !(a in EXERCISE_INFO)).length;
+  rapor.kontrol('Bilgi kaydı beklendiği kadar arttı',
+    sonOk && Object.keys(sonVeri.EXERCISE_INFO).length === bilgiOnce + yeniAnahtar,
+    sonOk ? bilgiOnce + ' → ' + Object.keys(sonVeri.EXERCISE_INFO).length +
+            ' (beklenen +' + yeniAnahtar + ')' : '(okunamadı)');
   rapor.kontrol('İki kaydın ikisi de yerinde',
     sonOk && !!sonVeri.EXERCISE_INFO['Push-Up'] && !!sonVeri.EXERCISE_INFO['Zercher Squat']);
   rapor.kontrol('Mevcut hareketlerin hiçbiri kaybolmadı',

@@ -59,6 +59,25 @@ var MUSCLE_VIEW = {
 
 var LEVEL_TR = { 'beginner': 'Başlangıç', 'intermediate': 'Orta', 'expert': 'İleri' };
 
+/* Aynı ekipmanın iki yazımı tek koda iniyor.
+
+   Uygulamanın kendi listesi "kettlebell" diyor, free-exercise-db
+   "kettlebells" — ajan yeni hareketleri o adla yazıyor. İkisi de "Kettlebell"
+   etiketine sahip olduğu için ekipman süzgecinde YAN YANA İKİ "Kettlebell"
+   seçeneği çıkıyordu ve her biri hareketlerin yalnız bir kısmını gösteriyordu.
+   Ajan verisi işlenene kadar görünmüyordu: ikinci yazım o zaman girdi. */
+var EKIPMAN_ES = {
+  'kettlebells': 'kettlebell',
+  'body only': 'none',
+  'e-z curl bar': 'ez curl bar',
+  '': 'none'
+};
+
+function ekipmanKodu(deger) {
+  var d = String(deger === null || deger === undefined ? 'none' : deger).toLowerCase().trim();
+  return Object.prototype.hasOwnProperty.call(EKIPMAN_ES, d) ? EKIPMAN_ES[d] : (d || 'none');
+}
+
 var EQUIPMENT_TR = {
   'none': '', 'other': '', 'body only': '',
   'barbell': 'Barbell', 'ez curl bar': 'EZ Bar', 'dumbbell': 'Dumbbell',

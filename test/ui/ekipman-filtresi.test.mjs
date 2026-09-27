@@ -157,8 +157,11 @@ export default async function ({ rapor, adres, browser }) {
     mekanlar.forEach(m => EXERCISES[m].forEach(e => bolgeler.add(m + '|' + e.muscle)));
     for (const anahtar of bolgeler) {
       const [mekan, kas] = anahtar.split('|');
+      /* Süzgecin kendi kullandığı tekilleştirmeyle sayıyoruz. Ham değerle
+         saysaydık "kettlebell" ile "kettlebells" iki ayrı kod görünür ve
+         uygulama düzeltilmiş olsa bile test kırmızı kalırdı. */
       const kodlar = [...new Set(EXERCISES[mekan]
-        .filter(e => e.muscle === kas).map(e => e.equipment || 'none'))];
+        .filter(e => e.muscle === kas).map(e => ekipmanKodu(e.equipment)))];
       const etiketler = kodlar.map(ekipmanEtiketi);
       const tekil = new Set(etiketler);
       if (tekil.size !== etiketler.length) sonuc.cakisan.push(anahtar + ': ' + etiketler.join(','));

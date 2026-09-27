@@ -946,7 +946,9 @@ function fillEquipmentSelect(location, region) {
   var sayim = {};
   list.forEach(function(ex) {
     if (ex.muscle !== region) return;
-    var kod = ex.equipment || 'none';
+    /* Ham değer değil TEKİLLEŞTİRİLMİŞ kod sayılıyor: "kettlebell" ile
+       "kettlebells" aynı seçenek olmalı, iki ayrı satır değil. */
+    var kod = ekipmanKodu(ex.equipment);
     sayim[kod] = (sayim[kod] || 0) + 1;
   });
 
@@ -977,7 +979,7 @@ function fillExerciseSelect(location, region, equipment) {
 
   list.forEach(function(ex) {
     if (ex.muscle !== region) return;
-    if (secilenEkipman !== TUM_EKIPMAN && (ex.equipment || 'none') !== secilenEkipman) return;
+    if (secilenEkipman !== TUM_EKIPMAN && ekipmanKodu(ex.equipment) !== secilenEkipman) return;
     html += '<option value="' + escapeHtml(ex.name) + '">' + escapeHtml(ex.name) + '</option>';
     sayi++;
   });
