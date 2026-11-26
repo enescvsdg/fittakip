@@ -33,7 +33,15 @@ export class Rapor {
    onsuz çalışsın diye tembel yükleniyor. */
 export async function chromiumAc() {
   const { chromium } = await import('playwright');
-  return chromium.launch();
+  /* FITTAKIP_CHROMIUM verilmişse o çalıştırılabilir kullanılıyor.
+
+     Playwright indirdiği tarayıcıyı sürümüne bağlı bir klasörde arıyor
+     (chromium-1255 gibi). Tarayıcının hazır kurulu geldiği ama sürümün
+     tutmadığı ortamlarda — kapalı ağda çalışan bir kap, CI imajı — indirme
+     de yapılamadığı için arayüz testlerinin tamamı hiç koşmuyor. Burada
+     varsayılan davranış değişmiyor: değişken yoksa her şey eskisi gibi. */
+  const yol = process.env.FITTAKIP_CHROMIUM;
+  return chromium.launch(yol ? { executablePath: yol } : {});
 }
 
 /* Tohumlanmış, hazır bir sayfa açar.

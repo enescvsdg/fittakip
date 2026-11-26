@@ -375,6 +375,62 @@ const KOMUTLAR = {
       'Onaylananlara dokunulmadı.');
   },
 
+  /* Worker'daki listeden egzersizler.js'i yeniden kurar.
+
+     "veri-al" onaylanan kayıtları dosyaya işledikten SONRA kuyruktan
+     düşürüyor ve güncel listeyi Worker'a geri gönderiyor. Yani onay emeği
+     iki yerde duruyor: yerel dosyada ve Worker'da. Dosya kaybolursa
+     (başka bilgisayara geçmek, klonu silmek, commit etmeden bırakmak)
+     kuyrukta artık o kayıtlar olmadığı için "veri-al" bir işe yaramıyor —
+     tek kalan kopya Worker'daki liste oluyor.
+
+     Bu komut onu geri yazıyor. Dosyanın elle bakımlı üst yarısına
+     dokunmuyor, yalnız üretilen bölümü kuruyor. */
+  async kurtar() {
+    const cevap = await cagir('/admin/mevcut');
+    const liste = (cevap && cevap.egzersiz) || [];
+    if (!liste.length) {
+      console.log("Worker'da kayıtlı liste yok. Kurtarılacak bir şey bulunamadı.");
+      return;
+    }
+
+    const EXERCISES = {};
+    const EXERCISE_INFO = {};
+    let bilgili = 0;
+    for (const h of liste) {
+      const mekan = h.mekan || 'Spor Salonunda';
+      (EXERCISES[mekan] = EXERCISES[mekan] || []).push({
+        name: h.name, muscle: h.muscle, equipment: h.equipment, level: h.level
+      });
+      const ikincil = h.secondary || [];
+      const talimat = h.instructions || [];
+      if ((ikincil.length || talimat.length) && !EXERCISE_INFO[h.name]) {
+        EXERCISE_INFO[h.name] = { secondary: ikincil, instructions: talimat };
+        bilgili++;
+      }
+    }
+
+    const yol = path.join(KOK, 'egzersizler.js');
+    const eski = fs.readFileSync(yol, 'utf8');
+    const yeni = dosyayiUret(eski, EXERCISES, EXERCISE_INFO);
+
+    /* Yazmadan önce ürettiğimiz dosya gerçekten çalışıyor mu diye deniyoruz;
+       bozuksa hiç yazmıyoruz — "veri-al"daki kapının aynısı. */
+    try { dosyayiOku(yeni); }
+    catch (e) { throw new Error('Üretilen dosya okunamadı, hiçbir şey yazılmadı: ' + e.message); }
+
+    fs.writeFileSync(yol, yeni);
+    const onbellek = onbellegiTazele();
+
+    const mekanlar = Object.keys(EXERCISES)
+      .map(m => m + ': ' + EXERCISES[m].length).join(' · ');
+    console.log('egzersizler.js Worker\'daki listeden kuruldu:');
+    console.log('  hareket      : ' + liste.length + ' (' + mekanlar + ')');
+    console.log('  talimat/kas  : ' + bilgili);
+    console.log('  önbellek     : v' + onbellek.eski + ' → v' + onbellek.yeni);
+    console.log('\nŞimdi: npm test && git add -A && git commit');
+  },
+
   async bekleyen() {
     const veri = await cagir('/admin/veri');
     for (const a of veri.ajanlar) {
